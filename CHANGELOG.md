@@ -12,6 +12,13 @@ The format follows the repository governance contract:
 
 - No unreleased changes.
 
+## 1.2.0 - 2026-04-09
+
+### Added
+
+- Canonical README indexes for `docs/assets/images/` and its public-safe image subdirectories.
+- A versioned place for future sanitized design, branding, origin, and GitHub-facing documentation imagery.
+
 ## 1.1.0 - 2026-04-09
 
 ### Added
