@@ -175,6 +175,9 @@ dist
 build
 .output
 .release
+.wxt
+.vscode/
+CaptionArc.code-workspace
 
 # >>> codex-session-isolator >>>
 # Managed by Codex Session Isolator launcher wizard.
