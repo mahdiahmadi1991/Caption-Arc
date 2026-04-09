@@ -92,11 +92,11 @@ Push the current integration state to `develope`, reset `main` to the root commi
 ## Progress
 
 - [x] Inspect the current local Git state and governance sources
-- [ ] Create the active execution plan
-- [ ] Clean noise changes and align governance summary docs
-- [ ] Create and configure the public GitHub repository
-- [ ] Publish the requested branch topology
-- [ ] Archive the completed plan
+- [x] Create the active execution plan
+- [x] Clean noise changes and align governance summary docs
+- [x] Create and configure the public GitHub repository
+- [x] Publish the requested branch topology
+- [x] Archive the completed plan
 
 ## Surprises and Discoveries
 
@@ -106,12 +106,51 @@ Push the current integration state to `develope`, reset `main` to the root commi
 - Observation: local branch `main` points to commit `2dc39cb`, while annotated tag `v1.3.0` points to `a78f1c0`.
   Evidence: `git log --oneline --decorate --graph --max-count=12 --all`.
 
+- Observation: resetting `main` to the root commit means the public repository cannot rely on `main`-resident workflow files for release PR checks.
+  Evidence: `origin/main` now points to `66aaf75`, while the workflow files live on `origin/develope`.
+
 ## Decision Log
 
 - Decision: treat this task as non-trivial repository work and record it with an execution plan before continuing to remote publication steps.
   Rationale: repository creation, branch publication, and `main` reset are governance-sensitive operations with irreversible consequences once pushed.
   Date/Author: 2026-04-09 / Codex
 
+- Decision: make `develope` the GitHub default branch before resetting `main`.
+  Rationale: the owner requested `main` be reset to the repository root, but the public repository should still open on the current product state for usability and SEO.
+  Date/Author: 2026-04-09 / Codex
+
+- Decision: protect `develope` with required status checks and protect `main` with a lighter no-force-push baseline.
+  Rationale: `develope` is the public default branch and contains the active automation, while `main` was intentionally reset to the root commit and cannot currently host the same required checks.
+  Date/Author: 2026-04-09 / Codex
+
 ## Outcomes and Retrospective
 
-To be completed after repository creation, branch publication, and final verification.
+The repository governance summary now matches the graph-preserving `develope -> main` workflow, the public GitHub repository exists at `https://github.com/mahdiahmadi1991/caption-arc`, and the requested branch topology is published with `develope` holding the current integration state and `main` reset to the root commit.
+
+Public repository configuration completed during this task:
+
+- repository visibility set to public
+- default branch set to `develope`
+- description and discovery topics configured from repository scope
+- merge commits enabled
+- squash merge disabled
+- rebase merge disabled
+- issues enabled
+- projects disabled
+- wiki disabled
+- discussions disabled
+- automatic branch deletion on merge enabled
+- branch protection configured on `develope` and `main`
+
+Verification recorded during this task:
+
+- `pnpm docs:check` passed
+- `git status --short --branch` confirmed clean state at each completion checkpoint
+- `git log --oneline --decorate --graph --max-count=12 --all` confirmed the local graph
+- `git remote -v` confirmed `origin`
+- `git ls-remote --heads origin` confirmed `origin/develope` at `4b2bb50` and `origin/main` at `66aaf75`
+- `gh repo view mahdiahmadi1991/caption-arc --json defaultBranchRef,deleteBranchOnMerge,hasIssuesEnabled,hasProjectsEnabled,hasWikiEnabled,hasDiscussionsEnabled,mergeCommitAllowed,rebaseMergeAllowed,squashMergeAllowed,repositoryTopics,url` confirmed the published repository settings
+
+Residual trade-off:
+
+- because `main` was intentionally reset to the root commit by owner request, future release automation and branch protection policy should continue to treat `develope` as the operational default branch until `main` is advanced to a workflow-bearing release baseline again
