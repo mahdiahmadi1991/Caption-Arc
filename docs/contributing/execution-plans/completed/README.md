@@ -39,3 +39,4 @@ Default behavior:
 - [2026-04-09-ui-language-switch-loader-and-smart-direction.md](./2026-04-09-ui-language-switch-loader-and-smart-direction.md)
 - [2026-04-09-curated-bootstrap-git-history.md](./2026-04-09-curated-bootstrap-git-history.md)
 - [2026-04-09-bootstrap-version-renumbering.md](./2026-04-09-bootstrap-version-renumbering.md)
+- [2026-04-09-public-repository-bootstrap-and-branch-reset.md](./2026-04-09-public-repository-bootstrap-and-branch-reset.md)
