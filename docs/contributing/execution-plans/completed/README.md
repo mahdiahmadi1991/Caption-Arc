@@ -37,3 +37,5 @@ Default behavior:
 - [2026-04-09-shared-dropdown-layering-and-theme-toggle-sizing.md](./2026-04-09-shared-dropdown-layering-and-theme-toggle-sizing.md)
 - [2026-04-09-shared-loading-surface-unification.md](./2026-04-09-shared-loading-surface-unification.md)
 - [2026-04-09-ui-language-switch-loader-and-smart-direction.md](./2026-04-09-ui-language-switch-loader-and-smart-direction.md)
+- [2026-04-09-curated-bootstrap-git-history.md](./2026-04-09-curated-bootstrap-git-history.md)
+- [2026-04-09-bootstrap-version-renumbering.md](./2026-04-09-bootstrap-version-renumbering.md)

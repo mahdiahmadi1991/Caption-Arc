@@ -81,7 +81,7 @@ export default defineConfig({
   manifest: {
     name: "CaptionArc",
     description: "Capture and translate browser meeting captions in real-time",
-    version: "1.2.0",
+    version: "1.3.0",
     permissions: ["storage", "identity", "alarms"],
     host_permissions: [
       ...meetingHostPermissions,

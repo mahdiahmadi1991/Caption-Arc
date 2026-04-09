@@ -9,5 +9,3 @@ Rules:
 - move the plan to `../completed/` when finished or superseded
 
 Current plans:
-
-- [2026-04-09-curated-bootstrap-git-history.md](./2026-04-09-curated-bootstrap-git-history.md)

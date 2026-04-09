@@ -4,9 +4,6 @@
 # long-thread settings only for this repository.
 
 profile = "long_threads"
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-personality = "pragmatic"
 
 # GPT-5.4 in Codex supports experimental 1M context.
 # Standard window is 272K; above that usage is billed at 2x.
@@ -21,11 +18,14 @@ runtime_metrics = true
 # with heavy context and up-to-date checks.
 model_reasoning_effort = "high"
 web_search = "live"
+model = "gpt-5.4"
+personality = "pragmatic"
 
 [profiles.fast_ops]
 # Faster/lighter profile for routine edits and lower-noise operation.
 model_reasoning_effort = "medium"
 web_search = "disabled"
+personality = "pragmatic"
 
 [profiles.safe_mode]
 # Conservative profile when you want tighter execution controls.

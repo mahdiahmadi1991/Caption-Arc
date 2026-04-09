@@ -12,6 +12,18 @@ The format follows the repository governance contract:
 
 - No unreleased changes.
 
+## 1.3.0 - 2026-04-09
+
+### Added
+
+- Final governed local bootstrap release alignment for the repository at version `1.3.0`.
+- A completed execution-plan record for the bootstrap process and a revised `release-1.3.0.md` note that explains the final repository state.
+
+### Changed
+
+- Archived the active bootstrap execution plan into the completed-plan index.
+- Confirmed the final tagged state against docs, tests, coverage, and dual-browser production builds.
+
 ## 1.2.0 - 2026-04-09
 
 ### Added

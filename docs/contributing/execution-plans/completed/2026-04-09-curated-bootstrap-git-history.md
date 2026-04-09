@@ -37,7 +37,7 @@ The repository was re-initialized and currently has no commits. The owner wants 
 - `docs/contributing/repository-governance.md`
 - `docs/contributing/execution-plans.md`
 - `docs/operations/release-runbook.md`
-- `docs/operations/release-notes/release-2.3.0.md`
+- `docs/operations/release-notes/release-1.3.0.md`
 - `package.json`
 - `wxt.config.ts`
 - `.github/workflows/release.yml`
@@ -99,17 +99,23 @@ Run repository validation against the final reconstructed state, move this plan 
 
 - [x] Inspect governance, versioning, and release docs
 - [x] Create the bootstrap execution plan
-- [ ] Reconstruct the governed `main` history
-- [ ] Run final verification
-- [ ] Archive the completed plan
+- [x] Reconstruct the governed `main` history
+- [x] Run final verification
+- [x] Archive the completed plan
 
 ## Surprises and Discoveries
 
 - Observation: the repository is currently on a freshly initialized Git history with no commits on `main`.
   Evidence: `git status --short --branch` reported `## No commits yet on main`.
 
-- Observation: the canonical version is duplicated in both `package.json` and `wxt.config.ts`, and both currently resolve to `2.3.0`.
-  Evidence: `package.json` and `wxt.config.ts` both declare version `2.3.0`.
+- Observation: the canonical version is duplicated in both `package.json` and `wxt.config.ts`, and both currently resolve to `1.3.0`.
+  Evidence: `package.json` and `wxt.config.ts` both declare version `1.3.0`.
+
+- Observation: squash-merged topic branches cannot be deleted with `git branch -d` because their branch tips are not ancestors of `main`.
+  Evidence: deleting `chore/repo-local-tooling` with `git branch -d` failed until the branch was removed with `git branch -D` after the squash merge.
+
+- Observation: two early local tags were briefly created before their matching version bumps were staged onto the squash commit.
+  Evidence: `v1.0.0` and `v1.0.1` needed immediate local incident recovery via amend-and-retag before any remote push or publication occurred.
 
 ## Decision Log
 
@@ -121,6 +127,33 @@ Run repository validation against the final reconstructed state, move this plan 
   Rationale: a single canonical running document is easier to keep aligned across multiple local release steps than many independent new release-note files.
   Date/Author: 2026-04-09 / Codex
 
+- Decision: retain one empty bootstrap anchor commit on `main` before the first squash merge.
+  Rationale: the repository had been re-initialized with no commits, and the anchor commit provided a practical local base for the governed squash-merge sequence.
+  Date/Author: 2026-04-09 / Codex
+
+- Decision: use `git branch -D` for merged topic-branch cleanup after squash merges.
+  Rationale: squash merges preserve a clean linear `main`, but they do not make the topic branch tip an ancestor of `main`, so `-d` is too strict for the intended cleanup step.
+  Date/Author: 2026-04-09 / Codex
+
+- Decision: document and correct early local tag/version mismatches immediately through local incident recovery before any remote publication.
+  Rationale: this preserved final tag correctness while keeping the bootstrap work transparent about the temporary local error.
+  Date/Author: 2026-04-09 / Codex
+
 ## Outcomes and Retrospective
 
-Implementation pending.
+The repository now has a curated local bootstrap history that ends at `v1.3.0` and keeps `main` linear through squash-merged topic branches. The reconstructed history introduces the runtime and technical docs first, then layers governance/docs standards, tests, GitHub automation, repository-local tooling, documentation assets, and final release alignment.
+
+Final verification recorded during this plan:
+
+- `pnpm docs:check` passed on the final `1.3.0` state.
+- `pnpm test:google` passed on the final `1.3.0` state.
+- `pnpm test:google:coverage` passed on the final `1.3.0` state.
+- `pnpm build:chrome:production` passed on the final `1.3.0` state.
+- `pnpm build:firefox:production` passed on the final `1.3.0` state.
+- `git log --oneline --decorate --graph` confirmed a linear `main`.
+- `git tag -n` confirmed the annotated release tag sequence through `v1.3.0`.
+
+Local-only limitations remained intentional:
+
+- no hosted PR artifacts were created because no remote workflow existed for this bootstrap
+- no GitHub Releases were published from the local tags

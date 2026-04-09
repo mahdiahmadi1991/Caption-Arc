@@ -1,47 +1,30 @@
-# Release 1.3.0 Draft
+# Release 1.3.0
 
 ## Summary
 
-CaptionArc now supports browser-based caption capture across:
+This release finalizes the governed local bootstrap history for CaptionArc at version `1.3.0`.
 
-- Google Meet
-- Microsoft Teams Web
-- Zoom Web App
-
-This release also expands the product around that shared capture pipeline with a redesigned settings experience, richer meeting history, and AI-generated meeting summaries.
+The repository now carries a linear `main` history with annotated release tags, browser-aware build outputs, contributor governance, contract tests, release automation wiring, and public-safe documentation assets around the full current product surface.
 
 ## Highlights
 
-- Added Microsoft Teams Web caption capture support
-- Added Zoom Web App caption capture support
-- Added provider-aware meeting history metadata and filtering
-- Added starred sessions, richer session detail pages, and export flows for history
-- Added per-session summary generation with reusable summary profiles
-- Added adaptive summary effort modes (`Economy`, `Balanced`, `Thorough`)
-- Added per-profile summary effort selection for summary profiles
-- Added staged summary orchestration for longer or riskier sessions
-- Added durable summary queue persistence and restart recovery for queued or interrupted summary jobs
-- Moved automatic end-of-meeting summary enqueueing onto a background-backed finalization path
-- Added cancel/retry flows and clearer summary job states in session detail
-- Added provider-specific capture guidance overlays
-- Added overlay controls for default state, opacity, and click-through behavior
-- Refined settings UX with model guidance, profile management, and provider verification
-- Improved browser-only product messaging and documentation
-- Stopped overriding `chrome://history/`; meeting history now opens as an internal extension page
+- Finalized a curated squash-merge release history from a freshly re-initialized repository.
+- Aligned the canonical repository version across `package.json`, `wxt.config.ts`, changelog material, and annotated release tags through `v1.3.0`.
+- Preserved the current cross-browser extension product surface, including Google Meet, Microsoft Teams Web, Zoom Web App, meeting history, summaries, diagnostics, and optional cloud sync.
+- Added repository governance, execution-planning, quality-gate, and release-workflow documentation as first-class versioned artifacts.
+- Added GitHub workflow definitions for docs guardrails, quality gates, and tagged release packaging.
+- Added repository-local Codex configuration and versioned documentation asset indexes for public-safe images.
 
 ## Notes
 
-- Native desktop Zoom and native desktop Teams apps are not supported
-- Caption availability still depends on each meeting platform exposing visible native captions or live transcription
-- Speaker attribution in Zoom Web App may still require refinement depending on layout and subtitle surface behavior
-- Meeting history and summaries remain local-first; optional personal cloud sync can mirror the archive into the user's own cloud account
+- This bootstrap was executed locally; hosted pull requests and GitHub Releases were intentionally not created in this workflow.
+- Two early local tag/version mismatches were corrected immediately before any remote publication as part of documented incident recovery during the bootstrap process.
+- Chrome and Firefox production builds remain the governed packaging targets for the repository.
 
 ## Recommended QA Before Release
 
-- Google Meet smoke pass
-- Microsoft Teams Web smoke pass
-- Zoom Web App smoke pass
-- Translation smoke pass
-- Meeting history smoke pass
-- Summary generation smoke pass
-- Overlay behavior smoke pass (`expanded`, `minimized`, opacity, click-through)
+- `pnpm docs:check`
+- `pnpm test:google`
+- `pnpm test:google:coverage`
+- `pnpm build:chrome:production`
+- `pnpm build:firefox:production`
