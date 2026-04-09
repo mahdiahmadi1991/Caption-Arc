@@ -12,6 +12,13 @@ The format follows the repository governance contract:
 
 - No unreleased changes.
 
+## 1.0.2 - 2026-04-09
+
+### Added
+
+- Vitest configuration and setup wiring for repository-level contract testing.
+- Contract coverage for diagnostics, browser capability selection, UI i18n, popup/runtime details, Google Meet provider behavior, and smoke-launch utilities.
+
 ## 1.0.1 - 2026-04-09
 
 ### Added
