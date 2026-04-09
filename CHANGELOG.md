@@ -12,6 +12,13 @@ The format follows the repository governance contract:
 
 - No unreleased changes.
 
+## 1.0.3 - 2026-04-09
+
+### Added
+
+- GitHub Actions workflows for docs guardrails, quality gates, and tagged release packaging.
+- Repository instruction files for GitHub Copilot and docs-focused markdown editing.
+
 ## 1.0.2 - 2026-04-09
 
 ### Added

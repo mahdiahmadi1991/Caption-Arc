@@ -1,0 +1,70 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    paths:
+      - "entrypoints/**"
+      - "tests/**"
+      - "scripts/testing/**"
+      - "scripts/manual-smoke/**"
+      - "scripts/start-windows-chrome-debug.sh"
+      - "vitest.config.ts"
+      - "wxt.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/quality-gates.yml"
+      - ".github/workflows/release.yml"
+      - "docs/**"
+      - "AGENTS.md"
+      - "README.md"
+  push:
+    paths:
+      - "entrypoints/**"
+      - "tests/**"
+      - "scripts/testing/**"
+      - "scripts/manual-smoke/**"
+      - "scripts/start-windows-chrome-debug.sh"
+      - "vitest.config.ts"
+      - "wxt.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/quality-gates.yml"
+      - ".github/workflows/release.yml"
+      - "docs/**"
+      - "AGENTS.md"
+      - "README.md"
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate documentation contract
+        run: pnpm docs:check
+
+      - name: Run contract test suite
+        run: pnpm test:google
+
+      - name: Run coverage report
+        run: pnpm test:google:coverage
+
+      - name: Build Chrome production artifact
+        run: pnpm build:chrome:production
+
+      - name: Build Firefox production artifact
+        run: pnpm build:firefox:production
