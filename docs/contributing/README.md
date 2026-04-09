@@ -5,6 +5,8 @@
 - [execution-plans.md](./execution-plans.md)
 - [execution-plans/README.md](./execution-plans/README.md)
 - [documentation-standards.md](./documentation-standards.md)
+- [business-documentation-governance.md](./business-documentation-governance.md)
+- [behavior-contract-governance.md](./behavior-contract-governance.md)
 - [definition-of-done.md](./definition-of-done.md)
 - [project-working-agreement.md](./project-working-agreement.md)
 - [coding-conventions/README.md](./coding-conventions/README.md)
@@ -13,4 +15,4 @@
 - [../quality/testing-quality-gate.md](../quality/testing-quality-gate.md)
 - [../quality/testing-onboarding.md](../quality/testing-onboarding.md)
 
-Before PR updates that touch docs, run: `pnpm docs:check`.
+Before PR updates that touch docs, run: `pnpm docs:check` and any required sync checks (`pnpm docs:check:business`, `pnpm docs:check:behavior`).

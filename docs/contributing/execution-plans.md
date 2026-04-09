@@ -1,6 +1,6 @@
 # Execution Plans Standard
 
-This document defines the repository standard for planning non-trivial engineering work.
+This document defines the repository standard for planning non-trivial engineering work that changes code, runtime behavior, contracts, or release mechanics.
 
 Goal:
 
@@ -21,7 +21,7 @@ File naming rule for task plans:
 
 ## When A Plan Is Required
 
-Create or update an Execution Plan before implementation for any non-trivial work, including:
+Create or update an Execution Plan before implementation for any non-trivial code/behavior work, including:
 
 - new feature work
 - behavior changes
@@ -33,10 +33,26 @@ Create or update an Execution Plan before implementation for any non-trivial wor
 - message-contract or storage-schema changes
 - release/build/CI workflow changes
 - security or privacy-sensitive changes
-- multi-file changes
-- tasks with uncertainty or trade-offs
+- multi-file code/config/runtime changes
+- code-facing tasks with uncertainty or trade-offs
 
-If there is doubt, create a plan.
+If there is doubt on a code/behavior task, create a plan.
+
+## Documentation-Only Policy
+
+Execution Plans are not mandatory for docs-only updates that do not change code behavior, runtime contracts, or release mechanics.
+
+Typical docs-only examples that do not require a plan:
+
+- small README edits
+- copy clarification
+- typo/format/link fixes
+- adding or updating product documentation without accompanying code behavior change
+
+Create a docs execution plan only when:
+
+- the repository owner explicitly asks for one, or
+- the docs change is itself a non-trivial governance/migration/restructure initiative with meaningful operational risk.
 
 ## When A Plan May Be Skipped
 
@@ -63,7 +79,7 @@ Use placeholders like `<repo-root>`, `<local-path>`, `<browser-profile>`, `<exte
 
 ## Mandatory Workflow
 
-### Before Implementation
+### Before Implementation (For Plan-Required Tasks)
 
 1. Inspect relevant repository context.
 2. Identify affected code/docs/tests/config boundaries.
@@ -78,6 +94,7 @@ Use placeholders like `<repo-root>`, `<local-path>`, `<browser-profile>`, `<exte
 3. Run validation per milestone.
 4. Update plan progress, decisions, discoveries, and scope changes continuously.
 5. Update impacted docs in the same workstream.
+6. For behavior-sensitive changes, update behavior contracts and traceability matrices in the same workstream.
 
 ### After Implementation
 
@@ -137,10 +154,13 @@ For this repository, use at minimum:
 - `pnpm test:google`
 - `pnpm test:google:coverage` (code changes)
 - `pnpm test:targeted:plan` and relevant targeted commands
+- `pnpm docs:check`
+- `pnpm docs:check:behavior` (behavior-sensitive code changes)
 
 Quality gate reference:
 
 - `docs/quality/testing-quality-gate.md`
+- `docs/contributing/behavior-contract-governance.md` (behavior-sensitive changes)
 
 ## Browser Extension Prompts
 
@@ -166,7 +186,8 @@ For governed browser behavior, plans must also state:
 
 Do not:
 
-- start non-trivial work without a plan
+- start non-trivial code/behavior work without a plan
+- require a plan for every docs-only edit by default
 - keep plans vague and non-verifiable
 - skip validation notes
 - leave plans stale while implementation evolves

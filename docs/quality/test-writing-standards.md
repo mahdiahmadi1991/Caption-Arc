@@ -31,6 +31,10 @@ Use descriptive names that encode intent and expected result:
 
 Avoid vague names like `works`, `test1`, `handles case`.
 
+For behavior-contract-covered surfaces:
+
+- prefix test names with stable case IDs from the traceability matrix (for example `GM-URL-001`, `RSC-PRM-001`)
+
 ### 2) Structure (Arrange / Act / Assert)
 
 Each test should clearly separate:
@@ -70,6 +74,12 @@ When relevant, include edge contracts (empty input, nullish input, invalid enum,
 - assert exact invariant/contract
 - do not rely on weak assertions that can pass with wrong behavior
 - when asserting objects, check critical fields explicitly
+
+### 8) Contract Traceability
+
+- when a behavior contract exists, map each changed/added test to a case in the relevant traceability matrix
+- update matrix status (`planned`/`implemented`) in the same change as test updates
+- do not leave behavior contract rules without explicit matrix status
 
 ## Runtime Smoke Test Rules
 

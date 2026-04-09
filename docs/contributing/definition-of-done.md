@@ -15,9 +15,15 @@ A change is done only when all applicable items are satisfied.
 ## Documentation
 
 - affected docs are updated in the same PR
+- business-sensitive behavior changes include updates to canonical docs under `docs/product/`
+- behavior-sensitive code changes include updates to canonical behavior contracts under `docs/api/`
+- behavior-sensitive code changes include updates to traceability matrices under `docs/quality/references/`
+- behavior-contract updates follow `docs/contributing/behavior-contract-governance.md`
 - section indexes include any new docs
 - architecture/setup/api/security docs reflect changed behavior
 - `pnpm docs:check` passes
+- `pnpm docs:check:business` passes when business-sensitive code surfaces changed
+- `pnpm docs:check:behavior` passes when behavior-sensitive code surfaces changed
 
 ## Safety
 

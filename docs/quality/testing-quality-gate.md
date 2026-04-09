@@ -35,6 +35,7 @@ Run:
 pnpm test:google
 pnpm test:google:coverage
 pnpm test:targeted:plan
+pnpm docs:check:behavior
 ```
 
 Then execute the targeted commands recommended by `pnpm test:targeted:plan`.
@@ -76,6 +77,13 @@ Run:
 
 ```bash
 pnpm docs:check
+```
+
+If docs-only change updates behavior contracts or business docs, also run:
+
+```bash
+pnpm docs:check:behavior
+pnpm docs:check:business
 ```
 
 ## Coverage Policy

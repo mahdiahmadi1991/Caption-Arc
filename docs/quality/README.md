@@ -8,3 +8,5 @@
 - [firefox-manual-verification-checklist.md](./firefox-manual-verification-checklist.md)
 - [manual-test-checklist.md](./manual-test-checklist.md)
 - [references/](./references/)
+- [references/google-meet-automation-traceability-matrix.md](./references/google-meet-automation-traceability-matrix.md)
+- [references/runtime-session-continuation-traceability-matrix.md](./references/runtime-session-continuation-traceability-matrix.md)

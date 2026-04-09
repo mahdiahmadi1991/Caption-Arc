@@ -30,6 +30,7 @@ For code changes:
 pnpm test:google
 pnpm test:google:coverage
 pnpm test:targeted:plan
+pnpm docs:check:behavior
 ```
 
 Then run the recommended targeted commands from `pnpm test:targeted:plan`.
@@ -97,9 +98,10 @@ Required summary content:
 
 ## CI Enforcement
 
-`Quality Gates` workflow re-runs:
+`Quality Gates` and `Docs Guardrails` workflows re-run:
 
 - `pnpm docs:check`
+- `pnpm docs:check:behavior`
 - `pnpm test:google`
 - `pnpm test:google:coverage`
 

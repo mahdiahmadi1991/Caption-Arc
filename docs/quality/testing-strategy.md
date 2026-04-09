@@ -12,6 +12,7 @@ This repository uses a layered testing model:
 - onboarding flow: [testing-onboarding.md](./testing-onboarding.md)
 - test authoring rules: [test-writing-standards.md](./test-writing-standards.md)
 - runtime onboarding reference: [references/agent-onboarding-cdp-runtime.md](./references/agent-onboarding-cdp-runtime.md)
+- behavior-contract governance: [../contributing/behavior-contract-governance.md](../contributing/behavior-contract-governance.md)
 
 ## Test Layers And Ownership
 
@@ -53,6 +54,7 @@ This repository uses a layered testing model:
   - run `pnpm test:google`
   - run `pnpm test:google:coverage`
   - run targeted smoke from `pnpm test:targeted:plan`
+  - run `pnpm docs:check:behavior`
 - if change touches shared runtime/provider routing:
   - include provider matrix smoke
 - if change touches only docs:

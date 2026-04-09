@@ -160,6 +160,8 @@ Every PR should include:
 - impacted areas
 - validation performed
 - documentation impact
+- business-doc impact when product/business-sensitive behavior changed
+- behavior-contract impact when runtime/system behavior changed
 - release impact
 - version bump rationale when targeting `main`
 
@@ -196,7 +198,7 @@ Do not rewrite merge commit messages into vague summaries when the merge event i
 
 ## 7. Plan-first requirement
 
-- Non-trivial work must follow `docs/contributing/plans-standard.md`.
+- Non-trivial code/behavior work must follow `docs/contributing/execution-plans.md`.
 - The relevant ExecPlan must exist before significant implementation begins.
 - When a plan is required, the merge path should be traceable from branch/PR to plan document.
 
@@ -395,7 +397,7 @@ Any AI agent operating in this repository must follow these rules:
 4. Use explicit merge-commit-oriented integration behavior.
 5. Do not merge to `main` unless the change is release-ready.
 6. Do not tag arbitrary commits; release tags belong on the release merge commit on `main`.
-7. For non-trivial work, follow `docs/contributing/plans-standard.md`.
+7. For non-trivial code/behavior work, follow `docs/contributing/execution-plans.md`.
 8. For documentation changes, follow `docs/contributing/documentation-standards.md`.
 9. For repository operations, follow this governance document.
 10. If automation, documentation, and local state disagree, stop and surface the inconsistency.

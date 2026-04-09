@@ -11,6 +11,14 @@ It is a characterization artifact, not a product requirement spec.
 - [google-meet.ts](../../entrypoints/content/providers/google-meet.ts)
 - [platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 - [index.ts](../../entrypoints/content/index.ts)
+- [settings.ts](../../entrypoints/content/overlay/settings.ts)
+- [visibility.ts](../../entrypoints/content/overlay/visibility.ts)
+- [header.ts](../../entrypoints/content/overlay/header.ts)
+- [footer.ts](../../entrypoints/content/overlay/footer.ts)
+
+Related contract:
+
+- [runtime-session-continuation-behavior-contract.md](./runtime-session-continuation-behavior-contract.md)
 
 ## Contract Rules
 
@@ -209,3 +217,7 @@ Rules:
 ## Change Control
 
 If behavior is intentionally changed in code, this contract must be updated in the same change set together with matching tests.
+
+Traceability matrix:
+
+- [google-meet-automation-traceability-matrix.md](../quality/references/google-meet-automation-traceability-matrix.md)

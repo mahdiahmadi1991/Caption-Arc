@@ -59,3 +59,5 @@ This matrix maps code-derived Google Meet behavior contracts to permanent automa
 - `GM-URL-*`, `GM-CTX-*`, `GM-PRES-*`, `GM-CAP-*`.
 2. Runtime smoke for provider host + marker presence remains available via `pnpm chrome:smoke:live google-meet <scenario>`.
 3. Deterministic marker and reset-guard contracts are covered in Vitest for CI safety.
+4. Runtime/session-continuation prompt and reuse-policy contracts are tracked in:
+- [runtime-session-continuation-traceability-matrix.md](./runtime-session-continuation-traceability-matrix.md)

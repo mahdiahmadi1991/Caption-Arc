@@ -12,6 +12,12 @@ Testing completion gate:
 2. [wsl-windows-chrome-cdp-quickstart.md](../../setup/wsl-windows-chrome-cdp-quickstart.md)
 - fast command-oriented quickstart for WSL + Windows Chrome CDP setup
 
+3. [google-meet-automation-traceability-matrix.md](./google-meet-automation-traceability-matrix.md)
+- Google Meet contract-to-test mapping
+
+4. [runtime-session-continuation-traceability-matrix.md](./runtime-session-continuation-traceability-matrix.md)
+- runtime/session-continuation contract-to-test mapping
+
 ## Command Summary
 
 ```bash

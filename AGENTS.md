@@ -18,7 +18,7 @@ Key rules:
 - Prefer graph-preserving merge commits over squash merges for normal integration and release flow.
 - Every merge to `main` must correspond to exactly one release version and one matching annotated tag in the form `vX.Y.Z`.
 - The Git tag, release version, and canonical project version must always stay aligned.
-- For non-trivial work, follow `docs/contributing/plans-standard.md` before implementation.
+- For non-trivial code/behavior work, follow `docs/contributing/execution-plans.md` before implementation.
 - For documentation updates, follow `docs/contributing/documentation-standards.md`.
 
 If repository automation, local state, and documentation disagree, stop and surface the inconsistency instead of guessing.
@@ -48,18 +48,23 @@ When adding or changing dependencies, check `package.json` first and prefer exis
 - Keep `docs/features/plans/` lightweight (pointer/index only). Move long plans to `docs/archive/feature-plans/`.
 - When behavior, architecture, setup, permissions, storage, messaging, release flow, or testing changes, update the relevant docs in the same change.
 - Follow detailed standards in `docs/contributing/documentation-standards.md`.
+- Follow business-doc update governance in `docs/contributing/business-documentation-governance.md`.
+- Follow behavior-contract governance in `docs/contributing/behavior-contract-governance.md`.
 - Run `pnpm docs:check` after documentation changes. Treat a failing docs check as a blocking issue.
+- Run `pnpm docs:check:business` when business-sensitive code surfaces change.
+- Run `pnpm docs:check:behavior` when behavior-sensitive code surfaces change.
 - The `Docs Guardrails` GitHub Actions workflow is required for markdown-governance enforcement on push/PR.
 - The `Quality Gates` GitHub Actions workflow is required for test and coverage enforcement on push/PR.
 - Treat `docs/archive/` as historical context. Do not load archived files unless the task explicitly requires decision history.
 
 ## Execution Plans
 
-- For non-trivial engineering work, create or update an Execution Plan before implementation.
+- For non-trivial code/behavior work, create or update an Execution Plan before implementation.
 - Planning standard: `docs/contributing/execution-plans.md`.
 - Active plans live in `docs/contributing/execution-plans/active/`.
 - Completed or superseded plans move to `docs/contributing/execution-plans/completed/`.
-- Do not start meaningful implementation before the relevant plan exists.
+- Docs-only updates do not require an Execution Plan by default unless explicitly requested by the repository owner or required by the planning standard.
+- Do not start meaningful implementation on plan-required code/behavior work before the relevant plan exists.
 - Plans that touch browser APIs, runtime behavior, permissions, packaging, or release flow must explicitly state Chrome and Firefox impact, any intentional browser gating, and the verification evidence required for both browsers.
 
 ## Required `docs/` layout

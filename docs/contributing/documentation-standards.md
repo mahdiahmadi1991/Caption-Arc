@@ -24,6 +24,19 @@
 - prefer concise, skimmable sections
 - use relative links
 
+## Business Documentation Sync Rules
+
+- for business-sensitive code changes, update the canonical business docs in `docs/product/` in the same change
+- follow `docs/contributing/business-documentation-governance.md` for scope and ownership
+- avoid splitting one business capability narrative across multiple competing docs
+
+## Behavior Contract Sync Rules
+
+- for behavior-sensitive code changes, update canonical behavior contracts in `docs/api/` in the same change
+- update matching traceability matrices in `docs/quality/references/`
+- follow `docs/contributing/behavior-contract-governance.md` for rule format and sync protocol
+- write deterministic, code-derived rules with stable rule IDs (`C-<DOMAIN>-<NNN>`)
+
 ## Public-Safety Rules
 
 Never include:
@@ -57,5 +70,7 @@ Use placeholders when needed:
 ## Automated Guardrails
 
 - run `pnpm docs:check` before opening or updating a PR
+- run `pnpm docs:check:business` when business-sensitive code surfaces changed
+- run `pnpm docs:check:behavior` when behavior-sensitive code surfaces changed
 - treat `docs:check` failures as blocking
-- CI re-runs this check to prevent out-of-contract markdown and broken links
+- CI re-runs these checks to prevent out-of-contract markdown and unsynced governance docs
