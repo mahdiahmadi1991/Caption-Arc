@@ -7,11 +7,16 @@ CaptionArc should feel precise, calm, and operational rather than loud or playfu
 Core idea:
 - capture spoken content clearly
 - translate it without noise
+- offer live AI guidance without sounding over-automated or autonomous
 - keep follow-up material practical and structured
+- signal that the product is built for real browser-meeting review, not only live display
 
 The visual system is built around:
 - the existing mint accent from the product UI
 - clean light surfaces with dark structural contrast
+- messaging that emphasizes browser support, live AI guidance, searchable follow-up, and local-first control
+- poster-like hero composition with one dominant message and restrained support detail
+- minimal boxed chrome so the assets read as brand surfaces, not mini dashboards
 - a compact mark that combines:
   - a speaker node
   - caption rails
