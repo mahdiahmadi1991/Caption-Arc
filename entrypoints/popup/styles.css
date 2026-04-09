@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "../shared/app-theme.css";
+@source "./**/*.{tsx,ts}";
+
+html {
+  width: 370px;
+  min-width: 370px;
+  max-width: 370px;
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+body,
+#root {
+  width: 370px;
+  min-width: 370px;
+  max-width: 370px;
+  margin: 0;
+  overflow: hidden;
+}

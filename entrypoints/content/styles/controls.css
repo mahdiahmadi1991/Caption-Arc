@@ -1,0 +1,184 @@
+.mc-resize {
+  position: absolute;
+  bottom: 4px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.mc-resize:hover {
+  opacity: 0.9;
+}
+
+.mc-resize-br {
+  right: 4px;
+  cursor: nwse-resize;
+}
+
+.mc-resize-bl {
+  left: 4px;
+  cursor: nesw-resize;
+}
+
+.mc-resize::before,
+.mc-resize::after {
+  content: "";
+  position: absolute;
+  background: var(--mc-border-strong);
+  border-radius: 1px;
+}
+
+.mc-resize-br::before {
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 2px;
+}
+
+.mc-resize-br::after {
+  bottom: 2px;
+  right: 2px;
+  width: 2px;
+  height: 8px;
+}
+
+.mc-resize-bl::before {
+  bottom: 2px;
+  left: 2px;
+  width: 8px;
+  height: 2px;
+}
+
+.mc-resize-bl::after {
+  bottom: 2px;
+  left: 2px;
+  width: 2px;
+  height: 8px;
+}
+
+.mc-resize-b {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  cursor: ns-resize;
+  bottom: 0px;
+}
+
+.mc-resize-b::before {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: var(--mc-border-strong);
+  border-radius: 2px;
+}
+
+.mc-resize-b::after {
+  display: none;
+}
+
+.mc-scroll-bottom {
+  position: absolute;
+  right: 12px;
+  bottom: 48px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--mc-border-strong) 92%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mc-header-bg) 94%, transparent);
+  color: var(--mc-text-muted);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.mc-scroll-bottom:hover {
+  background: var(--mc-surface-hover);
+  border-color: var(--mc-border-strong);
+  color: var(--mc-text);
+  transform: translateY(-1px);
+}
+
+.mc-scroll-bottom > svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+}
+
+.mc-floating-tooltip {
+  position: fixed;
+  max-width: 180px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px) scale(0.98);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+  pointer-events: none;
+  z-index: 1000001;
+}
+
+.mc-floating-tooltip::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid currentColor;
+  border-top: 1px solid currentColor;
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+  opacity: 0.18;
+}
+
+.mc-floating-tooltip[data-theme="light"] {
+  background: color-mix(in srgb, #ffffff 94%, transparent);
+  border-color: rgba(22, 26, 23, 0.12);
+  color: #161a17;
+}
+
+.mc-floating-tooltip[data-theme="dark"] {
+  background: color-mix(in srgb, #171b18 94%, transparent);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f5f7f4;
+}
+
+.mc-floating-tooltip[data-placement="bottom"]::before {
+  top: -6px;
+}
+
+.mc-floating-tooltip[data-placement="top"]::before {
+  bottom: -6px;
+  transform: translateX(-50%) rotate(225deg);
+}
+
+.mc-floating-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}

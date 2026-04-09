@@ -1,0 +1,72 @@
+.mc-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.mc-wave-bar {
+  width: 3px;
+  height: 6px;
+  background: var(--mc-border-strong);
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+
+.mc-wave.mc-active .mc-wave-bar {
+  background: var(--mc-accent);
+  animation: mcWave 1s ease-in-out infinite;
+}
+
+.mc-wave.mc-active .mc-wave-bar:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.mc-wave.mc-active .mc-wave-bar:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.mc-wave.mc-active .mc-wave-bar:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes mcWave {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+@keyframes mcEmptyWave {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1.35);
+  }
+}
+
+@keyframes mcFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mcPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}

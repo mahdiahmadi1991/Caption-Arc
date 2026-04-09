@@ -1,0 +1,104 @@
+import { useEffect } from "react";
+import { IconButton } from "../../shared/icon-button";
+import { useT } from "../../shared/i18n";
+import { CloseIcon } from "../../shared/icons";
+
+type ConfirmDialogProps = {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  busy?: boolean;
+  tone?: "neutral" | "danger";
+};
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  busy = false,
+  tone = "neutral",
+}: ConfirmDialogProps) {
+  const t = useT();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) {
+        onCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [busy, onCancel, open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const confirmClassName =
+    tone === "danger"
+      ? "border-[var(--app-danger-border)] bg-[var(--app-danger-soft)] text-[var(--app-danger)] hover:bg-[var(--app-danger-hover)]"
+      : "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)] hover:bg-[var(--app-surface-strong)]";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--app-bg)_68%,transparent)] px-4">
+      <button
+        type="button"
+        aria-label={t("history.confirmDialog.closeDialog")}
+        onClick={busy ? undefined : onCancel}
+        className="absolute inset-0"
+      />
+      <div className="relative w-full max-w-md rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-6 shadow-[0_24px_60px_var(--app-shadow)]">
+        <div className="absolute right-4 top-4">
+          <IconButton
+            onClick={onCancel}
+            disabled={busy}
+            icon={<CloseIcon />}
+            label={t("history.confirmDialog.closeDialog")}
+            size="sm"
+          />
+        </div>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--app-accent)]">
+          {t("history.confirmDialog.confirmAction")}
+        </p>
+        <h2 className="mt-3 text-xl font-semibold text-[var(--app-text)]">
+          {title}
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--app-text-muted)]">
+          {description}
+        </p>
+
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="h-10 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 text-sm font-medium text-[var(--app-text-muted)] transition-colors hover:text-[var(--app-text)] disabled:cursor-default disabled:opacity-60"
+          >
+            {t("common.actions.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className={`h-10 rounded-full border px-4 text-sm font-medium transition-colors disabled:cursor-default disabled:opacity-60 ${confirmClassName}`}
+          >
+            {busy ? t("common.actions.working") : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
