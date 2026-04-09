@@ -34,7 +34,6 @@ The local bootstrap history originally started at `v2.0.0` and ended at `v2.3.0`
 - `CHANGELOG.md`
 - `tests/google-meet/ui-i18n.contract.test.ts`
 - `docs/operations/release-notes/release-1.3.0.md`
-- `docs/contributing/execution-plans/completed/2026-04-09-curated-bootstrap-git-history.md`
 - `docs/contributing/repository-governance.md`
 
 ## Constraints

@@ -9,5 +9,5 @@
   <rect x="0" y="0" width="1180" height="320" rx="42" fill="#10A37F" fill-opacity="0.06"/>
   <image href="logo-mark.svg" x="68" y="70" width="180" height="180"/>
   <text x="290" y="156" fill="#161A17" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="74" font-weight="700">CaptionArc</text>
-  <text x="294" y="212" fill="#5E655F" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Real-time browser meeting captions and AI translation</text>
+  <text x="294" y="212" fill="#5E655F" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Browser meeting captions, translation, and AI follow-up</text>
 </svg>

@@ -9,6 +9,10 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-09-readme-and-brand-asset-refresh.md](./2026-04-09-readme-and-brand-asset-refresh.md)
+- [2026-04-09-public-capability-copy-alignment.md](./2026-04-09-public-capability-copy-alignment.md)
+- [2026-04-09-brand-banner-redesign.md](./2026-04-09-brand-banner-redesign.md)
+
 - [2026-04-06-debug-logging-observability-foundation.md](./2026-04-06-debug-logging-observability-foundation.md)
 - [2026-04-06-diagnostics-collector-test-hardening.md](./2026-04-06-diagnostics-collector-test-hardening.md)
 - [2026-04-06-project-wide-diagnostics-expansion.md](./2026-04-06-project-wide-diagnostics-expansion.md)

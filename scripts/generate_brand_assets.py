@@ -239,12 +239,21 @@ def create_icon(size: int) -> Image.Image:
 
 
 @dataclass
+class SupportFeature:
+    title: str
+    detail: str
+
+
+@dataclass
 class BannerCopy:
     title: str
     subtitle: str
     eyebrow: str
     chips: tuple[str, ...]
-    footer: tuple[str, ...]
+    feature_columns: tuple[SupportFeature, ...]
+    panel_title: str
+    panel_body: str
+    panel_points: tuple[str, ...]
 
 
 def draw_chip(draw: ImageDraw.ImageDraw, x: int, y: int, text: str, fill: str, outline: str, text_color: str) -> int:
@@ -336,122 +345,212 @@ def draw_centered_badge(
     )
 
 
+def draw_rule(
+    draw: ImageDraw.ImageDraw,
+    x1: int,
+    y: int,
+    x2: int,
+    color: str,
+    *,
+    width: int = 2,
+) -> None:
+    draw.line((x1, y, x2, y), fill=hex_rgba(color), width=width)
+
+
+def draw_feature_columns(
+    draw: ImageDraw.ImageDraw,
+    *,
+    x: int,
+    y: int,
+    width: int,
+    features: tuple[SupportFeature, ...],
+) -> None:
+    column_gap = 24
+    column_width = (width - (column_gap * (len(features) - 1))) // len(features)
+    title_font = get_font(24, bold=True)
+    body_font = get_font(18, bold=False)
+
+    for index, feature in enumerate(features):
+        column_x = x + index * (column_width + column_gap)
+        draw.rounded_rectangle(
+            (column_x, y, column_x + 58, y + 6),
+            radius=3,
+            fill=hex_rgba(ACCENT),
+        )
+        if index < len(features) - 1:
+            draw.line(
+                (column_x + column_width + (column_gap // 2), y, column_x + column_width + (column_gap // 2), y + 134),
+                fill=hex_rgba("#D7DED8"),
+                width=2,
+            )
+        draw.multiline_text(
+            (column_x, y + 26),
+            wrap_text(draw, feature.title, title_font, column_width - 16),
+            font=title_font,
+            fill=hex_rgba(TEXT),
+            spacing=6,
+        )
+        draw.multiline_text(
+            (column_x, y + 76),
+            wrap_text(draw, feature.detail, body_font, column_width - 16),
+            font=body_font,
+            fill=hex_rgba(TEXT_MUTED),
+            spacing=7,
+        )
+
+
+def draw_panel_points(
+    draw: ImageDraw.ImageDraw,
+    *,
+    x: int,
+    y: int,
+    width: int,
+    items: tuple[str, ...],
+    item_height: int = 62,
+    gap: int = 16,
+    font_size: int = 21,
+    bottom_limit: int | None = None,
+) -> None:
+    font = get_font(font_size, bold=False)
+    total_height = len(items) * item_height + max(0, len(items) - 1) * gap
+    if bottom_limit is not None and y + total_height > bottom_limit:
+        y = bottom_limit - total_height
+
+    for index, item in enumerate(items):
+        item_y = y + index * (item_height + gap)
+        draw.rounded_rectangle(
+            (x, item_y, x + width, item_y + item_height),
+            radius=item_height // 2,
+            fill=hex_rgba(SURFACE, 214 if index != 0 else 236),
+            outline=hex_rgba(ACCENT if index == 0 else "#D7DED8", 220),
+            width=2,
+        )
+        dot_size = 10
+        dot_y = item_y + ((item_height - dot_size) // 2)
+        draw.ellipse(
+            (x + 18, dot_y, x + 18 + dot_size, dot_y + dot_size),
+            fill=hex_rgba(ACCENT if index == 0 else TEXT_MUTED),
+        )
+        bbox = draw.textbbox((0, 0), item, font=font)
+        text_height = bbox[3] - bbox[1]
+        draw.text(
+            (x + 44, item_y + ((item_height - text_height) / 2) - 2),
+            item,
+            font=font,
+            fill=hex_rgba(TEXT if index != 0 else ACCENT_STRONG),
+        )
+
+
 def create_banner(size: tuple[int, int], copy: BannerCopy, path: Path) -> None:
     width, height = size
     image = vertical_gradient(size, "#FDFDF9", CREAM)
-    image.alpha_composite(radial_glow(size, ACCENT, (0.14, 0.16), 0.52))
-    image.alpha_composite(radial_glow(size, "#BDEADD", (0.84, 0.78), 0.44))
+    image.alpha_composite(radial_glow(size, ACCENT, (0.12, 0.18), 0.58))
+    image.alpha_composite(radial_glow(size, "#BDEADD", (0.9, 0.14), 0.36))
+    image.alpha_composite(radial_glow(size, "#CAE7DE", (0.86, 0.84), 0.34))
 
-    panel_box = (1048, 78, width - 88, height - 88)
-    paste_shadow(image, panel_box, 38, 38)
+    panel_box = (1006, 70, width - 84, height - 70)
+    paste_shadow(image, panel_box, 44, 28)
     panel = Image.new("RGBA", size, (0, 0, 0, 0))
     panel_draw = ImageDraw.Draw(panel)
     panel_draw.rounded_rectangle(
         panel_box,
-        radius=38,
-        fill=hex_rgba(SURFACE, 244),
-        outline=hex_rgba(ACCENT, 68),
+        radius=44,
+        fill=hex_rgba(SURFACE, 236),
+        outline=hex_rgba("#CBE7DE"),
         width=2,
     )
     image.alpha_composite(panel)
 
     panel_center_x = (panel_box[0] + panel_box[2]) // 2
-    icon_size = 196
+    icon_size = 212
     icon = create_icon(icon_size)
-    image.alpha_composite(icon, (panel_center_x - (icon_size // 2), 112))
+    image.alpha_composite(icon, (panel_center_x - (icon_size // 2), 118))
 
     draw = ImageDraw.Draw(image)
     eyebrow_font = get_font(28, bold=True)
-    title_font = get_font(70, bold=True)
-    subtitle_font = get_font(30, bold=False)
-    detail_font = get_font(23, bold=False)
+    title_font = get_font(82, bold=True)
+    subtitle_font = get_font(31, bold=False)
+    panel_title_font = get_font(34, bold=True)
+    panel_body_font = get_font(21, bold=False)
 
     draw.text((92, 90), copy.eyebrow, font=eyebrow_font, fill=hex_rgba(ACCENT))
     draw.text((92, 142), copy.title, font=title_font, fill=hex_rgba(TEXT))
-    wrapped_subtitle = wrap_text(draw, copy.subtitle.replace("\n", " "), subtitle_font, 760)
+    wrapped_subtitle = wrap_text(draw, copy.subtitle.replace("\n", " "), subtitle_font, 790)
     draw.multiline_text(
         (92, 242),
         wrapped_subtitle,
         font=subtitle_font,
         fill=hex_rgba(TEXT_MUTED),
-        spacing=12,
+        spacing=14,
     )
 
     chip_x = 92
     for chip in copy.chips:
-        chip_x += draw_chip(draw, chip_x, 372, chip, MIST, ACCENT, ACCENT) + 16
+        chip_x += draw_chip(draw, chip_x, 392, chip, MIST, ACCENT, ACCENT) + 14
 
-    right_col_x1, right_col_x2 = 1088, width - 128
+    draw_rule(draw, 92, 470, 922, "#D4DDD7")
+    draw_feature_columns(
+        draw,
+        x=92,
+        y=518,
+        width=830,
+        features=copy.feature_columns,
+    )
+
+    right_col_x1, right_col_x2 = 1050, width - 124
     right_col_width = right_col_x2 - right_col_x1
 
-    right_title = "Live meeting toolkit"
-    title_bbox = draw.textbbox((0, 0), right_title, font=get_font(26, bold=True))
+    title_bbox = draw.multiline_textbbox(
+        (0, 0),
+        wrap_text(draw, copy.panel_title, panel_title_font, right_col_width),
+        font=panel_title_font,
+        spacing=8,
+        align="center",
+    )
     title_width = title_bbox[2] - title_bbox[0]
-    draw.text(
+    draw.multiline_text(
         (right_col_x1 + (right_col_width - title_width) / 2, 360),
-        right_title,
-        font=get_font(26, bold=True),
+        wrap_text(draw, copy.panel_title, panel_title_font, right_col_width),
+        font=panel_title_font,
         fill=hex_rgba(TEXT),
+        spacing=8,
+        align="center",
     )
 
     wrapped_right_subtitle = wrap_text(
         draw,
-        "Capture, translate, review, and summarize browser meeting sessions.",
-        get_font(21, bold=False),
-        right_col_width - 42,
+        copy.panel_body,
+        panel_body_font,
+        right_col_width - 18,
     )
     subtitle_bbox = draw.multiline_textbbox(
         (0, 0),
         wrapped_right_subtitle,
-        font=get_font(21, bold=False),
+        font=panel_body_font,
         spacing=8,
         align="center",
     )
     subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
     draw.multiline_text(
-        (right_col_x1 + (right_col_width - subtitle_width) / 2, 400),
+        (right_col_x1 + (right_col_width - subtitle_width) / 2, 452),
         wrapped_right_subtitle,
-        font=get_font(21, bold=False),
+        font=panel_body_font,
         fill=hex_rgba(TEXT_MUTED),
         spacing=8,
         align="center",
     )
-    draw_info_card(draw, (92, 482, 676, 570), copy.footer[0])
-    draw_info_card(draw, (92, 592, 676, 714), copy.footer[1])
-    draw_info_card(draw, (92, 736, 676, 824), copy.footer[2])
 
-    badge_x1 = panel_center_x - 154
-    badge_x2 = panel_center_x + 154
-
-    draw_centered_badge(
+    draw_rule(draw, right_col_x1 + 34, 552, right_col_x2 - 34, "#D4DDD7")
+    draw_panel_points(
         draw,
-        (badge_x1, 496, badge_x2, 570),
-        "OpenAI · 19+ languages",
-        fill=MIST,
-        outline=ACCENT,
-        text_color=ACCENT,
-        font_size=19,
-        bold=False,
-    )
-    draw_centered_badge(
-        draw,
-        (badge_x1, 592, badge_x2, 666),
-        "Local-first history",
-        fill=SURFACE,
-        outline="#D7DED8",
-        text_color=TEXT,
-        font_size=19,
-        bold=False,
-    )
-    draw_centered_badge(
-        draw,
-        (badge_x1, 688, badge_x2, 762),
-        "Profile-based summaries",
-        fill=SURFACE,
-        outline="#D7DED8",
-        text_color=TEXT,
-        font_size=19,
-        bold=False,
+        x=right_col_x1 + 26,
+        y=584,
+        width=right_col_width - 52,
+        items=copy.panel_points,
+        item_height=58,
+        gap=12,
+        font_size=20,
+        bottom_limit=panel_box[3] - 26,
     )
 
     image.save(path)
@@ -460,74 +559,84 @@ def create_banner(size: tuple[int, int], copy: BannerCopy, path: Path) -> None:
 def create_store_banner(path: Path) -> None:
     size = (1400, 560)
     image = vertical_gradient(size, "#FBFCF8", CREAM)
-    image.alpha_composite(radial_glow(size, ACCENT, (0.16, 0.2), 0.6))
+    image.alpha_composite(radial_glow(size, ACCENT, (0.12, 0.22), 0.62))
+    image.alpha_composite(radial_glow(size, "#C8EADF", (0.82, 0.14), 0.32))
     draw = ImageDraw.Draw(image)
 
-    panel_box = (936, 58, 1324, 502)
-    paste_shadow(image, panel_box, 42, 34)
+    panel_box = (912, 36, 1336, 526)
+    paste_shadow(image, panel_box, 42, 28)
     panel = Image.new("RGBA", size, (0, 0, 0, 0))
     panel_draw = ImageDraw.Draw(panel)
     panel_draw.rounded_rectangle(
         panel_box,
         radius=42,
-        fill=hex_rgba(SURFACE, 244),
-        outline=hex_rgba(ACCENT, 68),
+        fill=hex_rgba(SURFACE, 236),
+        outline=hex_rgba("#CBE7DE"),
         width=2,
     )
     image.alpha_composite(panel)
 
-    image.alpha_composite(create_icon(168), (1048, 112))
+    image.alpha_composite(create_icon(176), (1036, 66))
 
     eyebrow_font = get_font(22, bold=True)
-    title_font = get_font(52, bold=True)
-    copy_font = get_font(25, bold=False)
+    title_font = get_font(56, bold=True)
+    copy_font = get_font(23, bold=False)
     panel_title_font = get_font(22, bold=True)
     panel_copy_font = get_font(18, bold=False)
-    small_font = get_font(18, bold=False)
+    small_font = get_font(17, bold=False)
 
     draw.text((76, 76), "CaptionArc", font=eyebrow_font, fill=hex_rgba(ACCENT))
     draw.multiline_text(
         (76, 122),
-        wrap_text(draw, "Browser meeting captions translated live.", title_font, 760),
+        wrap_text(draw, "Browser meeting captions, translated with live AI help.", title_font, 710),
         font=title_font,
         fill=hex_rgba(TEXT),
-        spacing=8,
+        spacing=6,
     )
     draw.multiline_text(
-        (76, 284),
+        (76, 312),
         wrap_text(
             draw,
-            "Google Meet, Microsoft Teams Web, and Zoom Web App. Searchable meeting history. AI summaries. Local-first setup.",
+            "Capture on Google Meet, Microsoft Teams Web, and Zoom Web App. Review later with meeting profiles, searchable history, Markdown export, and local-first continuity.",
             copy_font,
-            760,
+            726,
         ),
         font=copy_font,
         fill=hex_rgba(TEXT_MUTED),
-        spacing=10,
+        spacing=8,
     )
 
     chip_x = 76
-    for label in ("OpenAI", "GPT-5 family", "19+ languages"):
-        chip_x += draw_chip(draw, chip_x, 424, label, MIST, ACCENT, ACCENT) + 12
+    for label in ("Chrome + Firefox", "AI assistant", "27 languages"):
+        chip_x += draw_chip(draw, chip_x, 454, label, MIST, ACCENT, ACCENT) + 12
 
-    right_col_x1, right_col_x2 = 984, 1276
+    draw_rule(draw, 76, 520, 868, "#D4DDD7")
+
+    right_col_x1, right_col_x2 = 968, 1282
     right_col_width = right_col_x2 - right_col_x1
-
-    panel_title = "Capture and translate live"
-    panel_title_bbox = draw.textbbox((0, 0), panel_title, font=panel_title_font)
+    panel_title = wrap_text(draw, "Built for live help and review", panel_title_font, right_col_width)
+    panel_title_bbox = draw.multiline_textbbox(
+        (0, 0),
+        panel_title,
+        font=panel_title_font,
+        spacing=6,
+        align="center",
+    )
     panel_title_width = panel_title_bbox[2] - panel_title_bbox[0]
-    draw.text(
-        (right_col_x1 + (right_col_width - panel_title_width) / 2, 310),
+    draw.multiline_text(
+        (right_col_x1 + (right_col_width - panel_title_width) / 2, 266),
         panel_title,
         font=panel_title_font,
         fill=hex_rgba(ACCENT),
+        spacing=6,
+        align="center",
     )
 
     panel_copy = wrap_text(
         draw,
-        "For Google Meet, Microsoft Teams Web, and Zoom Web App.",
+        "Use live guidance in the moment, then search, export, and summarize later.",
         panel_copy_font,
-        right_col_width - 8,
+        right_col_width - 6,
     )
     panel_copy_bbox = draw.multiline_textbbox(
         (0, 0),
@@ -538,7 +647,7 @@ def create_store_banner(path: Path) -> None:
     )
     panel_copy_width = panel_copy_bbox[2] - panel_copy_bbox[0]
     draw.multiline_text(
-        (right_col_x1 + (right_col_width - panel_copy_width) / 2, 346),
+        (right_col_x1 + (right_col_width - panel_copy_width) / 2, 326),
         panel_copy,
         font=panel_copy_font,
         fill=hex_rgba(TEXT_MUTED),
@@ -546,30 +655,22 @@ def create_store_banner(path: Path) -> None:
         align="center",
     )
 
-    draw_centered_badge(
+    draw_rule(draw, right_col_x1 + 20, 390, right_col_x2 - 20, "#D4DDD7")
+    draw_panel_points(
         draw,
-        (1022, 408, 1238, 458),
-        "History + summaries",
-        fill=SURFACE,
-        outline="#D7DED8",
-        text_color=TEXT,
-        font_size=18,
-        bold=False,
-    )
-    draw_centered_badge(
-        draw,
-        (1034, 468, 1226, 516),
-        "Local-first setup",
-        fill=MIST,
-        outline=ACCENT,
-        text_color=ACCENT,
+        x=right_col_x1 + 18,
+        y=408,
+        width=right_col_width - 36,
+        items=("Meeting profiles", "Local-first archive"),
+        item_height=44,
+        gap=10,
         font_size=17,
-        bold=False,
+        bottom_limit=panel_box[3] - 16,
     )
 
     draw.text(
-        (76, 506),
-        "Built for noisy, machine-generated meeting captions with readable translation and organized review later.",
+        (76, 528),
+        "Built for multilingual meetings, accessibility support, and practical post-meeting follow-up.",
         font=small_font,
         fill=hex_rgba(TEXT_FAINT),
     )
@@ -596,7 +697,7 @@ def create_logo_lockup(path: Path, dark_mode: bool) -> None:
     draw.text((290, 106), "CaptionArc", font=get_font(74, bold=True), fill=hex_rgba(title_color))
     draw.text(
         (294, 198),
-        "Real-time browser meeting captions and AI translation",
+        "Browser meeting captions, translation, and AI follow-up",
         font=get_font(28, bold=False),
         fill=hex_rgba(subtitle_color),
     )
@@ -677,7 +778,7 @@ def generate_svg_assets() -> None:
   <rect x="0" y="0" width="1180" height="320" rx="42" fill="{ACCENT}" fill-opacity="0.06"/>
   <image href="logo-mark.svg" x="68" y="70" width="180" height="180"/>
   <text x="290" y="156" fill="{TEXT}" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="74" font-weight="700">CaptionArc</text>
-  <text x="294" y="212" fill="{TEXT_MUTED}" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Real-time browser meeting captions and AI translation</text>
+  <text x="294" y="212" fill="{TEXT_MUTED}" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Browser meeting captions, translation, and AI follow-up</text>
 </svg>
 """,
     )
@@ -695,7 +796,7 @@ def generate_svg_assets() -> None:
   <rect width="1180" height="320" rx="42" fill="{ACCENT}" fill-opacity="0.08"/>
   <image href="logo-mark.svg" x="68" y="70" width="180" height="180"/>
   <text x="290" y="156" fill="{CREAM}" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="74" font-weight="700">CaptionArc</text>
-  <text x="294" y="212" fill="#C5CDC7" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Real-time browser meeting captions and AI translation</text>
+  <text x="294" y="212" fill="#C5CDC7" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Browser meeting captions, translation, and AI follow-up</text>
 </svg>
 """,
     )
@@ -720,15 +821,27 @@ def main() -> None:
     create_banner(
         (1600, 900),
         BannerCopy(
-            eyebrow="AI TRANSLATION FOR BROWSER MEETINGS",
+            eyebrow="BROWSER MEETING CAPTIONS, TRANSLATED LIVE",
             title="CaptionArc",
-            subtitle="Capture live meeting captions.\nTranslate them clearly.\nReview everything later.",
+            subtitle="Capture live browser meeting captions.\nTranslate them clearly.\nGet AI guidance and review later.",
             chips=("Google Meet", "Microsoft Teams Web", "Zoom Web App"),
-            footer=(
-                "Searchable meeting history with starring and exports",
-                "Summary profiles for interviews, syncs, client calls, and general meetings",
-                "Local-first setup with OpenAI",
+            feature_columns=(
+                SupportFeature(
+                    title="Live overlay",
+                    detail="Keep captions and translation in view while the meeting keeps moving.",
+                ),
+                SupportFeature(
+                    title="AI guidance",
+                    detail="Shape assistant responses and summaries with reusable meeting profiles.",
+                ),
+                SupportFeature(
+                    title="Local-first archive",
+                    detail="Search history, export Markdown, and keep an encrypted backup when needed.",
+                ),
             ),
+            panel_title="Built for real meeting follow-up",
+            panel_body="A calmer, more useful workflow from live captions to post-meeting review.",
+            panel_points=("Chrome + Firefox", "27-language catalog", "Assistant + summaries"),
         ),
         BRANDING_DIR / "github-banner.png",
     )
