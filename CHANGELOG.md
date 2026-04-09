@@ -12,6 +12,13 @@ The format follows the repository governance contract:
 
 - No unreleased changes.
 
+## 1.1.0 - 2026-04-09
+
+### Added
+
+- Repository-local Codex configuration tuned for long-thread work on this codebase.
+- A public-safe `docs/assets/` index to reserve documentation asset storage under version control.
+
 ## 1.0.3 - 2026-04-09
 
 ### Added
