@@ -13,9 +13,9 @@ Follow `docs/contributing/repository-governance.md` for repository operations, b
 
 Key rules:
 - `main` is the protected release branch.
+- `develope` is the long-lived integration branch for normal work.
 - Use short-lived topic branches and PRs for normal work.
-- Keep `main` history linear and clean.
-- Prefer squash merge for PRs into `main`.
+- Prefer graph-preserving merge commits over squash merges for normal integration and release flow.
 - Every merge to `main` must correspond to exactly one release version and one matching annotated tag in the form `vX.Y.Z`.
 - The Git tag, release version, and canonical project version must always stay aligned.
 - For non-trivial work, follow `docs/contributing/plans-standard.md` before implementation.
