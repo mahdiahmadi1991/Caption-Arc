@@ -12,6 +12,7 @@ import {
   type SupportedUiLocale,
 } from "../shared/i18n";
 import { AppLoadingScreen } from "../shared/loading-screen";
+import { TermsGate } from "../shared/terms-gate";
 import "./styles.css";
 
 const meetingHistoryRootElement = document.getElementById("root");
@@ -80,7 +81,9 @@ function MeetingHistoryRoot() {
     <React.StrictMode>
       <I18nProvider locale={locale}>
         <div className="relative min-h-screen">
-          <App />
+          <TermsGate surface="meeting-history">
+            <App />
+          </TermsGate>
           {!localeReady && (
             <AppLoadingScreen
               variant="overlay"

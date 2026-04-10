@@ -422,6 +422,7 @@ export function buildSharedSettingsPayload(settings: Settings): SharedSettings {
     overlayOpacity: settings.overlayOpacity,
     overlayClickThrough: settings.overlayClickThrough,
     storeMeetingChat: settings.storeMeetingChat,
+    legalRiskAcknowledgements: { ...settings.legalRiskAcknowledgements },
   };
 }
 
@@ -661,6 +662,32 @@ export function parseSharedSettingsPayload(payload: unknown): SharedSettings | n
       typeof payload.storeMeetingChat === "boolean"
         ? payload.storeMeetingChat
         : fallback.storeMeetingChat,
+    legalRiskAcknowledgements:
+      typeof payload.legalRiskAcknowledgements === "object" &&
+      payload.legalRiskAcknowledgements !== null
+        ? {
+            ...(typeof payload.legalRiskAcknowledgements.storeMeetingChat === "number"
+              ? {
+                  storeMeetingChat:
+                    payload.legalRiskAcknowledgements.storeMeetingChat,
+                }
+              : {}),
+            ...(typeof payload.legalRiskAcknowledgements.captureStartupAlways === "number"
+              ? {
+                  captureStartupAlways:
+                    payload.legalRiskAcknowledgements.captureStartupAlways,
+                }
+              : {}),
+            ...(typeof payload.legalRiskAcknowledgements
+              .captionActivationAutomatic === "number"
+              ? {
+                  captionActivationAutomatic:
+                    payload.legalRiskAcknowledgements
+                      .captionActivationAutomatic,
+                }
+              : {}),
+          }
+        : fallback.legalRiskAcknowledgements,
   };
 }
 

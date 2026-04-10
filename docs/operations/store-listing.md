@@ -2,6 +2,13 @@
 
 This document provides a formal draft for browser-extension store submission text.
 
+## Canonical Public Legal URLs
+
+- Privacy Policy: `https://github.com/mahdiahmadi1991/caption-arc/blob/main/docs/security/privacy-policy.md`
+- Terms of Service: `https://github.com/mahdiahmadi1991/caption-arc/blob/main/docs/security/terms-of-service.md`
+
+These URLs are the current fixed public links used for store/public surfaces and should stay aligned with the release branch before store submission.
+
 ## Short Description
 
 Capture, translate, and follow up on browser-meeting captions with live AI help.
@@ -76,3 +83,7 @@ Used for background scheduling and retry of durable summary jobs.
 - Verify platform support wording matches current implementation.
 - Verify permission list matches current manifest.
 - Verify privacy language matches `docs/security/privacy-disclosure-notes.md`.
+- Verify the published privacy-policy URL in the store dashboard field matches the canonical public URL above.
+- Verify the in-product footer opens the dedicated internal legal pages backed by the same markdown sources as the canonical public URLs above.
+- Verify first-run Terms acceptance opens the dedicated Terms page instead of an options-page modal.
+- Verify store copy does not conflict with `docs/security/privacy-policy.md` or `docs/security/terms-of-service.md`.

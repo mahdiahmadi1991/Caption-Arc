@@ -9,6 +9,16 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-10-legal-compliance-hardening-wave-one.md](./2026-04-10-legal-compliance-hardening-wave-one.md)
+- [2026-04-10-terms-gate-review-fixes.md](./2026-04-10-terms-gate-review-fixes.md)
+- [2026-04-10-close-mode-terms-accept-fix.md](./2026-04-10-close-mode-terms-accept-fix.md)
+- [2026-04-10-close-mode-terms-decline-parity.md](./2026-04-10-close-mode-terms-decline-parity.md)
+- [2026-04-10-install-terms-decline-close-fix.md](./2026-04-10-install-terms-decline-close-fix.md)
+- [2026-04-10-terms-decline-close-path-fix.md](./2026-04-10-terms-decline-close-path-fix.md)
+- [2026-04-10-terms-decline-state-and-return-flow.md](./2026-04-10-terms-decline-state-and-return-flow.md)
+- [2026-04-10-universal-terms-gate.md](./2026-04-10-universal-terms-gate.md)
+- [2026-04-10-legal-pages-and-first-run-terms-refactor.md](./2026-04-10-legal-pages-and-first-run-terms-refactor.md)
+- [2026-04-10-shared-legal-chrome-and-first-run-terms.md](./2026-04-10-shared-legal-chrome-and-first-run-terms.md)
 - [2026-04-10-behavior-contract-gap-closure-wave-four.md](./2026-04-10-behavior-contract-gap-closure-wave-four.md)
 - [2026-04-10-behavior-contract-gap-closure-wave-three.md](./2026-04-10-behavior-contract-gap-closure-wave-three.md)
 - [2026-04-09-behavior-contract-18-docs-copilot-execution.md](./2026-04-09-behavior-contract-18-docs-copilot-execution.md)

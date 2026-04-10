@@ -5,6 +5,7 @@ import {
   queueCloudSyncReconciliation,
   runCloudSyncNow,
   scheduleCloudSyncRun,
+  stopCloudSyncEngine,
   syncCheckpointConnections,
 } from "./engine";
 import {
@@ -253,6 +254,11 @@ export async function retryCloudSync(provider?: CloudSyncProvider): Promise<{
     taskCount: existingTasks.length,
   });
   return { success: true };
+}
+
+export async function shutdownCloudSyncForTermsRevocation(): Promise<void> {
+  await cloudSyncDiagnostics.warn("cloud_sync_shutdown_terms_revoked");
+  await stopCloudSyncEngine();
 }
 
 export async function connectCloudSyncProvider(provider: CloudSyncProvider): Promise<{

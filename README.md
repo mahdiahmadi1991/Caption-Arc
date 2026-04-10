@@ -17,6 +17,8 @@ CaptionArc is a browser extension for people who rely on live captions during we
 
 - [Get the latest release artifacts](https://github.com/mahdiahmadi1991/caption-arc/releases)
 - [Build from source](#quick-start)
+- [Privacy Policy](./docs/security/privacy-policy.md)
+- [Terms of Service](./docs/security/terms-of-service.md)
 - [Read privacy notes](./docs/security/privacy-disclosure-notes.md)
 
 **Supported meeting surfaces**
@@ -113,6 +115,11 @@ CaptionArc is local-first, but it is not offline-only. The current repository su
 - Capture is tied to supported browser meeting pages and startup behavior can require explicit approval before capture begins.
 
 If you want implementation-aligned privacy details, start with [docs/security/privacy-disclosure-notes.md](./docs/security/privacy-disclosure-notes.md) and [docs/architecture/overview.md](./docs/architecture/overview.md).
+
+Draft public-facing legal documents are available here:
+
+- [Privacy Policy](./docs/security/privacy-policy.md)
+- [Terms of Service](./docs/security/terms-of-service.md)
 
 ---
 

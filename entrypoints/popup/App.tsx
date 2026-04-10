@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from "../background/constants";
 import type { Settings, SummaryJobStatus } from "../background/types";
 import { getOpenAiModels } from "../options/components/constants";
 import { BrandMark } from "../shared/brand";
+import { LegalFooter } from "../shared/extension-page-chrome";
 import { IconButton } from "../shared/icon-button";
 import {
   getOpenAiServiceAvailability,
@@ -666,7 +667,6 @@ export default function App() {
     : t("popup.setup.verificationNotTested");
   const aiServiceConfigured = isOpenAiConfigured(settings);
   const manifestVersion = useMemo(() => chrome.runtime.getManifest().version, []);
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
   const overlayVisibilityDisabled = settings.captureStartupBehavior === "off";
   const themeToggleLabels = useMemo<ThemeToggleLabels>(
     () => ({
@@ -911,7 +911,7 @@ export default function App() {
                 </p>
                 {isDevelopmentBuild ? (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_82%,transparent)] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.14em] text-[var(--app-accent)]">
-                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--app-accent)]" />
+                    <span className="inline-flex h-1.5 w-3.5 rounded-full bg-[var(--app-accent)]" />
                     {t("popup.header.devBadge")}
                   </span>
                 ) : null}
@@ -1020,35 +1020,24 @@ export default function App() {
           />
         </div>
 
-        <footer className="mt-3 border-t border-[color:color-mix(in_srgb,var(--app-border)_86%,transparent)] pt-3 text-[10px] text-[var(--app-text-faint)]">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <BrandMark size={18} theme={resolvedTheme} className="shrink-0 opacity-80" />
-              <div className="min-w-0">
-                <p className="font-medium uppercase tracking-[0.16em] text-[var(--app-text-muted)]">
-                  {t("common.appName")}
-                </p>
-                <p className="mt-1 text-[9px] leading-none">
-                  {t("popup.footer.version", { version: manifestVersion })}
-                </p>
+        <div className="mt-3 border-t border-[color:color-mix(in_srgb,var(--app-border)_86%,transparent)] pt-3">
+          <LegalFooter
+            version={manifestVersion}
+            compact
+            accessory={
+              <div
+                className={appearanceLoading ? "pointer-events-none opacity-70" : undefined}
+              >
+                <ThemeToggle
+                  value={settings.appearance}
+                  onChange={updateAppearance}
+                  className="scale-[0.86] shadow-none"
+                  labels={themeToggleLabels}
+                />
               </div>
-            </div>
-
-            <div className={appearanceLoading ? "pointer-events-none opacity-70" : undefined}>
-              <ThemeToggle
-                value={settings.appearance}
-                onChange={updateAppearance}
-                className="scale-[0.86] shadow-none"
-                labels={themeToggleLabels}
-              />
-            </div>
-          </div>
-
-          <div className="mt-2 flex items-center justify-between gap-2 text-[9px] leading-none text-[var(--app-text-faint)]">
-            <span>{t("common.quickAccess")}</span>
-            <span>{t("popup.footer.copyright", { year: currentYear })}</span>
-          </div>
-        </footer>
+            }
+          />
+        </div>
       </div>
     </div>
   );

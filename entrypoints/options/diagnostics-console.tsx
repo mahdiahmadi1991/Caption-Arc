@@ -647,7 +647,7 @@ export function DiagnosticsConsoleDrawer({
           event.stopPropagation();
         }}
         className={[
-          "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-[1380px] flex-col overflow-hidden overscroll-y-contain rounded-t-[2rem] border border-b-0 border-[var(--app-border-strong)] bg-[color:color-mix(in_srgb,var(--app-surface)_88%,transparent)] shadow-[0_-24px_72px_var(--app-shadow)] backdrop-blur-2xl transition-[height,opacity] motion-reduce:transition-none",
+          "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-7xl flex-col overflow-hidden overscroll-y-contain rounded-t-[2rem] border border-b-0 border-[var(--app-border-strong)] bg-[color:color-mix(in_srgb,var(--app-surface)_88%,transparent)] shadow-[0_-24px_72px_var(--app-shadow)] backdrop-blur-2xl transition-[height,opacity] motion-reduce:transition-none",
           animatedOpen ? "opacity-100" : "opacity-0",
         ].join(" ")}
         style={{

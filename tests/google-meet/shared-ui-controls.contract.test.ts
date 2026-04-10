@@ -4,6 +4,12 @@ import { resolve } from "node:path";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { DropdownSelect } from "../../entrypoints/shared/dropdown-select";
+import {
+  GitHubHeaderLink,
+  LegalFooter,
+} from "../../entrypoints/shared/extension-page-chrome";
+import { ConfirmDialog } from "../../entrypoints/meeting-history/components/confirm-dialog";
+import { I18nProvider } from "../../entrypoints/shared/i18n";
 import { AppLoadingScreen } from "../../entrypoints/shared/loading-screen";
 
 function createDomRect(
@@ -141,5 +147,59 @@ describe("Shared UI controls", () => {
     expect(status?.textContent).toContain("Applying the selected UI language.");
 
     await harness.cleanup();
+  });
+
+  test("UI-CTRL-004: shared legal chrome exposes GitHub, Privacy Policy, and version metadata", async () => {
+    const harness = await mount(
+      React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(
+          "div",
+          null,
+          React.createElement(GitHubHeaderLink, null),
+          React.createElement(LegalFooter, { version: "1.3.0" })
+        )
+      )
+    );
+
+    const githubLink = harness.container.querySelector(
+      'a[aria-label="GitHub"]'
+    ) as HTMLAnchorElement | null;
+    const privacyLink = harness.container.querySelector(
+      'a[href*="privacy-policy.html"]'
+    ) as HTMLAnchorElement | null;
+
+    expect(githubLink).toBeTruthy();
+    expect(githubLink?.href).toContain("github.com/mahdiahmadi1991/caption-arc");
+    expect(privacyLink).toBeTruthy();
+    expect(harness.container.textContent).toContain("Version 1.3.0");
+
+    await harness.cleanup();
+  });
+
+  test("UI-CTRL-005: confirm dialogs lock page scrolling while the modal is open", async () => {
+    const harness = await mount(
+      React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(ConfirmDialog, {
+          open: true,
+          title: "Legal warning",
+          description: "Review this change before continuing.",
+          confirmLabel: "Continue",
+          onConfirm: vi.fn(),
+          onCancel: vi.fn(),
+        })
+      )
+    );
+
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
+
+    await harness.cleanup();
+
+    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
   });
 });

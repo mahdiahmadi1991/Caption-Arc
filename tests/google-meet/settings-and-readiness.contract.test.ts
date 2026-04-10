@@ -63,6 +63,9 @@ describe("Settings and readiness contract", () => {
         shared: {
           model: "gpt-4.1",
           targetLanguage: "fa",
+          legalRiskAcknowledgements: {
+            storeMeetingChat: 55,
+          },
         },
         secrets: {
           openaiApiKey: "key-from-state",
@@ -70,6 +73,10 @@ describe("Settings and readiness contract", () => {
         local: {
           deviceLabel: "state-label",
           connectedCloudProviders: ["google-drive", "invalid-provider"],
+          termsAcceptance: {
+            version: "2026-03-01",
+            acceptedAt: 1234,
+          },
         },
       },
     });
@@ -83,6 +90,13 @@ describe("Settings and readiness contract", () => {
     expect(result.settings.openaiApiKey).toBe("key-from-state");
     expect(result.settings.deviceLabel).toBe("state-label");
     expect(result.settings.connectedCloudProviders).toEqual(["google-drive"]);
+    expect(result.settings.termsAcceptance).toEqual({
+      version: "2026-03-01",
+      acceptedAt: 1234,
+    });
+    expect(result.settings.legalRiskAcknowledgements).toEqual({
+      storeMeetingChat: 55,
+    });
     expect(storage.local.set).not.toHaveBeenCalled();
   });
 
@@ -100,6 +114,7 @@ describe("Settings and readiness contract", () => {
           connectedCloudProviders: [],
           overlayPositionsByPlatform: {},
           verificationSnapshot: null,
+          termsAcceptance: null,
         },
       },
     });
@@ -109,17 +124,43 @@ describe("Settings and readiness contract", () => {
       model: "gpt-5.2",
       translationEnabled: true,
       connectedCloudProviders: ["onedrive"],
+      legalRiskAcknowledgements: {
+        captureStartupAlways: 101,
+      },
+      termsAcceptance: {
+        version: "2026-04-10",
+        acceptedAt: 4567,
+      },
     });
 
     expect(response.success).toBe(true);
+    expect(response.settings.model).toBe("gpt-5.2");
+    expect(response.settings.termsAcceptance).toEqual({
+      version: "2026-04-10",
+      acceptedAt: 4567,
+    });
     expect(storage.local.set).toHaveBeenCalled();
     const persistedSettings = storage.storageState.settings as Record<string, unknown>;
     const persistedState = storage.storageState.settingsState as Record<string, unknown>;
     expect(persistedSettings.model).toBe("gpt-5.2");
     expect(persistedSettings.translationEnabled).toBe(true);
+    expect(persistedSettings.legalRiskAcknowledgements).toEqual({
+      captureStartupAlways: 101,
+    });
+    expect(persistedSettings.termsAcceptance).toEqual({
+      version: "2026-04-10",
+      acceptedAt: 4567,
+    });
     expect(persistedState).toHaveProperty("shared");
     expect(persistedState).toHaveProperty("secrets");
     expect(persistedState).toHaveProperty("local");
+    expect((persistedState.local as Record<string, unknown>).termsAcceptance).toEqual({
+      version: "2026-04-10",
+      acceptedAt: 4567,
+    });
+    expect((persistedState.shared as Record<string, unknown>).legalRiskAcknowledgements).toEqual({
+      captureStartupAlways: 101,
+    });
     expect(cloudSyncSettingsSavedMock).toHaveBeenCalledTimes(1);
   });
 
@@ -184,5 +225,83 @@ describe("Settings and readiness contract", () => {
 
     const persisted = storage.storageState.settings as Record<string, unknown>;
     expect(persisted.verificationSnapshot).toBeNull();
+  });
+
+  test("SETRDY-006: invalid local terms acceptance records are discarded during normalization", async () => {
+    const base = createDefaultSettings();
+    installChromeStorage({
+      settingsState: {
+        schemaVersion: 1,
+        shared: {
+          model: "gpt-5-mini",
+        },
+        secrets: {
+          openaiApiKey: "",
+        },
+        local: {
+          deviceId: base.deviceId,
+          deviceLabel: base.deviceLabel,
+          uiLanguage: base.uiLanguage,
+          connectedCloudProviders: [],
+          overlayPositionsByPlatform: {},
+          verificationSnapshot: null,
+          termsAcceptance: {
+            version: "",
+            acceptedAt: "invalid",
+          },
+        },
+      },
+    });
+
+    const { getSettings } = await import("../../entrypoints/background/settings");
+    const result = await getSettings();
+
+    expect(result.success).toBe(true);
+    expect(result.settings.termsAcceptance).toBeNull();
+  });
+
+  test("SETRDY-008: current-version terms decisions reconcile to the latest local state and save returns the normalized settings", async () => {
+    const base = createDefaultSettings();
+    installChromeStorage({
+      settings: base,
+    });
+
+    const { saveSettings } = await import("../../entrypoints/background/settings");
+
+    const declined = await saveSettings({
+      termsAcceptance: {
+        version: "2026-04-10",
+        acceptedAt: 100,
+      },
+      termsDecline: {
+        version: "2026-04-10",
+        declinedAt: 200,
+      },
+    });
+
+    expect(declined.success).toBe(true);
+    expect(declined.settings.termsAcceptance).toBeNull();
+    expect(declined.settings.termsDecline).toEqual({
+      version: "2026-04-10",
+      declinedAt: 200,
+    });
+
+    const accepted = await saveSettings({
+      termsAcceptance: {
+        version: "2026-04-10",
+        acceptedAt: 300,
+      },
+      termsDecline: {
+        version: "2026-04-10",
+        declinedAt: 200,
+      },
+    });
+
+    expect(accepted.success).toBe(true);
+    expect(accepted.settings.termsAcceptance).toEqual({
+      version: "2026-04-10",
+      acceptedAt: 300,
+    });
+    expect(accepted.settings.termsDecline).toBeNull();
   });
 });

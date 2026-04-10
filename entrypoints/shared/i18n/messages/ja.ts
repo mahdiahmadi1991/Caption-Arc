@@ -16,6 +16,7 @@ export const jaMessages = {
             loading: "読み込み中...",
             open: "開く",
             show: "表示する",
+            continue: "続行",
             working: "働いています..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const jaMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "プライバシーポリシー",
+            termsOfService: "利用規約"
+        },
+        legal: {
+            version: "バージョン {version}",
+            copyright: "著作権 © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "初回セットアップ",
+            title: "続行するには利用規約を確認して同意してください",
+            body: "セットアップを続行する前に、CaptionArc では現在の利用規約への一度限りの同意が必要です。",
+            version: "規約バージョン {version}",
+            reviewPrompt: "同意する前に、現在の利用規約とプライバシーポリシーを確認してください。",
+            acceptanceNote: "続行すると、現在の利用規約を確認し、プライバシーポリシーを理解したことを確認したものとみなされます。",
+            declinedBody: "現在の利用規約が拒否されたため、このデバイスでは CaptionArc は非アクティブのままです。",
+            declinedPrompt: "続行する準備ができたら、現在の規約をもう一度確認してください。",
+            declinedNote: "このデバイスで現在の利用規約が承認されるまで、CaptionArc はブロックされたままです。",
+            accept: "規約に同意"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "法務",
+                loadingDescription: "この拡張機能の最新の公開済み法務文書を読み込んでいます。"
+            },
+            privacyPolicy: {
+                title: "プライバシーポリシー",
+                subtitle: "リポジトリで公開されているプライバシーポリシーと同じ内容を製品内で表示します。",
+                sourceNote: "このページは、拡張機能内のコピーと公開ドキュメントを一致させるため、リポジトリで公開しているものと同じ markdown ソースを描画します。",
+                loadingTitle: "プライバシーポリシーを読み込み中"
+            },
+            termsOfService: {
+                title: "利用規約",
+                subtitle: "CaptionArc の現在の条件、責任、および法的な境界を確認してください。",
+                acceptEyebrow: "初回セットアップ",
+                acceptSubtitle: "このデバイスで同意する前に、現在の規約を最後までスクロールしてください。",
+                acceptPrompt: "同意を有効にするには現在の利用規約を読んでください。",
+                scrollRequired: "同意を有効にするには文書の最後までスクロールしてください。",
+                scrollReady: "規約の最後まで到達しました。これで同意してこのページを閉じることができます。",
+                accept: "同意して閉じる",
+                decline: "同意せず閉じる",
+                declineNote: "これらの規約に同意しない場合は、このページを閉じて CaptionArc を使用しないでください。",
+                sourceNote: "このページは、拡張機能内のコピーと公開ドキュメントを一致させるため、リポジトリで公開しているものと同じ markdown ソースを描画します。",
+                alreadyAcceptedTitle: "現在の規約はすでに同意済みです",
+                alreadyAcceptedBody: "このデバイスには、現在の規約バージョンへの同意記録がすでにあります。",
+                declinedTitle: "このデバイスでは現在の規約が拒否されました",
+                declinedBody: "このデバイスで現在の規約バージョンが承認されるまで、CaptionArc はブロックされたままです。",
+                version: "バージョン {version}",
+                loadingTitle: "利用規約を読み込み中"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const jaMessages = {
             storeMeetingChat: {
                 label: "ストアミーティングチャット",
                 description: "サポートされている会議チャットを保存して、会議履歴、エクスポート、概要に表示できるようにします。"
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "注意して使用",
+                warningLabel: "法務およびプライバシー通知"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "常時キャプチャ開始は同意の保護を弱めます",
+                    body: "このモードは会議ごとの承認確認を省略し、対応する会議を検出するとすぐにキャプチャを開始します。",
+                    pointOne: "会議由来の内容を取得し保持してよいと確信できる会議でのみ使用してください。",
+                    pointTwo: "有効にした機能によっては、保存された字幕やチャットが後で要約、ライブ支援、エクスポートに使われることがあります。",
+                    pointThree: "通知、同意、職場ポリシー、プラットフォームポリシーなど、利用に適用される要件への対応責任は引き続きあなたにあります。",
+                    confirm: "常時キャプチャ開始を有効にする"
+                },
+                warning: {
+                    title: "常時キャプチャ開始が有効です",
+                    body: "CaptionArc は会議ごとの承認手順を省略します。会議由来の内容を適法に取得し保持できる場合にのみ有効のままにしてください。"
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "自動字幕有効化は会議アプリを代わりに操作します",
+                    body: "このモードは、対応する会議画面で可能な場合にライブ字幕を自動でオンにしようとします。",
+                    pointOne: "自動有効化は、毎回あなたの手動操作なしで会議 UI を変更するため、ガイド付きモードよりも慎重な扱いが必要になる場合があります。",
+                    pointTwo: "自動字幕有効化がポリシーと運用に適している環境でのみ維持してください。",
+                    pointThree: "この自動化を利用できるのは、提供元のルールと会議での期待に照らして許容される場合に限られ、その判断責任はあなたにあります。",
+                    confirm: "自動字幕有効化を有効にする"
+                },
+                warning: {
+                    title: "自動字幕有効化が有効です",
+                    body: "提供元が対応している場合、CaptionArc は字幕を自動でオンにしようとします。ポリシー上センシティブな会議では慎重に確認してください。"
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "会議チャットの保存はプライバシー感度を高める可能性があります",
+                    body: "この設定を有効にすると、対応する会議チャットが保存された会議記録の一部となり、履歴、エクスポート、AI 支援の後続フローに表示されることがあります。",
+                    pointOne: "会議チャットには、表示字幕だけよりも機微性や識別性の高い内容が含まれる場合があります。",
+                    pointTwo: "これらの機能を使うと、保存されたチャットが後で要約、翻訳、アシスタントの文脈に含まれることがあります。",
+                    pointThree: "その内容の保持が通知、同意、秘密保持の期待に合致する場合にのみチャット保存を有効にしてください。",
+                    confirm: "会議チャット保存を有効にする"
+                },
+                warning: {
+                    title: "会議チャット保存が有効です",
+                    body: "対応する会議チャットは履歴、エクスポート、AI 支援の後続フローのために保持されています。この保持が適切な場合にのみ有効のままにしてください。"
+                }
             }
         },
         openAiService: {

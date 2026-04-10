@@ -16,6 +16,7 @@ export const esMessages = {
             loading: "Cargando...",
             open: "Abierto",
             show: "Mostrar",
+            continue: "Continuar",
             working: "Trabajando..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const esMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "Política de privacidad",
+            termsOfService: "Términos del servicio"
+        },
+        legal: {
+            version: "Versión {version}",
+            copyright: "Derechos de autor © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "Configuración inicial",
+            title: "Revise y acepte los términos para continuar",
+            body: "CaptionArc necesita una aceptación única de los Términos del servicio actuales antes de continuar con la configuración.",
+            version: "Versión de los términos {version}",
+            reviewPrompt: "Revise los Términos del servicio y la Política de privacidad actuales antes de aceptar.",
+            acceptanceNote: "Al continuar, confirma que revisó los Términos del servicio actuales y entiende la Política de privacidad.",
+            declinedBody: "CaptionArc permanece inactivo en este dispositivo porque se rechazaron los Términos del servicio actuales.",
+            declinedPrompt: "Revise de nuevo los términos actuales cuando esté listo para continuar.",
+            declinedNote: "CaptionArc seguirá bloqueado hasta que se acepten los Términos del servicio actuales para este dispositivo.",
+            accept: "Aceptar términos"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "Legal",
+                loadingDescription: "Cargando la copia legal publicada más reciente de esta extensión."
+            },
+            privacyPolicy: {
+                title: "Política de privacidad",
+                subtitle: "Una copia dentro del producto de la misma Política de privacidad publicada en el repositorio.",
+                sourceNote: "Esta página representa la misma fuente markdown publicada en el repositorio para que la copia dentro de la extensión y el documento público se mantengan alineados.",
+                loadingTitle: "Cargando Política de privacidad"
+            },
+            termsOfService: {
+                title: "Términos del servicio",
+                subtitle: "Revise los términos actuales, las responsabilidades y los límites legales de CaptionArc.",
+                acceptEyebrow: "Configuración inicial",
+                acceptSubtitle: "Desplácese por los términos actuales antes de aceptarlos en este dispositivo.",
+                acceptPrompt: "Lea los Términos del servicio actuales para habilitar la aceptación.",
+                scrollRequired: "Desplácese hasta el final del documento para habilitar la aceptación.",
+                scrollReady: "Llegó al final de los términos. Ahora puede aceptar y cerrar esta página.",
+                accept: "Aceptar y cerrar",
+                decline: "Rechazar y cerrar",
+                declineNote: "Si no está de acuerdo con estos términos, cierre esta página y no use CaptionArc.",
+                sourceNote: "Esta página representa la misma fuente markdown publicada en el repositorio para que la copia dentro de la extensión y el documento público se mantengan alineados.",
+                alreadyAcceptedTitle: "Los términos actuales ya fueron aceptados",
+                alreadyAcceptedBody: "Este dispositivo ya tiene registrada una aceptación de la versión actual de los términos.",
+                declinedTitle: "Los términos actuales fueron rechazados en este dispositivo",
+                declinedBody: "CaptionArc seguirá bloqueado hasta que se acepte la versión actual de los términos en este dispositivo.",
+                version: "Versión {version}",
+                loadingTitle: "Cargando Términos del servicio"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const esMessages = {
             storeMeetingChat: {
                 label: "Chat de reunión de tienda",
                 description: "Guarde el chat de reuniones compatible para que pueda aparecer en el historial, las exportaciones y los resúmenes de las reuniones."
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "Úsalo con cuidado",
+                warningLabel: "Aviso legal y de privacidad"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "La captura siempre activa reduce las salvaguardas de consentimiento",
+                    body: "Este modo omite la confirmación por reunión e inicia la captura en cuanto detecta una reunión compatible.",
+                    pointOne: "Úsalo solo en reuniones en las que tengas claro que puedes capturar y conservar contenido derivado de la reunión.",
+                    pointTwo: "Según lo que actives, otras funciones podrán usar más tarde subtítulos o chat guardados para resúmenes, guía en vivo o exportaciones.",
+                    pointThree: "Sigues siendo responsable de cualquier aviso, consentimiento, política laboral o política de la plataforma aplicable a tu uso.",
+                    confirm: "Activar captura siempre activa"
+                },
+                warning: {
+                    title: "La captura siempre activa está activada",
+                    body: "CaptionArc omitirá el paso de aprobación por reunión. Mantenlo activado solo donde puedas capturar y conservar contenido derivado de la reunión de forma lícita."
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "La activación automática de subtítulos interactúa con la app de la reunión por ti",
+                    body: "Este modo intenta activar automáticamente los subtítulos en vivo cuando la superficie de reunión compatible lo permite.",
+                    pointOne: "La activación automática puede ser más sensible que el modo guiado porque cambia la interfaz de la reunión sin un paso manual cada vez.",
+                    pointTwo: "Déjalo solo en entornos donde la activación automática de subtítulos sea aceptable según tu política y flujo de trabajo.",
+                    pointThree: "Sigues siendo responsable de usar esta automatización solo cuando las reglas del proveedor y las expectativas de la reunión lo permitan.",
+                    confirm: "Activar subtítulos automáticos"
+                },
+                warning: {
+                    title: "La activación automática de subtítulos está activa",
+                    body: "CaptionArc intentará activar los subtítulos automáticamente cuando el proveedor lo permita. Revisa este modo con cuidado para reuniones sensibles."
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "Guardar el chat de la reunión puede aumentar la sensibilidad de privacidad",
+                    body: "Si esta opción sigue activa, el chat compatible pasa a formar parte del registro guardado de la reunión y puede aparecer en el historial, las exportaciones y los flujos de seguimiento con IA.",
+                    pointOne: "El chat puede contener material más sensible o identificable que los subtítulos visibles por sí solos.",
+                    pointTwo: "El chat guardado puede incluirse más adelante en resúmenes, traducciones y contexto del asistente cuando se usen esas funciones.",
+                    pointThree: "Usa el almacenamiento de chat solo cuando conservar ese contenido encaje con tus avisos, consentimiento y expectativas de confidencialidad.",
+                    confirm: "Activar almacenamiento del chat"
+                },
+                warning: {
+                    title: "El almacenamiento del chat está activo",
+                    body: "El chat compatible se está conservando para historial, exportación y seguimiento con IA. Déjalo activado solo cuando esa conservación sea apropiada."
+                }
             }
         },
         openAiService: {

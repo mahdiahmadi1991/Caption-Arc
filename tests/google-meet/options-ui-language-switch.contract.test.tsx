@@ -229,4 +229,42 @@ describe("Options UI language switch contracts", () => {
 
     await harness.cleanup();
   });
+
+  test("OPTIONS-I18N-003: transactional saves run immediately and surface background rejection", async () => {
+    const initialSettings = createDefaultSettings();
+    const { sendMessage } = installChromeMock((message) => {
+      if (message.action === "getSettings") {
+        return { success: true, settings: initialSettings };
+      }
+
+      if (
+        message.action === "saveSettings" &&
+        (message.settings as { storeMeetingChat?: boolean }).storeMeetingChat === true
+      ) {
+        return { success: false, error: "blocked" };
+      }
+
+      return { success: true };
+    });
+
+    const harness = await mountUseSettingsHarness();
+
+    let result = false;
+    await act(async () => {
+      result = await harness.getState().persistSettingsNow({
+        storeMeetingChat: true,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(result).toBe(false);
+    expect(
+      sendMessage.mock.calls.filter(
+        ([message]) => message.action === "saveSettings"
+      )
+    ).toHaveLength(1);
+    expect(harness.getState().saveState.status).toBe("error");
+
+    await harness.cleanup();
+  });
 });

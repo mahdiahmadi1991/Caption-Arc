@@ -8,6 +8,7 @@ import {
   initializeCloudSyncEngine,
   resolveCloudSyncSettingsChoice,
   retryCloudSync,
+  shutdownCloudSyncForTermsRevocation,
 } from "./cloud-sync";
 import {
   findMeetingSessionContinuationCandidate,
@@ -30,6 +31,7 @@ import {
   generateMeetingSummary,
   clearMeetingHistory,
   getStorageUsage,
+  shutdownMeetingSummaryQueueForTermsRevocation,
 } from "./history";
 import {
   clearQuickAccessRuntimeStatus,
@@ -50,11 +52,174 @@ import {
   setDiagnosticsSnapshot,
   syncDiagnosticsEnvironmentConfig,
 } from "./diagnostics";
+import {
+  getTermsOfServicePageUrl,
+  hasAcceptedCurrentTerms,
+} from "../shared/legal";
 
 const backgroundLogger = createBackgroundDiagnosticsLogger({
   domain: "runtime",
   feature: "background-message-router",
 });
+let protectedBackgroundServicesStarted = false;
+let protectedBackgroundServicesInitPromise: Promise<void> | null = null;
+
+const TERMS_GATE_ALLOWED_ACTIONS = new Set([
+  "getSettings",
+  "openOptions",
+  "closeExtensionPageTab",
+  "saveTermsDeclineAndClosePage",
+  "saveInstallTermsDeclineAndClosePage",
+  "updateQuickAccessRuntimeStatus",
+  "clearQuickAccessRuntimeStatus",
+  "getQuickAccessRuntimeStatus",
+  "recordDiagnosticsEvent",
+  "setDiagnosticsSnapshot",
+  "clearDiagnosticsSnapshot",
+  "clearDiagnosticsData",
+  "getDiagnosticsConfig",
+  "setDiagnosticsConfig",
+  "getDiagnosticsPayload",
+]);
+
+const TERMS_GATE_ALLOWED_SETTINGS_KEYS = new Set([
+  "appearance",
+  "termsAcceptance",
+  "termsDecline",
+]);
+
+function createTermsRequiredResponse(source: string) {
+  return {
+    success: false,
+    code: "terms_not_accepted",
+    error: "The current Terms of Service must be accepted before using CaptionArc.",
+    termsPageUrl: getTermsOfServicePageUrl({
+      mode: "accept",
+      source,
+    }),
+  };
+}
+
+function isSafeBlockedSettingsWrite(value: unknown): boolean {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const keys = Object.keys(value);
+  return (
+    keys.length > 0 &&
+    keys.every((key) => TERMS_GATE_ALLOWED_SETTINGS_KEYS.has(key))
+  );
+}
+
+async function resolveExtensionPageTabIdForClose(
+  message: Record<string, unknown>,
+  sender: chrome.runtime.MessageSender
+): Promise<number | null> {
+  if (typeof message.tabId === "number") {
+    return message.tabId;
+  }
+
+  if (sender.tab?.id !== undefined) {
+    return sender.tab.id;
+  }
+
+  const currentUrl =
+    typeof message.currentUrl === "string" ? message.currentUrl.trim() : "";
+  if (!currentUrl) {
+    return null;
+  }
+
+  try {
+    const tabs = await chrome.tabs.query({});
+    const matchingTab = tabs.find((tab) => tab.url === currentUrl);
+    return typeof matchingTab?.id === "number" ? matchingTab.id : null;
+  } catch {
+    return null;
+  }
+}
+
+async function initializeProtectedBackgroundServices(
+  source: string
+): Promise<void> {
+  if (protectedBackgroundServicesStarted) {
+    return;
+  }
+
+  if (protectedBackgroundServicesInitPromise) {
+    await protectedBackgroundServicesInitPromise;
+    return;
+  }
+
+  protectedBackgroundServicesInitPromise = (async () => {
+    const { settings } = await getSettings();
+    if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+      await backgroundLogger.info("protected_services_skipped_terms_required", {
+        source,
+      });
+      return;
+    }
+
+    initializeCloudSyncEngine();
+    await initializeMeetingSummaryQueue();
+    protectedBackgroundServicesStarted = true;
+    await backgroundLogger.info("protected_services_started", {
+      source,
+    });
+  })();
+
+  try {
+    await protectedBackgroundServicesInitPromise;
+  } finally {
+    protectedBackgroundServicesInitPromise = null;
+  }
+}
+
+async function stopProtectedBackgroundServices(
+  source: string
+): Promise<void> {
+  protectedBackgroundServicesStarted = false;
+  protectedBackgroundServicesInitPromise = null;
+  await backgroundLogger.warn("protected_services_stopped", {
+    source,
+  });
+  await Promise.all([
+    shutdownCloudSyncForTermsRevocation(),
+    shutdownMeetingSummaryQueueForTermsRevocation(),
+  ]);
+}
+
+function shouldPromptTermsOnInstalled(
+  reason: chrome.runtime.OnInstalledReason,
+  acceptedCurrentTerms: boolean
+): boolean {
+  if (acceptedCurrentTerms) {
+    return false;
+  }
+
+  return reason === "install" || reason === "update";
+}
+
+async function reconcileProtectedBackgroundServicesForTermsTransition(
+  previousAcceptance: unknown,
+  nextAcceptance: unknown
+): Promise<void> {
+  const previouslyAccepted = hasAcceptedCurrentTerms(
+    previousAcceptance as Parameters<typeof hasAcceptedCurrentTerms>[0]
+  );
+  const acceptedNow = hasAcceptedCurrentTerms(
+    nextAcceptance as Parameters<typeof hasAcceptedCurrentTerms>[0]
+  );
+
+  if (!previouslyAccepted && acceptedNow) {
+    await initializeProtectedBackgroundServices("save-settings");
+    return;
+  }
+
+  if (previouslyAccepted && !acceptedNow) {
+    await stopProtectedBackgroundServices("terms-revoked");
+  }
+}
 
 export default defineBackground(() => {
   void backgroundLogger.info("background_runtime_started");
@@ -63,13 +228,41 @@ export default defineBackground(() => {
     .catch((error) => {
       void backgroundLogger.error("diagnostics_startup_sync_failed", { error });
     });
-  initializeCloudSyncEngine();
-  void initializeMeetingSummaryQueue();
   void initializeQuickAccessRuntimeRegistry();
+  void initializeProtectedBackgroundServices("background-start");
 
   chrome.runtime.onStartup.addListener(() => {
     void backgroundLogger.info("background_on_startup");
-    void initializeMeetingSummaryQueue();
+    void initializeProtectedBackgroundServices("background-on-startup");
+  });
+
+  chrome.runtime.onInstalled.addListener((details) => {
+    void (async () => {
+      await backgroundLogger.info("background_on_installed", {
+        reason: details.reason,
+      });
+
+      const { settings } = await getSettings();
+      if (!shouldPromptTermsOnInstalled(
+        details.reason,
+        hasAcceptedCurrentTerms(settings.termsAcceptance)
+      )) {
+        return;
+      }
+
+      await chrome.tabs.create({
+        url: getTermsOfServicePageUrl({
+          mode: "accept",
+          source: details.reason === "install" ? "install" : "update",
+          returnTo: "close",
+        }),
+      });
+    })().catch((error) => {
+      void backgroundLogger.error("background_on_installed_failed", {
+        reason: details.reason,
+        error,
+      });
+    });
   });
 
   chrome.alarms.onAlarm.addListener((alarm) => {
@@ -77,7 +270,14 @@ export default defineBackground(() => {
       name: alarm.name,
     });
     if (alarm.name === "meeting-summary-job-retry") {
-      void handleMeetingSummaryRetryAlarm();
+      void (async () => {
+        const { settings } = await getSettings();
+        if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+          await backgroundLogger.info("summary_retry_alarm_skipped_terms_required");
+          return;
+        }
+        await handleMeetingSummaryRetryAlarm();
+      })();
     }
   });
 
@@ -114,12 +314,41 @@ async function handleMessage(
   message: Record<string, unknown>,
   sender: chrome.runtime.MessageSender
 ): Promise<unknown> {
+  const action = typeof message.action === "string" ? message.action : null;
+
+  if (action === "saveSettings") {
+    const safeBlockedSettingsWrite = isSafeBlockedSettingsWrite(message.settings);
+    if (!safeBlockedSettingsWrite) {
+      const { settings } = await getSettings();
+      if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+        return createTermsRequiredResponse("save-settings");
+      }
+    }
+  } else if (action && !TERMS_GATE_ALLOWED_ACTIONS.has(action)) {
+    const { settings } = await getSettings();
+    if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+      return createTermsRequiredResponse(action);
+    }
+  }
+
   switch (message.action) {
     case "getSettings":
       return getSettings();
 
     case "saveSettings":
-      return saveSettings(message.settings as Parameters<typeof saveSettings>[0]);
+      {
+        const { settings: previousSettings } = await getSettings();
+        const response = await saveSettings(
+          message.settings as Parameters<typeof saveSettings>[0]
+        );
+        if (response?.success && response.settings) {
+          await reconcileProtectedBackgroundServicesForTermsTransition(
+            previousSettings.termsAcceptance,
+            response.settings.termsAcceptance
+          );
+        }
+        return response;
+      }
 
     case "getCloudSyncState":
       return getCloudSyncState();
@@ -157,8 +386,59 @@ async function handleMessage(
       await backgroundLogger.info("open_options_requested", {
         senderOrigin: sender?.origin || sender?.url || null,
       });
-      chrome.runtime.openOptionsPage();
+      {
+        const { settings } = await getSettings();
+        if (hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+          chrome.runtime.openOptionsPage();
+        } else {
+          await chrome.tabs.create({
+            url: getTermsOfServicePageUrl({
+              mode: "accept",
+              source: "open-options",
+              returnTo: "options",
+            }),
+          });
+        }
+      }
       return { success: true };
+
+    case "closeExtensionPageTab":
+      {
+        const tabId = await resolveExtensionPageTabIdForClose(message, sender);
+        if (tabId !== null) {
+          await chrome.tabs.remove(tabId);
+          return { success: true };
+        }
+      }
+      return { success: false, error: "No sender tab to close." };
+
+    case "saveInstallTermsDeclineAndClosePage":
+    case "saveTermsDeclineAndClosePage":
+      {
+        const { settings: previousSettings } = await getSettings();
+        const response = await saveSettings({
+          termsAcceptance: null,
+          termsDecline:
+            message.termsDecline as Parameters<typeof saveSettings>[0]["termsDecline"],
+        });
+
+        if (!response?.success) {
+          return response;
+        }
+
+        await reconcileProtectedBackgroundServicesForTermsTransition(
+          previousSettings.termsAcceptance,
+          response.settings?.termsAcceptance
+        );
+
+        const tabId = await resolveExtensionPageTabIdForClose(message, sender);
+        if (tabId !== null) {
+          await chrome.tabs.remove(tabId);
+          return { success: true, settings: response.settings };
+        }
+
+        return { success: true };
+      }
 
     case "getMeetingHistory":
       return getMeetingHistory();
@@ -294,3 +574,7 @@ async function handleMessage(
       return { success: false, error: "Unknown action" };
   }
 }
+
+export const backgroundTermsGateInternals = {
+  shouldPromptTermsOnInstalled,
+};

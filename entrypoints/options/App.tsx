@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { SummaryProfile } from "../background/types";
+import type {
+  LegalRiskAcknowledgementKey,
+  SummaryProfile,
+} from "../background/types";
 import type { CloudSyncProvider } from "../background/types";
 import type {
   CloudSyncProviderCheckpoint,
@@ -19,9 +22,14 @@ import { useResolvedTheme } from "../shared/use-resolved-theme";
 import { IconButton } from "../shared/icon-button";
 import { Tooltip } from "../shared/tooltip";
 import { BrandLockup } from "../shared/brand";
+import {
+  GitHubHeaderLink,
+  LegalFooter,
+} from "../shared/extension-page-chrome";
 import { ConfirmDialog } from "../meeting-history/components/confirm-dialog";
 import {
   ArchiveIcon,
+  AlertTriangleIcon,
   BeakerIcon,
   CheckIcon,
   ChevronDownIcon,
@@ -56,6 +64,10 @@ import {
   DYNAMIC_TEXT_STYLE,
   getDynamicTextDirection,
 } from "../shared/text-direction";
+import {
+  isLegalRiskSettingActive,
+  shouldPromptForLegalRiskAcknowledgement,
+} from "./legal-risk-settings";
 
 const CAPTURE_STARTUP_OPTION_IDS = ["off", "ask", "always"] as const;
 const CAPTION_ACTIVATION_OPTION_IDS = ["guided", "automatic"] as const;
@@ -920,6 +932,105 @@ function GlobalDependencyBanner({
         {description}
       </p>
     </SurfacePanel>
+  );
+}
+
+type LegalRiskDialogCopy = {
+  eyebrow: string;
+  title: string;
+  body: string;
+  points: string[];
+  confirmLabel: string;
+  warningLabel: string;
+  warningTitle: string;
+  warningBody: string;
+};
+
+type PendingLegalRiskChange =
+  | {
+      riskId: LegalRiskAcknowledgementKey;
+      key: "captureStartupBehavior";
+      value: "off" | "ask" | "always";
+    }
+  | {
+      riskId: LegalRiskAcknowledgementKey;
+      key: "captionActivationBehavior";
+      value: "guided" | "automatic";
+    }
+  | {
+      riskId: LegalRiskAcknowledgementKey;
+      key: "storeMeetingChat";
+      value: boolean;
+    };
+
+function getLegalRiskDialogCopy(
+  riskId: LegalRiskAcknowledgementKey,
+  t: UiTranslator
+): LegalRiskDialogCopy {
+  return {
+    eyebrow: t("options.legalRisk.shared.eyebrow"),
+    title: t(`options.legalRisk.${riskId}.dialog.title`),
+    body: t(`options.legalRisk.${riskId}.dialog.body`),
+    points: [
+      t(`options.legalRisk.${riskId}.dialog.pointOne`),
+      t(`options.legalRisk.${riskId}.dialog.pointTwo`),
+      t(`options.legalRisk.${riskId}.dialog.pointThree`),
+    ],
+    confirmLabel: t(`options.legalRisk.${riskId}.dialog.confirm`),
+    warningLabel: t("options.legalRisk.shared.warningLabel"),
+    warningTitle: t(`options.legalRisk.${riskId}.warning.title`),
+    warningBody: t(`options.legalRisk.${riskId}.warning.body`),
+  };
+}
+
+function LegalRiskDialogBody({
+  body,
+  points,
+}: {
+  body: string;
+  points: string[];
+}) {
+  return (
+    <div className="space-y-3">
+      <p>{body}</p>
+      <ul className="space-y-2 rounded-[1.4rem] border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_68%,var(--app-surface))] px-4 py-3 text-[13px] leading-relaxed text-[var(--app-text)]">
+        {points.map((point) => (
+          <li key={point} className="flex items-start gap-2">
+            <span className="mt-1 inline-block h-1.5 w-3.5 rounded-full bg-[var(--app-warning)]" />
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LegalRiskNotice({
+  label,
+  title,
+  body,
+}: {
+  label: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_62%,var(--app-surface))] px-4 py-3.5 shadow-[0_14px_30px_var(--app-shadow)]">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-full border border-[var(--app-warning-border)] bg-[var(--app-surface)] p-2 text-[var(--app-warning)]">
+          <AlertTriangleIcon />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill label={label} tone="warning" />
+            <h3 className="text-sm font-medium text-[var(--app-text)]">{title}</h3>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]">
+            {body}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1798,6 +1909,7 @@ export default function App() {
     currentOpenAiApiKey,
     setCurrentOpenAiApiKey,
     updateSetting,
+    persistSettingsNow,
     saveAppearance,
     verifyOpenAiSetupNow,
     exportDataBundle,
@@ -1864,6 +1976,9 @@ export default function App() {
   const [backupPassphrase, setBackupPassphrase] = useState("");
   const [showBackupPassphrase, setShowBackupPassphrase] = useState(false);
   const [confirmClearSessionData, setConfirmClearSessionData] = useState(false);
+  const [pendingLegalRiskChange, setPendingLegalRiskChange] =
+    useState<PendingLegalRiskChange | null>(null);
+  const [legalRiskDialogBusy, setLegalRiskDialogBusy] = useState(false);
   const dataImportInputRef = useRef<HTMLInputElement | null>(null);
   const pendingNavigationSectionRef = useRef<string | null>(null);
   const pendingNavigationTimeoutRef = useRef<number | null>(null);
@@ -2118,6 +2233,12 @@ export default function App() {
   const confirmClearSessionLabel = hasConnectedCloudProviders
     ? t("options.dataRecovery.confirmDelete.syncedLabel")
     : t("options.dataRecovery.confirmDelete.localLabel");
+  const activeMeetingFlowRiskIds = (
+    ["captureStartupAlways", "captionActivationAutomatic"] as const
+  ).filter((riskId) => isLegalRiskSettingActive(settings, riskId));
+  const activeMeetingArchiveRiskIds = (["storeMeetingChat"] as const).filter(
+    (riskId) => isLegalRiskSettingActive(settings, riskId)
+  );
   const selectedSummaryProfile =
     settings.summaryProfiles.find(
       (profile) => profile.id === selectedSummaryProfileId
@@ -2138,6 +2259,80 @@ export default function App() {
         tooltip={openAiServiceState.impact}
       />
     ) : null;
+  const pendingLegalRiskCopy = pendingLegalRiskChange
+    ? getLegalRiskDialogCopy(pendingLegalRiskChange.riskId, t)
+    : null;
+
+  const acknowledgePendingLegalRiskChange = async () => {
+    if (!pendingLegalRiskChange) {
+      return;
+    }
+
+    setLegalRiskDialogBusy(true);
+    const applied = await persistSettingsNow({
+      [pendingLegalRiskChange.key]: pendingLegalRiskChange.value,
+      legalRiskAcknowledgements: {
+        ...settings.legalRiskAcknowledgements,
+        [pendingLegalRiskChange.riskId]: Date.now(),
+      },
+    } as Partial<typeof settings>);
+    setLegalRiskDialogBusy(false);
+
+    if (applied) {
+      setPendingLegalRiskChange(null);
+    }
+  };
+
+  const requestRiskAwareSettingChange = (change: PendingLegalRiskChange) => {
+    const riskId = shouldPromptForLegalRiskAcknowledgement(
+      settings,
+      change.key,
+      change.value
+    );
+
+    if (!riskId) {
+      switch (change.key) {
+        case "captureStartupBehavior":
+          updateSetting("captureStartupBehavior", change.value);
+          break;
+        case "captionActivationBehavior":
+          updateSetting("captionActivationBehavior", change.value);
+          break;
+        case "storeMeetingChat":
+          updateSetting("storeMeetingChat", change.value);
+          break;
+        default:
+          break;
+      }
+      return;
+    }
+
+    setPendingLegalRiskChange(change);
+  };
+
+  const handleCaptureStartupChange = (value: "off" | "ask" | "always") => {
+    requestRiskAwareSettingChange({
+      riskId: "captureStartupAlways",
+      key: "captureStartupBehavior",
+      value,
+    });
+  };
+
+  const handleCaptionActivationChange = (value: "guided" | "automatic") => {
+    requestRiskAwareSettingChange({
+      riskId: "captionActivationAutomatic",
+      key: "captionActivationBehavior",
+      value,
+    });
+  };
+
+  const handleStoreMeetingChatChange = (enabled: boolean) => {
+    requestRiskAwareSettingChange({
+      riskId: "storeMeetingChat",
+      key: "storeMeetingChat",
+      value: enabled,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
@@ -2155,7 +2350,36 @@ export default function App() {
         onCancel={() => setConfirmClearSessionData(false)}
         busy={dataTransferState.status === "clearing"}
       />
-      <div className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8 xl:py-8">
+      <ConfirmDialog
+        open={Boolean(pendingLegalRiskChange && pendingLegalRiskCopy)}
+        tone="warning"
+        eyebrow={pendingLegalRiskCopy?.eyebrow}
+        title={pendingLegalRiskCopy?.title || ""}
+        description={
+          pendingLegalRiskCopy ? (
+            <LegalRiskDialogBody
+              body={pendingLegalRiskCopy.body}
+              points={pendingLegalRiskCopy.points}
+            />
+          ) : (
+            ""
+          )
+        }
+        confirmLabel={
+          pendingLegalRiskCopy?.confirmLabel ||
+          t("history.confirmDialog.confirmAction")
+        }
+        onConfirm={() => {
+          void acknowledgePendingLegalRiskChange();
+        }}
+        onCancel={() => {
+          if (!legalRiskDialogBusy) {
+            setPendingLegalRiskChange(null);
+          }
+        }}
+        busy={legalRiskDialogBusy}
+      />
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 xl:px-8 xl:py-8">
         <header className="mb-5 space-y-4 xl:mb-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-2xl">
@@ -2196,8 +2420,9 @@ export default function App() {
                     : saveState.status === "error"
                       ? t("options.saveBadge.attention")
                       : t("options.saveBadge.saved")}
+                  </span>
                 </span>
-              </span>
+              <GitHubHeaderLink />
               <button
                 type="button"
                 onClick={openHistory}
@@ -2370,13 +2595,23 @@ export default function App() {
                     {t("options.workspace.meetingFlow.description")}
                   </p>
                 </div>
+                {activeMeetingFlowRiskIds.map((riskId) => {
+                  const copy = getLegalRiskDialogCopy(riskId, t);
+                  return (
+                    <LegalRiskNotice
+                      key={riskId}
+                      label={copy.warningLabel}
+                      title={copy.warningTitle}
+                      body={copy.warningBody}
+                    />
+                  );
+                })}
                 <div className="grid gap-3 lg:grid-cols-2">
                   <Select
                     label={t("options.workspace.captureStartup.label")}
                     value={settings.captureStartupBehavior}
                     onChange={(value) =>
-                      updateSetting(
-                        "captureStartupBehavior",
+                      handleCaptureStartupChange(
                         value as "off" | "ask" | "always"
                       )
                     }
@@ -2387,8 +2622,7 @@ export default function App() {
                     label={t("options.workspace.captionActivation.label")}
                     value={settings.captionActivationBehavior}
                     onChange={(value) =>
-                      updateSetting(
-                        "captionActivationBehavior",
+                      handleCaptionActivationChange(
                         value as "guided" | "automatic"
                       )
                     }
@@ -2521,13 +2755,22 @@ export default function App() {
                     {t("options.workspace.meetingArchive.description")}
                   </p>
                 </div>
+                {activeMeetingArchiveRiskIds.map((riskId) => {
+                  const copy = getLegalRiskDialogCopy(riskId, t);
+                  return (
+                    <LegalRiskNotice
+                      key={riskId}
+                      label={copy.warningLabel}
+                      title={copy.warningTitle}
+                      body={copy.warningBody}
+                    />
+                  );
+                })}
 
                 <div className="grid gap-3 lg:grid-cols-2">
                   <Toggle
                     enabled={settings.storeMeetingChat}
-                    onChange={(enabled) =>
-                      updateSetting("storeMeetingChat", enabled)
-                    }
+                    onChange={handleStoreMeetingChatChange}
                     label={t("options.workspace.storeMeetingChat.label")}
                     description={t("options.workspace.storeMeetingChat.description")}
                     className="lg:col-span-2"
@@ -3280,6 +3523,8 @@ export default function App() {
           </div>
 
         </div>
+
+        <LegalFooter className="mt-8" version={chrome.runtime.getManifest().version} />
       </div>
       <DiagnosticsConsole />
     </div>

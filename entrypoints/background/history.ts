@@ -446,6 +446,24 @@ export async function handleMeetingSummaryRetryAlarm(): Promise<void> {
   await processPersistedMeetingSummaryJobs();
 }
 
+export async function shutdownMeetingSummaryQueueForTermsRevocation(): Promise<void> {
+  const activeControllers = [...activeMeetingSummaryJobs.values()].map(
+    (job) => job.controller
+  );
+
+  for (const controller of activeControllers) {
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  }
+
+  activeMeetingSummaryJobs.clear();
+  meetingSummaryJobStatuses.clear();
+  meetingSummaryQueueInitialized = false;
+  meetingSummaryQueueProcessingPromise = null;
+  await chrome.alarms.clear(SUMMARY_JOB_RETRY_ALARM);
+}
+
 function ensureSummaryJobActive(sessionId: string): AbortController {
   const job = activeMeetingSummaryJobs.get(sessionId);
   if (!job) {

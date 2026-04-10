@@ -16,6 +16,7 @@ export const ptMessages = {
             loading: "Carregando...",
             open: "Abrir",
             show: "Mostrar",
+            continue: "Continuar",
             working: "Trabalhando..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const ptMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "Política de Privacidade",
+            termsOfService: "Termos de Serviço"
+        },
+        legal: {
+            version: "Versão {version}",
+            copyright: "Direitos autorais © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "Configuração inicial",
+            title: "Revise e aceite os termos para continuar",
+            body: "O CaptionArc exige uma aceitação única dos Termos de Serviço atuais antes de continuar a configuração.",
+            version: "Versão dos termos {version}",
+            reviewPrompt: "Revise os Termos de Serviço e a Política de Privacidade atuais antes de aceitar.",
+            acceptanceNote: "Ao continuar, você confirma que revisou os Termos de Serviço atuais e entende a Política de Privacidade.",
+            declinedBody: "O CaptionArc permanece inativo neste dispositivo porque os Termos de Serviço atuais foram recusados.",
+            declinedPrompt: "Revise os termos atuais novamente quando estiver pronto para continuar.",
+            declinedNote: "O CaptionArc permanecerá bloqueado até que os Termos de Serviço atuais sejam aceitos para este dispositivo.",
+            accept: "Aceitar termos"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "Jurídico",
+                loadingDescription: "Carregando a cópia jurídica publicada mais recente desta extensão."
+            },
+            privacyPolicy: {
+                title: "Política de Privacidade",
+                subtitle: "Uma cópia no produto da mesma Política de Privacidade publicada no repositório.",
+                sourceNote: "Esta página renderiza a mesma fonte markdown publicada no repositório para manter alinhadas a cópia dentro da extensão e o documento público.",
+                loadingTitle: "Carregando Política de Privacidade"
+            },
+            termsOfService: {
+                title: "Termos de Serviço",
+                subtitle: "Revise os termos atuais, as responsabilidades e os limites legais do CaptionArc.",
+                acceptEyebrow: "Configuração inicial",
+                acceptSubtitle: "Role pelos termos atuais antes de aceitá-los neste dispositivo.",
+                acceptPrompt: "Leia os Termos de Serviço atuais para liberar a aceitação.",
+                scrollRequired: "Role até o final do documento para habilitar a aceitação.",
+                scrollReady: "Você chegou ao final dos termos. Agora pode aceitar e fechar esta página.",
+                accept: "Aceitar e fechar",
+                decline: "Recusar e fechar",
+                declineNote: "Se você não concorda com estes termos, feche esta página e evite usar o CaptionArc.",
+                sourceNote: "Esta página renderiza a mesma fonte markdown publicada no repositório para manter alinhadas a cópia dentro da extensão e o documento público.",
+                alreadyAcceptedTitle: "Os termos atuais já foram aceitos",
+                alreadyAcceptedBody: "Este dispositivo já possui um aceite registrado para a versão atual dos termos.",
+                declinedTitle: "Os termos atuais foram recusados neste dispositivo",
+                declinedBody: "O CaptionArc permanecerá bloqueado até que a versão atual dos termos seja aceita neste dispositivo.",
+                version: "Versão {version}",
+                loadingTitle: "Carregando Termos de Serviço"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const ptMessages = {
             storeMeetingChat: {
                 label: "Armazenar bate-papo de reunião",
                 description: "Salve o bate-papo da reunião compatível para que ele possa aparecer no histórico, nas exportações e nos resumos da reunião."
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "Use com cuidado",
+                warningLabel: "Aviso legal e de privacidade"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "A captura com início automático reduz as salvaguardas de consentimento",
+                    body: "Este modo ignora a confirmação por reunião e inicia a captura assim que uma reunião compatível é detectada.",
+                    pointOne: "Use-o apenas em reuniões nas quais você tenha segurança de que pode capturar e reter conteúdo derivado da reunião.",
+                    pointTwo: "Dependendo do que você ativar, outros recursos poderão usar depois legendas ou chat salvos para resumos, orientação ao vivo ou exportações.",
+                    pointThree: "Você continua responsável por quaisquer requisitos de aviso, consentimento, política de trabalho ou política da plataforma aplicáveis ao seu uso.",
+                    confirm: "Ativar captura com início automático"
+                },
+                warning: {
+                    title: "A captura com início automático está ativa",
+                    body: "O CaptionArc vai ignorar a etapa de aprovação por reunião. Mantenha isso ativo apenas onde você puder capturar e reter conteúdo derivado da reunião de forma lícita."
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "A ativação automática de legendas interage com o app da reunião por você",
+                    body: "Este modo tenta ligar automaticamente as legendas ao vivo quando a superfície de reunião compatível permite isso.",
+                    pointOne: "A ativação automática pode ser mais sensível do que o modo guiado porque altera a interface da reunião sem uma etapa manual sua a cada vez.",
+                    pointTwo: "Mantenha isso apenas em ambientes nos quais a ativação automática de legendas seja aceitável para sua política e seu fluxo de trabalho.",
+                    pointThree: "Você continua responsável por usar essa automação apenas onde as regras do provedor e as expectativas da reunião permitirem.",
+                    confirm: "Ativar legendas automáticas"
+                },
+                warning: {
+                    title: "A ativação automática de legendas está ativa",
+                    body: "O CaptionArc tentará ligar as legendas automaticamente quando o provedor permitir. Revise este modo com cuidado em reuniões sensíveis a políticas."
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "Armazenar o chat da reunião pode aumentar a sensibilidade de privacidade",
+                    body: "Quando isso permanece ativo, o chat compatível da reunião passa a fazer parte do registro salvo da reunião e pode aparecer no histórico, nas exportações e nos fluxos de acompanhamento com IA.",
+                    pointOne: "O chat da reunião pode conter material mais sensível ou identificável do que as legendas visíveis sozinhas.",
+                    pointTwo: "O chat salvo poderá depois ser incluído em resumos, traduções e contexto do assistente quando esses recursos forem usados.",
+                    pointThree: "Use o armazenamento de chat apenas onde reter esse conteúdo seja compatível com seus avisos, consentimento e expectativas de confidencialidade.",
+                    confirm: "Ativar armazenamento do chat"
+                },
+                warning: {
+                    title: "O armazenamento do chat está ativo",
+                    body: "O chat compatível está sendo retido para histórico, exportação e acompanhamento com IA. Mantenha isso ativo apenas onde essa retenção for apropriada."
+                }
             }
         },
         openAiService: {

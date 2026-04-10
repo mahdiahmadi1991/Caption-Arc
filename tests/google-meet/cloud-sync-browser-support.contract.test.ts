@@ -63,6 +63,7 @@ async function loadCloudSyncModuleWithSettings(options?: {
     queueCloudSyncReconciliation: vi.fn(async () => undefined),
     runCloudSyncNow: vi.fn(async () => undefined),
     scheduleCloudSyncRun: vi.fn(() => undefined),
+    stopCloudSyncEngine: vi.fn(async () => undefined),
     syncCheckpointConnections: vi.fn(async () => undefined),
   }));
   vi.doMock("../../entrypoints/background/cloud-sync/outbox", () => ({

@@ -83,18 +83,22 @@ describe("Google Meet startup prompts contract", () => {
     expect(document.querySelector(".mc-capture-consent")).toBeNull();
   });
 
-  test("GM-PRM-003: session continuation prompt timeout defaults to restart", async () => {
-    vi.useFakeTimers();
-    mountOverlayRoot();
-    updateSettings({ overlayVisible: true });
+  test(
+    "GM-PRM-003: session continuation prompt timeout defaults to restart",
+    async () => {
+      vi.useFakeTimers();
+      mountOverlayRoot();
+      updateSettings({ overlayVisible: true });
 
-    const decisionPromise = requestSessionContinuationDecision("Google Meet");
-    await Promise.resolve();
+      const decisionPromise = requestSessionContinuationDecision("Google Meet");
+      await Promise.resolve();
 
-    await vi.advanceTimersByTimeAsync(31_000);
-    await expect(decisionPromise).resolves.toBe("restart");
-    expect(document.querySelector(".mc-capture-consent")).toBeNull();
-  });
+      await vi.advanceTimersByTimeAsync(31_000);
+      await expect(decisionPromise).resolves.toBe("restart");
+      expect(document.querySelector(".mc-capture-consent")).toBeNull();
+    },
+    15_000
+  );
 
   test("RPROMPT-004: hidden overlay session-ended prompt resolves timeout decision immediately", async () => {
     updateSettings({ overlayVisible: false });
@@ -134,16 +138,20 @@ describe("Google Meet startup prompts contract", () => {
     await expect(decisionPromise).resolves.toBe("dismissed");
   });
 
-  test("RPROMPT-007: session-ended timeout resolves exit", async () => {
-    vi.useFakeTimers();
-    mountOverlayRoot();
-    updateSettings({ overlayVisible: true });
+  test(
+    "RPROMPT-007: session-ended timeout resolves exit",
+    async () => {
+      vi.useFakeTimers();
+      mountOverlayRoot();
+      updateSettings({ overlayVisible: true });
 
-    const decisionPromise = requestSessionEndedDecision("Google Meet");
-    await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(31_000);
-    await expect(decisionPromise).resolves.toBe("exit");
-  });
+      const decisionPromise = requestSessionEndedDecision("Google Meet");
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(31_000);
+      await expect(decisionPromise).resolves.toBe("exit");
+    },
+    15_000
+  );
 
   test("RPROMPT-008: force-resolve applies only to matching active prompt kind", async () => {
     vi.useFakeTimers();

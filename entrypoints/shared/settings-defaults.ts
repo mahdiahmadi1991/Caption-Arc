@@ -54,12 +54,15 @@ export function createDefaultSettings() {
       DEFAULT_SESSION_CONTINUATION_WINDOW_MINUTES,
     overlayOpacity: 96,
     overlayClickThrough: false,
-    storeMeetingChat: true,
+    storeMeetingChat: false,
+    legalRiskAcknowledgements: {},
     deviceId: createDeviceId(),
     deviceLabel: createDefaultDeviceLabel(),
     uiLanguage: "system" as const,
     connectedCloudProviders: [],
     overlayPositionsByPlatform: {},
     verificationSnapshot: null,
+    termsAcceptance: null,
+    termsDecline: null,
   };
 }

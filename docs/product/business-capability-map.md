@@ -14,7 +14,7 @@ This document maps user-facing business capabilities to implementation surfaces 
 | Profile-driven summaries | Generate profile-shaped summaries in selected target language | `entrypoints/background/history.ts`, `entrypoints/shared/meeting-summary.ts`, `entrypoints/shared/summary-generation.ts` |
 | Session continuation and rejoin continuity | Resume eligible recently-ended sessions to reduce fragmented records | `entrypoints/content/platform-runtime.ts`, `entrypoints/background/history.ts`, `entrypoints/shared/meeting-session.ts` |
 | Optional cloud continuity | Mirror archive metadata/events to user-owned cloud app-data folders | `entrypoints/background/cloud-sync/*`, `entrypoints/background/cloud-sync/providers/*`, `entrypoints/shared/browser-capabilities.ts` |
-| Encrypted backup and restore | Export and import encrypted `.mcbak` backup bundles | `entrypoints/background/data-transfer.ts`, `entrypoints/shared/app-data-backup.ts`, `entrypoints/options/App.tsx` |
+| Encrypted backup and restore | Export and import encrypted `.mcbak` backup bundles for shared settings and archive recovery without exporting device-local secrets | `entrypoints/background/data-transfer.ts`, `entrypoints/shared/app-data-backup.ts`, `entrypoints/options/App.tsx` |
 | Runtime diagnostics and support tooling | Capture runtime diagnostics for support, validation, and troubleshooting | `entrypoints/background/diagnostics.ts`, `entrypoints/shared/diagnostics-client.ts`, `entrypoints/options/diagnostics-console.tsx` |
 
 ## Business Dependencies
@@ -22,6 +22,7 @@ This document maps user-facing business capabilities to implementation surfaces 
 - Shared AI dependency: OpenAI-backed translation, assistant, and summary paths rely on operational OpenAI setup.
 - Browser capability dependency: cloud sync providers are filtered by browser capability checks.
 - Provider DOM dependency: capture pipelines rely on provider page structures being present and detectable.
+- Risk-acceptance dependency: higher-risk settings now rely on one-time user acknowledgments plus persistent contextual warnings in the settings UI.
 
 ## Canonical Rule
 
