@@ -24,6 +24,11 @@ import {
 } from "../shared/openai-service";
 import { createDiagnosticsLogger } from "../shared/diagnostics-client";
 import { useT, type UiTranslator } from "../shared/i18n";
+import {
+  buildMeetingHistoryRelativeUrl,
+  readMeetingHistoryUrlState,
+  type MeetingHistoryUrlState,
+} from "./url-state";
 
 const historyDiagnostics = createDiagnosticsLogger({
   runtime: "meeting-history",
@@ -57,12 +62,14 @@ export type ProviderFilter = "all" | MeetingPlatform;
 export type SessionSort = "newest" | "oldest";
 export type StarFilter = "all" | "starred";
 
-type HistoryUrlState = {
+type NormalizedHistoryUrlState = {
   searchQuery: string;
   providerFilter: ProviderFilter;
   starFilter: StarFilter;
   sortOrder: SessionSort;
   selectedSessionId: string | null;
+  targetSummaryKey: string | null;
+  expandSummary: boolean;
 };
 
 const VALID_PROVIDER_FILTERS: ProviderFilter[] = [
@@ -74,6 +81,14 @@ const VALID_PROVIDER_FILTERS: ProviderFilter[] = [
 const VALID_SORT_ORDERS: SessionSort[] = ["newest", "oldest"];
 const VALID_STAR_FILTERS: StarFilter[] = ["all", "starred"];
 const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+
+function createMeetingHistoryViewInstanceId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `meeting-history-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function buildTimelineContext(
   session: MeetingSession,
@@ -170,15 +185,14 @@ function isTerminalSummaryJobState(
   );
 }
 
-function readHistoryUrlState(): HistoryUrlState {
-  const url = new URL(window.location.href);
-  const provider = url.searchParams.get("provider");
-  const starred = url.searchParams.get("starred");
-  const sort = url.searchParams.get("sort");
-  const selectedSessionId = url.searchParams.get("session");
-
+function normalizeHistoryUrlState(
+  state: MeetingHistoryUrlState
+): NormalizedHistoryUrlState {
+  const provider = state.providerFilter;
+  const starred = state.starFilter;
+  const sort = state.sortOrder;
   return {
-    searchQuery: url.searchParams.get("q") || "",
+    searchQuery: state.searchQuery,
     providerFilter: VALID_PROVIDER_FILTERS.includes(provider as ProviderFilter)
       ? (provider as ProviderFilter)
       : "all",
@@ -188,47 +202,26 @@ function readHistoryUrlState(): HistoryUrlState {
     sortOrder: VALID_SORT_ORDERS.includes(sort as SessionSort)
       ? (sort as SessionSort)
       : "newest",
-    selectedSessionId: selectedSessionId?.trim() || null,
+    selectedSessionId: state.selectedSessionId,
+    targetSummaryKey: state.targetSummaryKey,
+    expandSummary: state.expandSummary,
   };
 }
 
 function writeHistoryUrlState(
-  state: HistoryUrlState,
+  state: NormalizedHistoryUrlState,
   mode: "replace" | "push"
 ): void {
-  const url = new URL(window.location.href);
+  const nextUrl = buildMeetingHistoryRelativeUrl(window.location.href, {
+    searchQuery: state.searchQuery,
+    providerFilter: state.providerFilter,
+    starFilter: state.starFilter,
+    sortOrder: state.sortOrder,
+    selectedSessionId: state.selectedSessionId,
+    targetSummaryKey: state.selectedSessionId ? state.targetSummaryKey : null,
+    expandSummary: state.selectedSessionId ? state.expandSummary : false,
+  });
 
-  if (state.searchQuery.trim()) {
-    url.searchParams.set("q", state.searchQuery.trim());
-  } else {
-    url.searchParams.delete("q");
-  }
-
-  if (state.providerFilter !== "all") {
-    url.searchParams.set("provider", state.providerFilter);
-  } else {
-    url.searchParams.delete("provider");
-  }
-
-  if (state.starFilter !== "all") {
-    url.searchParams.set("starred", state.starFilter);
-  } else {
-    url.searchParams.delete("starred");
-  }
-
-  if (state.sortOrder !== "newest") {
-    url.searchParams.set("sort", state.sortOrder);
-  } else {
-    url.searchParams.delete("sort");
-  }
-
-  if (state.selectedSessionId) {
-    url.searchParams.set("session", state.selectedSessionId);
-  } else {
-    url.searchParams.delete("session");
-  }
-
-  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
   if (mode === "push") {
     window.history.pushState(null, "", nextUrl);
   } else {
@@ -238,7 +231,9 @@ function writeHistoryUrlState(
 
 export function useHistory() {
   const t = useT();
-  const initialUrlState = readHistoryUrlState();
+  const initialUrlState = normalizeHistoryUrlState(
+    readMeetingHistoryUrlState(window.location.href)
+  );
 
   const [sessions, setSessions] = useState<MeetingSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,6 +254,11 @@ export function useHistory() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     initialUrlState.selectedSessionId
   );
+  const [requestedSummaryKey, setRequestedSummaryKey] = useState<string | null>(
+    initialUrlState.targetSummaryKey
+  );
+  const [requestedSummaryExpanded, setRequestedSummaryExpanded] =
+    useState<boolean>(initialUrlState.expandSummary);
   const [storageInfo, setStorageInfo] = useState<StorageInfo>({
     bytesUsed: 0,
     quota: 5242880,
@@ -292,6 +292,7 @@ export function useHistory() {
   const activeSummaryRequestsRef = useRef<Set<string>>(new Set());
   const historyRefreshInFlightRef = useRef(false);
   const lastFocusRefreshAtRef = useRef(0);
+  const viewInstanceIdRef = useRef(createMeetingHistoryViewInstanceId());
 
   useEffect(() => {
     void loadHistory();
@@ -363,12 +364,16 @@ export function useHistory() {
 
   useEffect(() => {
     const handlePopState = () => {
-      const nextState = readHistoryUrlState();
+      const nextState = normalizeHistoryUrlState(
+        readMeetingHistoryUrlState(window.location.href)
+      );
       setSearchQuery(nextState.searchQuery);
       setProviderFilter(nextState.providerFilter);
       setStarFilter(nextState.starFilter);
       setSortOrder(nextState.sortOrder);
       setSelectedSessionId(nextState.selectedSessionId);
+      setRequestedSummaryKey(nextState.targetSummaryKey);
+      setRequestedSummaryExpanded(nextState.expandSummary);
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -432,10 +437,101 @@ export function useHistory() {
         starFilter,
         sortOrder,
         selectedSessionId,
+        targetSummaryKey: requestedSummaryKey,
+        expandSummary: requestedSummaryExpanded,
       },
       "replace"
     );
-  }, [providerFilter, searchQuery, selectedSessionId, sortOrder, starFilter]);
+  }, [
+    providerFilter,
+    requestedSummaryExpanded,
+    requestedSummaryKey,
+    searchQuery,
+    selectedSessionId,
+    sortOrder,
+    starFilter,
+  ]);
+
+  useEffect(() => {
+    const sendViewState = async (state: {
+      selectedSessionId: string | null;
+      currentUrl: string;
+      visible: boolean;
+      focused: boolean;
+    }) => {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          action: "updateMeetingHistoryViewState",
+          selectedSessionId: state.selectedSessionId,
+          currentUrl: state.currentUrl,
+          viewInstanceId: viewInstanceIdRef.current,
+          visible: state.visible,
+          focused: state.focused,
+        });
+
+        if (response?.success === false) {
+          await historyDiagnostics.warn(
+            "meeting_history_view_state_report_failed",
+            {
+              selectedSessionId: state.selectedSessionId,
+              currentUrl: state.currentUrl,
+              visible: state.visible,
+              focused: state.focused,
+              error: response.error || null,
+            },
+            {
+              sessionId: state.selectedSessionId || undefined,
+            }
+          );
+        }
+      } catch (error) {
+        await historyDiagnostics.warn(
+          "meeting_history_view_state_report_failed",
+          {
+            selectedSessionId: state.selectedSessionId,
+            currentUrl: state.currentUrl,
+            visible: state.visible,
+            focused: state.focused,
+            error,
+          },
+          {
+            sessionId: state.selectedSessionId || undefined,
+          }
+        );
+      }
+    };
+
+    const reportCurrentState = () =>
+      void sendViewState({
+        selectedSessionId,
+        currentUrl: window.location.href,
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+      });
+
+    const reportInactiveState = () =>
+      void sendViewState({
+        selectedSessionId: null,
+        currentUrl: window.location.href,
+        visible: false,
+        focused: false,
+      });
+
+    reportCurrentState();
+    window.addEventListener("focus", reportCurrentState);
+    window.addEventListener("blur", reportCurrentState);
+    document.addEventListener("visibilitychange", reportCurrentState);
+    window.addEventListener("pagehide", reportInactiveState);
+    window.addEventListener("beforeunload", reportInactiveState);
+
+    return () => {
+      window.removeEventListener("focus", reportCurrentState);
+      window.removeEventListener("blur", reportCurrentState);
+      document.removeEventListener("visibilitychange", reportCurrentState);
+      window.removeEventListener("pagehide", reportInactiveState);
+      window.removeEventListener("beforeunload", reportInactiveState);
+    };
+  }, [selectedSessionId]);
 
   useEffect(() => {
     if (loading || !selectedSessionId) {
@@ -446,6 +542,8 @@ export function useHistory() {
     const exists = sessions.some((session) => session.id === selectedSessionId);
     if (!exists) {
       setSelectedSessionId(null);
+      setRequestedSummaryKey(null);
+      setRequestedSummaryExpanded(false);
       setSelectedSession(null);
     }
   }, [loading, selectedSessionId, sessions]);
@@ -746,12 +844,16 @@ export function useHistory() {
         starFilter,
         sortOrder,
         selectedSessionId: sessionId,
+        targetSummaryKey: null,
+        expandSummary: false,
       },
       "push"
     );
     setSelectedSession(null);
     setDetailLoading(true);
     setSelectedSessionId(sessionId);
+    setRequestedSummaryKey(null);
+    setRequestedSummaryExpanded(false);
   };
 
   const closeSession = () => {
@@ -767,10 +869,14 @@ export function useHistory() {
         starFilter,
         sortOrder,
         selectedSessionId: null,
+        targetSummaryKey: null,
+        expandSummary: false,
       },
       "push"
     );
     setSelectedSessionId(null);
+    setRequestedSummaryKey(null);
+    setRequestedSummaryExpanded(false);
     setSelectedSession(null);
   };
 
@@ -1488,6 +1594,8 @@ export function useHistory() {
       ? summaryJobStatuses[selectedSessionId] || null
       : null,
     summaryJobStatuses,
+    requestedSummaryExpanded,
+    requestedSummaryKey,
     filteredSessions,
     openSession,
     closeSession,

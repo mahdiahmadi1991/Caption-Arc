@@ -64,6 +64,12 @@ export const ruMessages = {
             version: "Версия {version}",
             copyright: "Авторские права © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "Сводка для {title} готова",
+                message: "Нажмите, чтобы открыть полную сводку в истории встреч."
+            }
+        },
         firstRunTerms: {
             eyebrow: "Первоначальная настройка",
             title: "Изучите и примите условия, чтобы продолжить",

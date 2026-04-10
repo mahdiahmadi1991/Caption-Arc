@@ -65,6 +65,12 @@ export const enMessages = {
       version: "Version {version}",
       copyright: "Copyright © {year} CaptionArc",
     },
+    notifications: {
+      summaryReady: {
+        title: "Summary ready for {title}",
+        message: "Click to open the full summary in Meeting History.",
+      },
+    },
     firstRunTerms: {
       eyebrow: "First-run setup",
       title: "Review and accept the Terms to continue",

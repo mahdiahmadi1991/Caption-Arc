@@ -64,6 +64,12 @@ export const jaMessages = {
             version: "バージョン {version}",
             copyright: "著作権 © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "{title} の要約が準備できました",
+                message: "クリックすると会議履歴で完全な要約を開きます。"
+            }
+        },
         firstRunTerms: {
             eyebrow: "初回セットアップ",
             title: "続行するには利用規約を確認して同意してください",

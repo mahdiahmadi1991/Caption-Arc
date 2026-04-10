@@ -116,6 +116,13 @@ function installChromeRuntime() {
   const storageState: Record<string, unknown> = {};
   const alarmsCreate = vi.fn(async () => undefined);
   const alarmsClear = vi.fn(async () => true);
+  const notificationsCreate = vi.fn(async (notificationId: string) => notificationId);
+  const notificationsClear = vi.fn(async () => true);
+  const tabsQuery = vi.fn(async () => []);
+  const tabsUpdate = vi.fn(async () => undefined);
+  const tabsCreate = vi.fn(async () => undefined);
+  const windowsUpdate = vi.fn(async () => undefined);
+  const getUILanguage = vi.fn(() => "en-US");
 
   vi.stubGlobal("chrome", {
     storage: {
@@ -132,10 +139,37 @@ function installChromeRuntime() {
     },
     runtime: {
       sendMessage: vi.fn(async () => ({ success: true })),
+      getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
+    },
+    notifications: {
+      create: notificationsCreate,
+      clear: notificationsClear,
+    },
+    tabs: {
+      query: tabsQuery,
+      update: tabsUpdate,
+      create: tabsCreate,
+    },
+    windows: {
+      update: windowsUpdate,
+    },
+    i18n: {
+      getUILanguage,
     },
   });
 
-  return { storageState, alarmsCreate, alarmsClear };
+  return {
+    storageState,
+    alarmsCreate,
+    alarmsClear,
+    notificationsCreate,
+    notificationsClear,
+    tabsQuery,
+    tabsUpdate,
+    tabsCreate,
+    windowsUpdate,
+    getUILanguage,
+  };
 }
 
 beforeEach(() => {
@@ -344,5 +378,194 @@ describe("Meeting summary pipeline contract", () => {
       )
     ).toBe(true);
     expect(putStoredMeetingSessionRecordMock).toHaveBeenCalled();
+  });
+
+  test("MSUM-006: successful summary completion creates a summary-ready notification when the user is not focused on the same session", async () => {
+    const { notificationsCreate } = installChromeRuntime();
+    const session = createSession({}, 2, 40);
+
+    generateTextChunkMock.mockResolvedValue({
+      success: true,
+      text: "summary-output",
+      truncated: false,
+    });
+    getStoredMeetingSessionRecordMock.mockResolvedValueOnce(session);
+
+    const result = await historySummaryInternals.runMeetingSummaryJob(
+      {
+        sessionId: session.id,
+        targetLanguage: "fa",
+        profileId: createDefaultSettings().summaryProfiles[0]!.id,
+      },
+      "manual"
+    );
+
+    expect(result.success).toBe(true);
+    expect(notificationsCreate).toHaveBeenCalledTimes(1);
+    expect(notificationsCreate).toHaveBeenCalledWith(
+      expect.stringMatching(/^summary-ready:/),
+      expect.objectContaining({
+        type: "basic",
+        iconUrl: "icon-128.png",
+      })
+    );
+  });
+
+  test("MSUM-007: summary-ready notifications are suppressed when the same session detail is visible and focused", async () => {
+    const { notificationsCreate } = installChromeRuntime();
+    const session = createSession({}, 2, 40);
+
+    historySummaryInternals.setMeetingHistoryViewStateForTests(9, {
+      selectedSessionId: session.id,
+      visible: true,
+      focused: true,
+    });
+
+    generateTextChunkMock.mockResolvedValue({
+      success: true,
+      text: "summary-output",
+      truncated: false,
+    });
+    getStoredMeetingSessionRecordMock.mockResolvedValueOnce(session);
+
+    const result = await historySummaryInternals.runMeetingSummaryJob(
+      {
+        sessionId: session.id,
+        targetLanguage: "fa",
+        profileId: createDefaultSettings().summaryProfiles[0]!.id,
+      },
+      "manual"
+    );
+
+    expect(result.success).toBe(true);
+    expect(notificationsCreate).not.toHaveBeenCalled();
+  });
+
+  test("MSUM-008: presence updates use a stable view instance when sender.tab is unavailable", async () => {
+    installChromeRuntime();
+    const response = await historySummaryInternals.updateMeetingHistoryViewState(
+      {
+        selectedSessionId: "session-1",
+        currentUrl:
+          "chrome-extension://test/meeting-history.html?session=session-1&summary=default%3Afa%3A1712742000000&summaryExpanded=1",
+        viewInstanceId: "meeting-history-view-1",
+        visible: true,
+        focused: true,
+      },
+      {
+      } as chrome.runtime.MessageSender
+    );
+
+    expect(response).toEqual({ success: true });
+    expect(
+      historySummaryInternals
+        .getMeetingHistoryViewStatesForTests()
+        .get("view:meeting-history-view-1")
+    ).toMatchObject({
+      selectedSessionId: "session-1",
+      visible: true,
+      focused: true,
+    });
+  });
+
+  test("MSUM-010: same-url meeting-history views keep independent presence state without sender tabs", async () => {
+    installChromeRuntime();
+
+    await historySummaryInternals.updateMeetingHistoryViewState(
+      {
+        selectedSessionId: "session-1",
+        currentUrl: "chrome-extension://test/meeting-history.html?session=session-1",
+        viewInstanceId: "meeting-history-view-a",
+        visible: true,
+        focused: true,
+      },
+      {} as chrome.runtime.MessageSender
+    );
+
+    await historySummaryInternals.updateMeetingHistoryViewState(
+      {
+        selectedSessionId: "session-1",
+        currentUrl: "chrome-extension://test/meeting-history.html?session=session-1",
+        viewInstanceId: "meeting-history-view-b",
+        visible: false,
+        focused: false,
+      },
+      {} as chrome.runtime.MessageSender
+    );
+
+    const states = historySummaryInternals.getMeetingHistoryViewStatesForTests();
+    expect(states.size).toBe(2);
+    expect(states.get("view:meeting-history-view-a")).toMatchObject({
+      visible: true,
+      focused: true,
+    });
+    expect(states.get("view:meeting-history-view-b")).toMatchObject({
+      visible: false,
+      focused: false,
+    });
+  });
+
+  test("MSUM-009: clicking a summary-ready notification prefers the best matching meeting-history tab instead of the first one", async () => {
+    const {
+      notificationsClear,
+      tabsQuery,
+      tabsUpdate,
+      windowsUpdate,
+    } = installChromeRuntime();
+
+    tabsQuery.mockImplementation(
+      async (queryInfo?: { active?: boolean; lastFocusedWindow?: boolean }) => {
+        if (queryInfo?.active && queryInfo?.lastFocusedWindow) {
+          return [
+            {
+              id: 34,
+              url: "chrome-extension://test/meeting-history.html?session=recent-session",
+              windowId: 7,
+              active: true,
+            },
+          ];
+        }
+
+        return [
+          {
+            id: 12,
+            url: "chrome-extension://test/meeting-history.html?session=older-session",
+            windowId: 4,
+          },
+          {
+            id: 34,
+            url: "chrome-extension://test/meeting-history.html?session=recent-session",
+            windowId: 7,
+            active: true,
+          },
+        ];
+      }
+    );
+
+    const notificationId = historySummaryInternals.buildSummaryReadyNotificationId(
+      "session-1",
+      "default:fa:1712742000000"
+    );
+
+    const handled = await historySummaryInternals.handleSummaryReadyNotificationClick(
+      notificationId
+    );
+
+    expect(handled).toBe(true);
+    expect(notificationsClear).toHaveBeenCalledWith(notificationId);
+    expect(tabsUpdate).toHaveBeenCalledWith(
+      34,
+      expect.objectContaining({
+        active: true,
+        url: expect.stringContaining("session=session-1"),
+      })
+    );
+    expect(String(tabsUpdate.mock.calls[0]?.[1]?.url)).toContain(
+      "summary=default%3Afa%3A1712742000000"
+    );
+    expect(String(tabsUpdate.mock.calls[0]?.[1]?.url)).toContain(
+      "summaryExpanded=1"
+    );
+    expect(windowsUpdate).toHaveBeenCalledWith(7, { focused: true });
   });
 });

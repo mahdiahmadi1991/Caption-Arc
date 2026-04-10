@@ -64,6 +64,12 @@ export const hiMessages = {
             version: "संस्करण {version}",
             copyright: "कॉपीराइट © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "{title} के लिए सारांश तैयार है",
+                message: "मीटिंग इतिहास में पूरा सारांश खोलने के लिए क्लिक करें।"
+            }
+        },
         firstRunTerms: {
             eyebrow: "पहला सेटअप",
             title: "आगे बढ़ने के लिए शर्तें देखें और स्वीकार करें",

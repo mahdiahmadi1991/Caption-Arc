@@ -86,6 +86,31 @@ Rules:
 4. Successful summaries are persisted back into the meeting session, including execution mode, strategy, continuation count, evidence chunk count, and reconciliation flag.
 5. Successful persisted summaries trigger session save and cloud-sync notification.
 
+## C-MSUM-006: Successful summary completion may emit one browser notification with browser-locale copy
+
+Source: `maybeShowSummaryReadyNotification`, `getSummaryReadyNotificationCopy`, `buildSummaryReadyNotificationId` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts); localized copy in [../../entrypoints/shared/i18n/messages/en.ts](../../entrypoints/shared/i18n/messages/en.ts) and peer locale catalogs
+
+Rules:
+
+1. Summary-ready notifications are considered only after the summary artifact is persisted into the meeting session record.
+2. Failed, cancelled, and retrying summary jobs do not emit summary-ready notifications.
+3. Eligible notifications use browser-locale resolution based on browser UI language rather than the extension UI-language preference.
+4. Notification payloads use a deterministic notification identifier that encodes the target session and exact summary artifact key.
+5. Notification rendering uses a cross-browser-safe basic notification template with extension-owned icon, title, and message fields only.
+
+## C-MSUM-007: Summary-ready notifications are suppressed for the same focused session detail and deep-link back into meeting history on click
+
+Source: `updateMeetingHistoryViewState`, `setMeetingHistoryViewState`, `shouldSuppressSummaryReadyNotification`, `handleSummaryReadyNotificationClick`, `openMeetingHistoryForSummaryTarget` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts); summary-target URL helpers in [../../entrypoints/meeting-history/url-state.ts](../../entrypoints/meeting-history/url-state.ts); URL-state consumption in [../../entrypoints/meeting-history/use-history.ts](../../entrypoints/meeting-history/use-history.ts) and [../../entrypoints/meeting-history/components/session-detail.tsx](../../entrypoints/meeting-history/components/session-detail.tsx)
+
+Rules:
+
+1. Meeting History reports its selected session, page visibility, and browser-focus state back to background.
+2. A summary-ready notification is suppressed when any active Meeting History tab is both visible and focused while showing the same session detail.
+3. Opening the same session in a background tab without focus does not suppress the notification.
+4. Clicking a summary-ready notification reuses an existing Meeting History tab when possible; otherwise it opens a new tab.
+5. Notification click routing selects the target session, requests the exact generated summary artifact by key, and forces the summary section expanded.
+6. If the requested summary key is unavailable at render time, Meeting History falls back to the latest matching summary after selecting the target session.
+
 ## Test Traceability
 
 - [../quality/references/meeting-summary-pipeline-traceability-matrix.md](../quality/references/meeting-summary-pipeline-traceability-matrix.md)
@@ -94,4 +119,4 @@ Each rule maps to one or more traceability cases with explicit `implemented` or 
 
 ## Change Control
 
-If summary planning thresholds, retry behavior, continuation handling, evidence extraction, or persistence semantics change in code, update this contract and its traceability matrix in the same change set.
+If summary planning thresholds, retry behavior, continuation handling, evidence extraction, persistence semantics, or summary notification behavior change in code, update this contract and its traceability matrix in the same change set.

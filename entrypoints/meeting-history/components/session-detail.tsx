@@ -123,6 +123,27 @@ const SUMMARY_MARKDOWN_COMPONENTS: Components = {
   ),
 };
 
+function getRequestedSummaryFallback(
+  session: MeetingSession,
+  requestedSummaryKey: string | null
+) {
+  if (!requestedSummaryKey) {
+    return null;
+  }
+
+  const groupSeparatorIndex = requestedSummaryKey.lastIndexOf(":");
+  if (groupSeparatorIndex <= 0) {
+    return null;
+  }
+
+  const requestedGroupKey = requestedSummaryKey.slice(0, groupSeparatorIndex);
+  return (
+    getMeetingSummaryList(session.summaries).find(
+      (summary) => summary.groupKey === requestedGroupKey
+    ) || null
+  );
+}
+
 type SessionDetailProps = {
   session: MeetingSession;
   translationTargetLanguage: string;
@@ -134,6 +155,8 @@ type SessionDetailProps = {
   translatingSessionId: string | null;
   summarizingSessionId: string | null;
   summaryJobStatus: SummaryJobStatus | null;
+  requestedSummaryExpanded: boolean;
+  requestedSummaryKey: string | null;
   onTranslateCaption: (
     sessionId: string,
     captionTimestamp: number,
@@ -848,6 +871,8 @@ export function SessionDetail({
   translatingSessionId,
   summarizingSessionId,
   summaryJobStatus,
+  requestedSummaryExpanded,
+  requestedSummaryKey,
   onTranslateCaption,
   onTranslateAllCaptions,
   onGenerateSummary,
@@ -886,6 +911,8 @@ export function SessionDetail({
   const [continuationsExpanded, setContinuationsExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [selectedSummaryKey, setSelectedSummaryKey] = useState<string>("");
+  const summarySectionRef = useRef<HTMLDivElement | null>(null);
+  const handledSummaryDeepLinkScrollRef = useRef<string | null>(null);
   const latestSavedSummary = useMemo(
     () => getMeetingSummaryList(session.summaries)[0] || null,
     [session.summaries]
@@ -923,6 +950,31 @@ export function SessionDetail({
       : summaryProfiles[0]?.id || "";
     setSelectedProfileId(nextProfileId);
   }, [defaultSummaryProfileId, session.id, session.summaryProfileId, summaryProfiles]);
+
+  useEffect(() => {
+    const requestedSummary =
+      (requestedSummaryKey && session.summaries?.[requestedSummaryKey]) || null;
+    const fallbackSummary = requestedSummary
+      ? null
+      : getRequestedSummaryFallback(session, requestedSummaryKey);
+
+    if (!requestedSummary && !fallbackSummary) {
+      if (requestedSummaryExpanded) {
+        setSummaryExpanded(true);
+      }
+      return;
+    }
+
+    const summaryTarget = requestedSummary || fallbackSummary;
+    if (!summaryTarget) {
+      return;
+    }
+
+    setSummaryLanguage(summaryTarget.language);
+    setSelectedProfileId(summaryTarget.profileId);
+    setSelectedSummaryKey(summaryTarget.key);
+    setSummaryExpanded(true);
+  }, [requestedSummaryExpanded, requestedSummaryKey, session.id, session.summaries]);
 
   const selectedProfile =
     summaryProfiles.find((profile) => profile.id === selectedProfileId) || null;
@@ -1104,7 +1156,13 @@ export function SessionDetail({
   }, [session.id]);
 
   useEffect(() => {
-    setSelectedSummaryKey(matchingSummaries[0]?.key || "");
+    setSelectedSummaryKey((current) => {
+      if (current && matchingSummaries.some((summary) => summary.key === current)) {
+        return current;
+      }
+
+      return matchingSummaries[0]?.key || "";
+    });
   }, [matchingSummaries, session.id]);
 
   useEffect(() => {
@@ -1112,6 +1170,51 @@ export function SessionDetail({
       setSummaryExpanded(true);
     }
   }, [isSummarizing]);
+
+  useEffect(() => {
+    if (requestedSummaryExpanded) {
+      setSummaryExpanded(true);
+    }
+  }, [requestedSummaryExpanded]);
+
+  useEffect(() => {
+    if (!requestedSummaryExpanded || !summaryExpanded) {
+      return;
+    }
+
+    const deepLinkTargetKey = `${session.id}:${requestedSummaryKey || "expanded"}`;
+    if (handledSummaryDeepLinkScrollRef.current === deepLinkTargetKey) {
+      return;
+    }
+
+    handledSummaryDeepLinkScrollRef.current = deepLinkTargetKey;
+
+    const scrollToSummary = () => {
+      summarySectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      let secondFrameId = 0;
+      const firstFrameId = window.requestAnimationFrame(() => {
+        secondFrameId = window.requestAnimationFrame(scrollToSummary);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(firstFrameId);
+        if (secondFrameId) {
+          window.cancelAnimationFrame(secondFrameId);
+        }
+      };
+    }
+
+    const timeoutId = window.setTimeout(scrollToSummary, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [requestedSummaryExpanded, requestedSummaryKey, session.id, summaryExpanded]);
 
   return (
     <div className="space-y-6">
@@ -1501,7 +1604,10 @@ export function SessionDetail({
         </AnimatedCollapse>
       </div>
 
-      <div className="rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-6 shadow-[0_18px_40px_var(--app-shadow)] backdrop-blur-xl">
+      <div
+        ref={summarySectionRef}
+        className="rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-6 shadow-[0_18px_40px_var(--app-shadow)] backdrop-blur-xl"
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">

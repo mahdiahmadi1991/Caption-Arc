@@ -18,7 +18,9 @@ This matrix maps meeting-summary-pipeline behavior-contract rules to available v
 | MSUM-003 | C-MSUM-003 | summary planning selects strategy from weighted transcript, chat, and prompt size | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
 | MSUM-004 | C-MSUM-004 | long summaries continue segment-by-segment and optionally reconcile the final draft | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
 | MSUM-005 | C-MSUM-005 | strategy-specific execution chooses direct prompts or evidence extraction before persistence | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
+| MSUM-006 | C-MSUM-006 | successful summary completion emits one browser notification with browser-locale copy | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
+| MSUM-007 | C-MSUM-007 | same-session focused detail suppresses notifications and notification clicks deep-link to the exact saved summary | `tests/google-meet/meeting-summary-pipeline.contract.test.ts`, `tests/google-meet/meeting-history-url-state.contract.test.ts` | implemented |
 
 ## Notes
 
-1. Summary-pipeline planned coverage is now closed with deterministic contract tests.
+1. Summary-pipeline deterministic coverage now includes persistence-time notification emission, focus-aware suppression, and summary-target URL construction.

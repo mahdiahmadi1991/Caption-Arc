@@ -82,7 +82,7 @@ export default defineConfig({
     name: "CaptionArc",
     description: "Capture and translate browser meeting captions in real-time",
     version: "1.3.0",
-    permissions: ["storage", "identity", "alarms"],
+    permissions: ["storage", "identity", "alarms", "notifications"],
     host_permissions: [
       ...meetingHostPermissions,
       "https://api.openai.com/*",
