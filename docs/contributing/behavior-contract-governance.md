@@ -14,13 +14,45 @@ Behavior contracts exist to keep these three surfaces synchronized:
 
 Canonical behavior contracts live in `docs/api/`:
 
+- `provider-routing-behavior-contract.md`
 - `google-meet-behavior-contract.md`
+- `microsoft-teams-behavior-contract.md`
+- `zoom-web-behavior-contract.md`
+- `runtime-lifecycle-behavior-contract.md`
+- `runtime-prompts-behavior-contract.md`
 - `runtime-session-continuation-behavior-contract.md`
+- `meeting-session-model-behavior-contract.md`
+- `event-ingestion-behavior-contract.md`
+- `overlay-behavior-contract.md`
+- `assistant-runtime-behavior-contract.md`
+- `meeting-summary-pipeline-behavior-contract.md`
+- `translation-pipeline-behavior-contract.md`
+- `cloud-sync-behavior-contract.md`
+- `diagnostics-behavior-contract.md`
+- `settings-and-readiness-behavior-contract.md`
+- `data-transfer-behavior-contract.md`
+- `browser-capabilities-behavior-contract.md`
 
 Canonical test traceability artifacts live in `docs/quality/references/`:
 
+- `provider-routing-traceability-matrix.md`
 - `google-meet-automation-traceability-matrix.md`
+- `microsoft-teams-traceability-matrix.md`
+- `zoom-web-traceability-matrix.md`
+- `runtime-lifecycle-traceability-matrix.md`
+- `runtime-prompts-traceability-matrix.md`
 - `runtime-session-continuation-traceability-matrix.md`
+- `meeting-session-model-traceability-matrix.md`
+- `event-ingestion-traceability-matrix.md`
+- `overlay-traceability-matrix.md`
+- `assistant-runtime-traceability-matrix.md`
+- `meeting-summary-pipeline-traceability-matrix.md`
+- `translation-pipeline-traceability-matrix.md`
+- `cloud-sync-traceability-matrix.md`
+- `diagnostics-traceability-matrix.md`
+- `settings-and-readiness-traceability-matrix.md`
+- `data-transfer-traceability-matrix.md`
+- `browser-capabilities-traceability-matrix.md`
 
 Use one canonical contract per behavior area. Avoid duplicate contract statements across multiple docs.
 
@@ -58,6 +90,11 @@ Update behavior contracts and traceability matrices in the same change when work
    - `pnpm docs:check:behavior`
    - `pnpm test:google` and `pnpm test:google:coverage` for code changes
 5. Record contract/test impact in implementation summary and plan-required work artifacts.
+
+For any traceability case validated with DLS (`chrome:smoke:live*`) as acceptance evidence:
+
+6. Run the DLS scenario in a visible session for repository-owner review.
+7. Record explicit repository-owner approval in-thread before marking the case complete.
 
 ## Enforcement
 

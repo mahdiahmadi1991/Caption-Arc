@@ -415,7 +415,7 @@ export async function runCloudSyncNow(reason = "manual"): Promise<void> {
 }
 
 export async function getCloudSyncStateSnapshot(): Promise<CloudSyncState> {
-  const [tasks, engine, checkpoints, diagnostics] = await Promise.all([
+  const [tasks, engine, checkpoints, diagnostics, pendingSettingsDecision] = await Promise.all([
     listCloudSyncTasks(),
     getCloudSyncEngineState(),
     listCloudSyncCheckpoints(),
@@ -429,6 +429,11 @@ export async function getCloudSyncStateSnapshot(): Promise<CloudSyncState> {
     engine,
     checkpoints: mergeCloudSyncProviderCheckpoints(checkpoints),
     diagnostics,
-    pendingSettingsDecision: arguments[0],
+    pendingSettingsDecision,
   };
 }
+
+export const cloudSyncEngineInternals = {
+  createRetryDelayMs,
+  processTaskAcrossProviders,
+};

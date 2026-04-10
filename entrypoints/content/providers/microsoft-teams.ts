@@ -136,6 +136,7 @@ const capturedTeamsChatMessageIds = new Set<string>();
 const recentTeamsChatFingerprints = new Map<string, number>();
 let teamsChatMessageCounter = 0;
 let hasSeenTeamsLeaveControl = false;
+let directCallChatCaptureFloorOverride: number | null | undefined = undefined;
 
 export function resetMicrosoftTeamsProviderState(): void {
   hasSeenTeamsLeaveControl = false;
@@ -150,6 +151,7 @@ export function resetMicrosoftTeamsProviderState(): void {
   capturedTeamsChatMessageIds.clear();
   recentTeamsChatFingerprints.clear();
   teamsChatMessageCounter = 0;
+  directCallChatCaptureFloorOverride = undefined;
 }
 
 function buildTeamsCaptionMetadata(
@@ -989,6 +991,10 @@ function isOwnTeamsChatMessage(body: Element, entry: Element): boolean {
 }
 
 function getDirectCallChatCaptureFloorTimestamp(): number | null {
+  if (directCallChatCaptureFloorOverride !== undefined) {
+    return directCallChatCaptureFloorOverride;
+  }
+
   const session = getCurrentSessionSnapshot();
   if (!session || session.identifiers.callType !== "direct-call") {
     return null;
@@ -1951,6 +1957,36 @@ function getTeamsMeetingPresence(url: URL): MeetingPresenceState {
   return isTeamsMeetingContext(url) ? "prejoin" : "unknown";
 }
 
+function getTeamsSessionMetadataForUrl(runtimeUrl: URL) {
+  const canonicalUrl = getTeamsCanonicalUrl(runtimeUrl);
+  const sourceUrl = canonicalUrl.href;
+  const isDirectCall = isTeamsDirectCallContext(runtimeUrl);
+  const resolvedMeetingCode = isDirectCall
+    ? undefined
+    : resolveTeamsMeetingCode(runtimeUrl);
+  const meetingId = isDirectCall
+    ? undefined
+    : resolvedMeetingCode || extractTeamsMeetingId(canonicalUrl);
+  const meetingCode = isDirectCall
+    ? undefined
+    : resolvedMeetingCode || extractTeamsLiveMeetingCode(canonicalUrl);
+  const callType = isDirectCall ? "direct-call" : "scheduled-meeting";
+
+  return {
+    platform: "microsoft-teams" as const,
+    providerLabel: getProviderLabel("microsoft-teams"),
+    title:
+      extractTeamsVisibleMeetingTitle() ||
+      normalizeTeamsTitle(document.title),
+    sourceUrl,
+    identifiers: {
+      meetingId,
+      meetingCode,
+      callType,
+    },
+  };
+}
+
 export const microsoftTeamsProvider: MeetingProvider = {
   platform: "microsoft-teams",
 
@@ -2136,34 +2172,7 @@ export const microsoftTeamsProvider: MeetingProvider = {
   },
 
   getSessionMetadata() {
-    const runtimeUrl = new URL(window.location.href);
-    const canonicalUrl = getTeamsCanonicalUrl(runtimeUrl);
-    const sourceUrl = canonicalUrl.href;
-    const isDirectCall = isTeamsDirectCallContext(runtimeUrl);
-    const resolvedMeetingCode = isDirectCall
-      ? undefined
-      : resolveTeamsMeetingCode(runtimeUrl);
-    const meetingId = isDirectCall
-      ? undefined
-      : resolvedMeetingCode || extractTeamsMeetingId(canonicalUrl);
-    const meetingCode = isDirectCall
-      ? undefined
-      : resolvedMeetingCode || extractTeamsLiveMeetingCode(canonicalUrl);
-    const callType = isDirectCall ? "direct-call" : "scheduled-meeting";
-
-    return {
-      platform: "microsoft-teams",
-      providerLabel: getProviderLabel("microsoft-teams"),
-      title:
-        extractTeamsVisibleMeetingTitle() ||
-        normalizeTeamsTitle(document.title),
-      sourceUrl,
-      identifiers: {
-        meetingId,
-        meetingCode,
-        callType,
-      },
-    };
+    return getTeamsSessionMetadataForUrl(new URL(window.location.href));
   },
 
   getEmptyState() {
@@ -2252,6 +2261,9 @@ export const microsoftTeamsProvider: MeetingProvider = {
 };
 
 export const microsoftTeamsProviderInternals = {
+  extractTeamsChatMessages,
+  processCaptionEntry,
+  startCaptionObserver: () => microsoftTeamsProvider.startCaptionObserver(),
   getCaptionRegions,
   extractCaptionEntries: getCaptionEntries,
   extractSpeakerAndText,
@@ -2260,6 +2272,11 @@ export const microsoftTeamsProviderInternals = {
   extractTeamsParticipantLabel,
   extractTeamsThreadId,
   getTeamsMeetingPresence,
+  getTeamsSessionMetadataForUrl,
+  isTeamsDirectCallContext,
   isTeamsMeetingContext,
   normalizeTeamsTitle,
+  setDirectCallChatCaptureFloorOverride: (value: number | null | undefined) => {
+    directCallChatCaptureFloorOverride = value;
+  },
 };

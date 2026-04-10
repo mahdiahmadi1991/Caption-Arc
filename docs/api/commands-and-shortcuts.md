@@ -75,6 +75,10 @@ pnpm chrome:debug:bridge:remove
 pnpm chrome:debug:bridge:show
 ```
 
+DLS acceptance gate:
+
+- runtime DLS commands are considered complete only after repository-owner visual review and explicit in-thread approval
+
 All command definitions are sourced from [`package.json`](../../package.json).
 
 Diagnostics threshold note:

@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { updateSettings, setOverlay } from "../../entrypoints/content/state";
 import {
+  forceResolveActivePrompt,
   requestCaptureConsent,
+  requestSessionEndedDecision,
   requestSessionContinuationDecision,
 } from "../../entrypoints/content/overlay/capture-consent";
 
@@ -92,5 +94,67 @@ describe("Google Meet startup prompts contract", () => {
     await vi.advanceTimersByTimeAsync(31_000);
     await expect(decisionPromise).resolves.toBe("restart");
     expect(document.querySelector(".mc-capture-consent")).toBeNull();
+  });
+
+  test("RPROMPT-004: hidden overlay session-ended prompt resolves timeout decision immediately", async () => {
+    updateSettings({ overlayVisible: false });
+
+    await expect(requestSessionEndedDecision("Google Meet")).resolves.toBe("exit");
+    expect(document.querySelector(".mc-capture-consent")).toBeNull();
+  });
+
+  test("RPROMPT-005: opening a new prompt replaces the previous active prompt lifecycle", async () => {
+    vi.useFakeTimers();
+    mountOverlayRoot();
+    updateSettings({ overlayVisible: true });
+
+    void requestCaptureConsent("Google Meet");
+    await Promise.resolve();
+    const continuationDecisionPromise = requestSessionContinuationDecision("Google Meet");
+    await Promise.resolve();
+
+    expect(document.querySelectorAll(".mc-capture-consent")).toHaveLength(1);
+    expect(forceResolveActivePrompt("capture-consent", "dismissed")).toBe(false);
+    expect(forceResolveActivePrompt("session-continuation", "restart")).toBe(true);
+    await expect(continuationDecisionPromise).resolves.toBe("restart");
+  });
+
+  test("RPROMPT-006: escape resolves configured escape decision", async () => {
+    vi.useFakeTimers();
+    mountOverlayRoot();
+    updateSettings({ overlayVisible: true });
+
+    const decisionPromise = requestCaptureConsent("Google Meet");
+    await Promise.resolve();
+
+    const prompt = document.querySelector(".mc-capture-consent");
+    expect(prompt).not.toBeNull();
+    prompt?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    await expect(decisionPromise).resolves.toBe("dismissed");
+  });
+
+  test("RPROMPT-007: session-ended timeout resolves exit", async () => {
+    vi.useFakeTimers();
+    mountOverlayRoot();
+    updateSettings({ overlayVisible: true });
+
+    const decisionPromise = requestSessionEndedDecision("Google Meet");
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(31_000);
+    await expect(decisionPromise).resolves.toBe("exit");
+  });
+
+  test("RPROMPT-008: force-resolve applies only to matching active prompt kind", async () => {
+    vi.useFakeTimers();
+    mountOverlayRoot();
+    updateSettings({ overlayVisible: true });
+
+    const decisionPromise = requestSessionEndedDecision("Google Meet");
+    await Promise.resolve();
+
+    expect(forceResolveActivePrompt("capture-consent", "dismissed")).toBe(false);
+    expect(forceResolveActivePrompt("session-ended", "exit")).toBe(true);
+    await expect(decisionPromise).resolves.toBe("exit");
   });
 });

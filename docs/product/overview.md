@@ -16,3 +16,7 @@ Desktop-native meeting apps are out of scope.
 - local-first archive with optional personal-cloud continuity
 - reusable meeting profiles that shape live guidance and summary behavior
 - AI translation, live assistant guidance, and summary generation powered by OpenAI
+
+## Current Product Notes
+
+- 2026-04-10: Behavior-contract test coverage expanded for runtime/provider surfaces with no intended change to user-facing product scope or capability set.

@@ -9,6 +9,9 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-10-behavior-contract-gap-closure-wave-four.md](./2026-04-10-behavior-contract-gap-closure-wave-four.md)
+- [2026-04-10-behavior-contract-gap-closure-wave-three.md](./2026-04-10-behavior-contract-gap-closure-wave-three.md)
+- [2026-04-09-behavior-contract-18-docs-copilot-execution.md](./2026-04-09-behavior-contract-18-docs-copilot-execution.md)
 - [2026-04-09-readme-and-brand-asset-refresh.md](./2026-04-09-readme-and-brand-asset-refresh.md)
 - [2026-04-09-public-capability-copy-alignment.md](./2026-04-09-public-capability-copy-alignment.md)
 - [2026-04-09-brand-banner-redesign.md](./2026-04-09-brand-banner-redesign.md)

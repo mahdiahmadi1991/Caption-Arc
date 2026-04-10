@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This matrix maps runtime/session-continuation behavior-contract rules to automated or scripted validation surfaces.
+This matrix maps runtime session-continuation behavior-contract rules to repository validation surfaces.
 
 ## Status Legend
 
@@ -12,21 +12,20 @@ This matrix maps runtime/session-continuation behavior-contract rules to automat
 ## Matrix
 
 | Case ID | Contract ID | Behavior Summary | Validation Surface | Status |
-|---|---|---|---|---|
-| RSC-PRM-001 | C-PRM-002 | capture-consent primary action resolves `approved` | `tests/google-meet/google-meet-prompts.contract.test.ts` (`GM-PRM-001`) | implemented |
-| RSC-PRM-002 | C-PRM-003 | session-continuation secondary action resolves `restart` | `tests/google-meet/google-meet-prompts.contract.test.ts` (`GM-PRM-002`) | implemented |
-| RSC-PRM-003 | C-PRM-003 | session-continuation timeout resolves `restart` | `tests/google-meet/google-meet-prompts.contract.test.ts` (`GM-PRM-003`) | implemented |
-| RSC-PRM-004 | C-PRM-004 | session-ended timeout/escape behavior resolves `exit` | contract test (to be added) | planned |
-| RSC-CONT-001 | C-CONT-001 | startup continuation candidate produces force-reuse on `resume` | contract test around `prepareMeetingStartupDecision` (to be added) | planned |
-| RSC-CONT-002 | C-CONT-002 | prejoin continuation prompt sets pending force-reuse/force-new options | contract test around `handleSessionContinuationDecision` (to be added) | planned |
-| RSC-CONT-003 | C-CONT-005 | force-reuse appends `rejoinHistory` and reopens lifecycle | contract test around `resolveMeetingSession` (to be added) | planned |
-| RSC-CONT-004 | C-CONT-004 | Teams direct-call is continuation-ineligible | contract test around `findMeetingSessionContinuationCandidate` (to be added) | planned |
-| RSC-CONT-005 | C-CONT-002 | continuation scenario prompt appears during Google Meet continuation smoke flow | `pnpm chrome:smoke:live google-meet continuation` | implemented |
-| RSC-QA-001 | C-QA-001 | stale quick-access status entries are pruned and best entry is selected by priority+recency | contract test around `quick-access-runtime.ts` (to be added) | planned |
-| RSC-QA-002 | C-QA-002 | teardown clears quick-access runtime status | contract test around `teardownPlatformRuntime` + message routing (to be added) | planned |
-| RSC-SCW-001 | C-SCW-001 | continuation window value is rounded and clamped to `0..720` | contract test around `normalizeSessionContinuationWindowMinutes` (to be added) | planned |
+| --- | --- | --- | --- | --- |
+| RCONT-001 | C-RCONT-001 | Teams direct-call metadata is continuation-ineligible in background continuation lookup and session resolution | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-002 | C-RCONT-002 | startup continuation lookup retries Teams pages without stable identifiers for up to `2500` ms | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-003 | C-RCONT-003 | startup continuation `resume` sets pending force-reuse options and loads stored preview | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-004 | C-RCONT-004 | prejoin continuation prompt sets pending force-reuse or force-new options for recently ended sessions | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-005 | C-RCONT-005 | session-start option resolution consumes pending options before recent-session prompts | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-006 | C-RCONT-006 | candidate lookup tries fingerprint matching before fallback ranking | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-007 | C-RCONT-006 | live stored sessions are rejected as continuation candidates | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-008 | C-RCONT-007 | force-reuse appends `rejoinHistory` and reopens ended sessions | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-009 | C-RCONT-004 | continuation prompt appears during the canonical Google Meet continuation smoke scenario | `pnpm chrome:smoke:live google-meet continuation` | implemented |
+| RCONT-010 | C-RCONT-001 | Teams direct-call transitions force continuation flows into `force-new` without leaving prompts active | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-011 | C-RCONT-003 | startup continuation falls back to capture consent when no continuation candidate exists | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 
 ## Notes
 
-1. `RSC-CONT-*` planned cases should be prioritized when continuation logic is changed.
-2. Smoke validation does not replace deterministic contract tests for pure logic branches.
+1. Generic prompt behavior moved to [runtime-prompts-traceability-matrix.md](./runtime-prompts-traceability-matrix.md) to keep this matrix continuation-specific.
+2. Deterministic runtime continuation tests now cover startup retries, option precedence, direct-call force-new paths, and startup fallback-to-consent behavior.

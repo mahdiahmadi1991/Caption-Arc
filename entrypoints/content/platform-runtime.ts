@@ -256,7 +256,138 @@ function shouldResetRuntimeOnCurrentPage(
 
 export const platformRuntimeInternals = {
   shouldResetRuntimeOnCurrentPage,
+  observeResetPageState,
+  syncPresenceState,
+  resolveSessionStartOptions,
+  shouldRetryContinuationLookup,
+  getPersistedContinuationCandidateWithRetry,
+  startMeetingCapture,
+  stopMeetingCapture,
+  handleSessionContinuationDecision,
+  prepareMeetingStartupDecision,
+  syncMeetingLifecycle,
+  startLifecycleMonitor,
+  teardownPlatformRuntime,
+  getRuntimeStateForTests,
+  setRuntimeStateForTests,
 };
+
+function getRuntimeStateForTests(): {
+  runtimeInitialized: boolean;
+  activeProviderPlatform: MeetingProvider["platform"] | null;
+  captureApprovedForLifecycle: boolean;
+  captureBlockedForLifecycle: boolean;
+  hasActiveMeetingSession: boolean;
+  meetingPresenceState: MeetingPresenceState;
+  lastObservedPresenceState: MeetingPresenceState;
+  lastObservedPresenceCount: number;
+  lifecycleSyncInProgress: boolean;
+  lifecycleSyncRequested: boolean;
+  sessionEndDecisionPending: boolean;
+  endedSessionReviewPinned: boolean;
+  sessionContinuationDecisionPending: boolean;
+  pendingSessionResolveOptions:
+    | Pick<ResolveMeetingSessionRequest, "reusePolicy" | "resumeSessionId">
+    | undefined;
+  recentlyEndedSession:
+    | {
+        sessionId: string;
+        endedAt: number;
+      }
+    | null;
+  suppressEndedOverlayAutoShow: boolean;
+  resetPageObservedAt: number | null;
+  preparedMeetingFingerprint: string | null;
+} {
+  return {
+    runtimeInitialized,
+    activeProviderPlatform,
+    captureApprovedForLifecycle,
+    captureBlockedForLifecycle,
+    hasActiveMeetingSession,
+    meetingPresenceState,
+    lastObservedPresenceState,
+    lastObservedPresenceCount,
+    lifecycleSyncInProgress,
+    lifecycleSyncRequested,
+    sessionEndDecisionPending,
+    endedSessionReviewPinned,
+    sessionContinuationDecisionPending,
+    pendingSessionResolveOptions,
+    recentlyEndedSession,
+    suppressEndedOverlayAutoShow,
+    resetPageObservedAt,
+    preparedMeetingFingerprint,
+  };
+}
+
+function setRuntimeStateForTests(
+  patch: Partial<ReturnType<typeof getRuntimeStateForTests>> & {
+    stopObservingCurrentProvider?: (() => void) | null;
+    stopSettingsSync?: (() => void) | null;
+  }
+): void {
+  if (patch.runtimeInitialized !== undefined) {
+    runtimeInitialized = patch.runtimeInitialized;
+  }
+  if (patch.activeProviderPlatform !== undefined) {
+    activeProviderPlatform = patch.activeProviderPlatform;
+  }
+  if (patch.captureApprovedForLifecycle !== undefined) {
+    captureApprovedForLifecycle = patch.captureApprovedForLifecycle;
+  }
+  if (patch.captureBlockedForLifecycle !== undefined) {
+    captureBlockedForLifecycle = patch.captureBlockedForLifecycle;
+  }
+  if (patch.hasActiveMeetingSession !== undefined) {
+    hasActiveMeetingSession = patch.hasActiveMeetingSession;
+  }
+  if (patch.meetingPresenceState !== undefined) {
+    setMeetingPresenceState(patch.meetingPresenceState);
+  }
+  if (patch.lastObservedPresenceState !== undefined) {
+    lastObservedPresenceState = patch.lastObservedPresenceState;
+  }
+  if (patch.lastObservedPresenceCount !== undefined) {
+    lastObservedPresenceCount = patch.lastObservedPresenceCount;
+  }
+  if (patch.lifecycleSyncInProgress !== undefined) {
+    lifecycleSyncInProgress = patch.lifecycleSyncInProgress;
+  }
+  if (patch.lifecycleSyncRequested !== undefined) {
+    lifecycleSyncRequested = patch.lifecycleSyncRequested;
+  }
+  if (patch.sessionEndDecisionPending !== undefined) {
+    sessionEndDecisionPending = patch.sessionEndDecisionPending;
+  }
+  if (patch.endedSessionReviewPinned !== undefined) {
+    endedSessionReviewPinned = patch.endedSessionReviewPinned;
+  }
+  if (patch.sessionContinuationDecisionPending !== undefined) {
+    sessionContinuationDecisionPending = patch.sessionContinuationDecisionPending;
+  }
+  if ("pendingSessionResolveOptions" in patch) {
+    pendingSessionResolveOptions = patch.pendingSessionResolveOptions;
+  }
+  if (patch.recentlyEndedSession !== undefined) {
+    recentlyEndedSession = patch.recentlyEndedSession;
+  }
+  if (patch.suppressEndedOverlayAutoShow !== undefined) {
+    suppressEndedOverlayAutoShow = patch.suppressEndedOverlayAutoShow;
+  }
+  if (patch.resetPageObservedAt !== undefined) {
+    resetPageObservedAt = patch.resetPageObservedAt;
+  }
+  if (patch.preparedMeetingFingerprint !== undefined) {
+    preparedMeetingFingerprint = patch.preparedMeetingFingerprint;
+  }
+  if ("stopObservingCurrentProvider" in patch) {
+    stopObservingCurrentProvider = patch.stopObservingCurrentProvider;
+  }
+  if ("stopSettingsSync" in patch) {
+    stopSettingsSync = patch.stopSettingsSync;
+  }
+}
 
 function observeResetPageState(
   provider: MeetingProvider,

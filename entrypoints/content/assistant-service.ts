@@ -134,6 +134,7 @@ function applyAssistantSession(
       }
     | null
 ): void {
+  const sessionStatus = liveState?.status;
   const aiAvailability = getOpenAiServiceAvailability(settings);
   const previousOutputs = assistantLiveOutputs;
   const previousPending = assistantLivePendingOutputs;
@@ -167,8 +168,6 @@ function applyAssistantSession(
   if (pendingChanged) {
     setAssistantLivePendingOutputs(nextPending);
   }
-
-  const sessionStatus = liveState?.status;
 
   if (!nextEnabled) {
     setAssistantLiveState("suppressed");
@@ -380,3 +379,13 @@ export function syncAssistantAvailabilityFromSettingsOnly(): void {
   });
   emitAssistantUpdate();
 }
+
+export const assistantServiceInternals = {
+  getResolvedMeetingProfile,
+  getResolvedAssistantEnabled,
+  getAssistantOutputs,
+  getAssistantPendingOutputs,
+  applyAssistantSession,
+  pollAssistantState,
+  getAssistantPollIntervalMs: () => ASSISTANT_POLL_INTERVAL_MS,
+};

@@ -22,6 +22,13 @@ Before running smoke checks for extension behavior, every agent must:
 
 Skipping this flow is not allowed for runtime-sensitive work.
 
+Owner approval gate for DLS:
+
+1. execute DLS scenario in a visible session
+2. repository owner must visually review behavior
+3. repository owner must explicitly approve in the same thread
+4. before explicit approval, DLS status is `pending-owner-review` and cannot be counted as done
+
 Provider scope is mandatory:
 
 - do not restrict smoke validation to Google Meet only

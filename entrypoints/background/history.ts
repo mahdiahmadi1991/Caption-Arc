@@ -2578,3 +2578,37 @@ export async function getStorageUsage(): Promise<{
   const quota = estimate?.quota || 5242880;
   return { success: true, bytesUsed, quota };
 }
+
+export const historySummaryInternals = {
+  getAutomaticSummaryRequest,
+  generateMeetingSummaryText,
+  queueMeetingSummaryJob,
+  processPersistedMeetingSummaryJobs,
+  runMeetingSummaryJob,
+  scheduleMeetingSummaryRetryAlarm,
+  getSummaryJobBackoffMs,
+  loadPersistedMeetingSummaryJobs,
+  savePersistedMeetingSummaryJobs,
+  upsertPersistedMeetingSummaryJob,
+  removePersistedMeetingSummaryJob,
+  setMeetingSummaryQueueInitializedForTests(nextValue: boolean) {
+    meetingSummaryQueueInitialized = nextValue;
+  },
+  setActiveMeetingSummaryJobForTests(sessionId: string, aborted = false) {
+    const controller = new AbortController();
+    if (aborted) {
+      controller.abort();
+    }
+    activeMeetingSummaryJobs.set(sessionId, { controller });
+    return controller;
+  },
+  clearActiveMeetingSummaryJobForTests(sessionId: string) {
+    activeMeetingSummaryJobs.delete(sessionId);
+  },
+  resetMeetingSummaryInternalsForTests() {
+    activeMeetingSummaryJobs.clear();
+    meetingSummaryJobStatuses.clear();
+    meetingSummaryQueueInitialized = false;
+    meetingSummaryQueueProcessingPromise = null;
+  },
+};

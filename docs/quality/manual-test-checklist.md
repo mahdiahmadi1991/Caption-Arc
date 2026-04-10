@@ -30,3 +30,9 @@ pnpm chrome:smoke:live microsoft-teams meeting
 pnpm chrome:smoke:live zoom-web meeting
 pnpm chrome:smoke:live:matrix
 ```
+
+## Owner Approval Checkpoint
+
+- run DLS in a visible session
+- repository owner watches and confirms expected behavior
+- do not mark manual runtime validation complete until explicit owner approval is recorded

@@ -33,6 +33,7 @@ This repository uses a layered testing model:
 - module runner: `pnpm test:module:run <module-path>`
 - smoke tooling location: `scripts/manual-smoke/*`
 - canonical runtime smoke convention: `Deterministic Live Smoke (DLS)` via `pnpm chrome:smoke:live <provider> <scenario>`
+- acceptance checkpoint: each DLS run must be visually reviewed and explicitly approved by the repository owner before it is counted as complete
 - purpose:
   - validate browser extension behavior in live runtime context
   - validate startup prompts, provider detection, and overlay behavior

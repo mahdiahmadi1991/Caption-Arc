@@ -1,173 +1,127 @@
-# Runtime And Session Continuation Code-Derived Behavior Contract
+# Runtime Session Continuation Code-Derived Behavior Contract
 
 ## Purpose
 
-This document captures runtime lifecycle, prompt, continuation, and quick-access behavior derived from implementation code.
+This document captures how the runtime discovers continuation candidates, prompts for reuse decisions, resolves session-start options, and reuses stored meeting sessions.
 
-It is a characterization contract for testing and change control, not a product roadmap document.
+It is a characterization artifact derived from implementation code, not a requirement specification.
 
 ## Source Files
 
-- [platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
-- [capture-consent.ts](../../entrypoints/content/overlay/capture-consent.ts)
-- [history-service.ts](../../entrypoints/content/history-service.ts)
-- [history.ts](../../entrypoints/background/history.ts)
-- [quick-access-runtime.ts](../../entrypoints/background/quick-access-runtime.ts)
-- [settings-defaults.ts](../../entrypoints/shared/settings-defaults.ts)
-- [settings.ts](../../entrypoints/background/settings.ts)
-- [quick-access-status.ts](../../entrypoints/shared/quick-access-status.ts)
+- [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
+- [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts)
+- [../../entrypoints/background/types/index.ts](../../entrypoints/background/types/index.ts)
+
+## Rule ID Convention
+
+- Contract rule IDs: `C-RCONT-<NNN>`
+- Traceability case IDs: `RCONT-<NNN>`
 
 ## Contract Rules
 
-## C-SCW-001: Session continuation window normalization
+## C-RCONT-001: Direct-call Teams sessions are continuation-ineligible in both runtime and background resolution
 
-Source: `normalizeSessionContinuationWindowMinutes`, `sanitizeSettingsShape`
-
-Rules:
-
-1. default continuation window is `120` minutes.
-2. minimum allowed value is `0` and maximum is `720`.
-3. non-finite input falls back to the default.
-4. numeric input is rounded and clamped to the allowed range.
-
-## C-PRM-001: Overlay prompt lifecycle and timeout behavior
-
-Source: `requestOverlayPrompt`
+Source: `isDirectCallSessionMetadata`, `handleSessionContinuationDecision`, `resolveSessionStartOptions` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts); `resolveMeetingSession`, `findMeetingSessionContinuationCandidate` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts)
 
 Rules:
 
-1. only one active prompt can exist at a time; opening a new prompt clears the previous prompt state.
-2. prompt timeout is `30000` ms and countdown/progress are updated every `100` ms.
-3. when timeout reaches zero, prompt resolves with `timeoutDecision`.
-4. secondary click resolves `secondaryDecision`, primary click resolves `primaryDecision`, and `Escape` resolves `escapeDecision`.
-5. if overlay is hidden and prompt is not allowed to show while hidden (`showWhenOverlayHidden=false`), prompt resolves immediately with `timeoutDecision`.
+1. Runtime direct-call detection is limited to Microsoft Teams metadata where `identifiers.callType === "direct-call"`.
+2. When `handleSessionContinuationDecision(provider)` sees direct-call metadata, it clears `recentlyEndedSession`, clears `pendingSessionResolveOptions`, force-resolves any active session-continuation prompt to `restart`, and returns without prompting.
+3. When `resolveSessionStartOptions(provider)` sees direct-call metadata, it clears recent and pending continuation state and returns `{ reusePolicy: "force-new" }`.
+4. Startup preparation treats direct-call metadata as continuation-ineligible and falls back to the normal capture-consent path.
+5. `resolveMeetingSession(request)` always creates a fresh session for Teams direct-call requests.
+6. `findMeetingSessionContinuationCandidate(request)` always returns `candidate: null` for Teams direct-call requests.
 
-## C-PRM-002: Capture-consent decision mapping
+## C-RCONT-002: Startup continuation lookup can retry briefly for Teams pages without stable identifiers
 
-Source: `requestCaptureConsent`
-
-Rules:
-
-1. primary action resolves to `approved`.
-2. secondary action resolves to `dismissed`.
-3. `Escape` and timeout both resolve to `dismissed`.
-4. capture-consent prompt is allowed even when overlay visibility is off.
-
-## C-PRM-003: Session-continuation decision mapping
-
-Source: `requestSessionContinuationDecision`
+Source: `prepareMeetingStartupDecision`, `getPersistedContinuationCandidateWithRetry`, `shouldRetryContinuationLookup` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 
 Rules:
 
-1. primary action resolves to `resume`.
-2. secondary action resolves to `restart`.
-3. `Escape` and timeout both resolve to `restart`.
-4. session-continuation prompt is allowed even when overlay visibility is off.
+1. Startup continuation lookup is skipped when `settings.captureStartupBehavior === "off"`.
+2. Startup continuation lookup is skipped when the current meeting fingerprint was already prepared, a session-ended decision is pending, or a continuation decision is pending.
+3. Direct-call Teams metadata disables startup continuation lookup.
+4. `getPersistedContinuationCandidateWithRetry(provider)` returns `null` immediately when the continuation window is disabled.
+5. Retry behavior exists only for Microsoft Teams providers whose metadata still lacks any stable identifier among meeting code, meeting ID, conference ID, thread ID, or meeting number.
+6. Retry attempts run every `500` ms and stop after `2500` ms if no candidate is found.
 
-## C-PRM-004: Session-ended decision mapping
+## C-RCONT-003: Startup continuation decisions set pending resolve options before capture starts
 
-Source: `requestSessionEndedDecision`
-
-Rules:
-
-1. primary action resolves to `stay`.
-2. secondary action resolves to `exit`.
-3. `Escape` and timeout both resolve to `exit`.
-4. session-ended prompt does not force show when overlay is hidden.
-
-## C-CONT-001: Startup continuation decision flow
-
-Source: `prepareMeetingStartupDecision`
+Source: `prepareMeetingStartupDecision` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 
 Rules:
 
-1. when `captureStartupBehavior` is `off`, startup prompt logic is skipped.
-2. direct-call Teams metadata is continuation-ineligible and skips persisted continuation lookup.
-3. when a persisted continuation candidate exists, runtime requests a session-continuation decision before capture starts.
-4. `resume` loads stored session preview and sets pending resolve options to `{ reusePolicy: "force-reuse", resumeSessionId }`.
-5. non-resume decision sets pending resolve options to `{ reusePolicy: "force-new" }`.
+1. When a persisted continuation candidate is found, the runtime requests `requestSessionContinuationDecision(providerLabel)` before capture starts.
+2. On `resume`, the runtime loads the stored session preview, keeps profile selection locked, and sets `pendingSessionResolveOptions` to `{ reusePolicy: "force-reuse", resumeSessionId }`.
+3. On any non-`resume` decision, the runtime unlocks the initial pending profile selection and sets `pendingSessionResolveOptions` to `{ reusePolicy: "force-new" }`.
+4. After either startup continuation decision path, the runtime marks capture as approved, clears capture-blocked state, and stores the prepared meeting fingerprint.
+5. When no continuation candidate exists and startup mode is `ask`, the runtime falls back to capture-consent prompting instead of continuation prompting.
 
-## C-CONT-002: Prejoin continuation decision flow for recently ended sessions
+## C-RCONT-004: Recently ended sessions can trigger a prejoin continuation decision
 
-Source: `handleSessionContinuationDecision`
-
-Rules:
-
-1. continuation prompt is considered only when all are true:
-   - there is a recently ended session
-   - meeting presence is `prejoin`
-   - continuation window is enabled (`> 0`)
-   - no pending continuation decision is already in progress
-2. if referenced stored session no longer exists, continuation state is cleared and no reuse options are set.
-3. `resume` sets pending resolve options to `{ reusePolicy: "force-reuse", resumeSessionId }` and loads preview.
-4. non-resume decision sets pending resolve options to `{ reusePolicy: "force-new" }`.
-
-## C-CONT-003: Session start resolve-option precedence
-
-Source: `resolveSessionStartOptions`
+Source: `handleSessionContinuationDecision` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 
 Rules:
 
-1. direct-call metadata always resolves to `{ reusePolicy: "force-new" }`.
-2. pending resolve options are consumed first and cleared from pending state.
-3. if pending `resumeSessionId` does not exist in storage, flow falls back to `{ reusePolicy: "force-new" }`.
-4. if there is no pending option and no eligible recently ended session, start options are `undefined`.
+1. A prejoin continuation decision is considered only when all of these are true:
+   - no continuation decision is already pending
+   - no pending session resolve options already exist
+   - `recentlyEndedSession` exists
+   - the continuation window is greater than `0`
+   - `meetingPresenceState === "prejoin"`
+2. If the stored session referenced by `recentlyEndedSession.sessionId` no longer exists, the runtime clears `recentlyEndedSession`, clears `pendingSessionResolveOptions`, and returns without prompting.
+3. On `resume`, the runtime loads the stored session preview and sets `pendingSessionResolveOptions` to `{ reusePolicy: "force-reuse", resumeSessionId }`.
+4. On any non-`resume` decision, the runtime sets `pendingSessionResolveOptions` to `{ reusePolicy: "force-new" }`.
+5. After either decision path, the runtime clears `recentlyEndedSession`, marks capture approved, clears capture-blocked state, and stores the prepared meeting fingerprint.
+6. A direct-call Teams metadata transition force-resolves any currently active continuation prompt to `restart` instead of leaving the prompt open.
 
-## C-CONT-004: Background continuation-candidate eligibility
+## C-RCONT-005: Session-start option resolution consumes pending decisions before checking recent-session reuse
 
-Source: `findMeetingSessionContinuationCandidate`, `evaluateContinuationResume`
-
-Rules:
-
-1. Teams direct-call requests are never continuation candidates.
-2. Teams requests without stable identity tokens are never continuation candidates.
-3. candidate lookup tries fingerprint match first, then fallback ranking.
-4. active live sessions (no end time and lifecycle `live`) are rejected as continuation candidates.
-5. candidate is returned only when continuation-window and resume checks pass.
-
-## C-CONT-005: Session resolution and rejoin history behavior
-
-Source: `resolveMeetingSession`
+Source: `resolveSessionStartOptions` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 
 Rules:
 
-1. `reusePolicy="force-new"` always creates a fresh session.
-2. default policy reuses only still-live sessions (`lifecycleState === "live"` or missing `endTime`).
-3. `reusePolicy="force-reuse"` requires continuation eligibility checks to pass.
-4. when force-reuse succeeds for an ended session, rejoin metadata is appended to `rejoinHistory` with `previousEndTime`, `resumedAt`, and `gapMs`.
-5. reused ended sessions transition to lifecycle `reopened` and clear `endTime`.
+1. Pending resolve options are consumed first and removed from `pendingSessionResolveOptions`.
+2. If a consumed `resumeSessionId` no longer exists in storage, the runtime clears `recentlyEndedSession` and falls back to `{ reusePolicy: "force-new" }`.
+3. If no recent continuation state exists, `resolveSessionStartOptions(provider)` returns `undefined`.
+4. If the continuation window is disabled or expired, the runtime clears `recentlyEndedSession` and returns `{ reusePolicy: "force-new" }`.
+5. If the recent session record no longer exists in storage, the runtime clears `recentlyEndedSession` and returns `{ reusePolicy: "force-new" }`.
+6. Otherwise the runtime prompts for a session-continuation decision and returns either `{ reusePolicy: "force-reuse", resumeSessionId }` on `resume` or `{ reusePolicy: "force-new" }` on any other decision.
+7. When the continuation decision resolves to `resume`, the runtime also loads a stored preview before capture resumes.
 
-## C-QA-001: Quick-access runtime registry semantics
+## C-RCONT-006: Background continuation candidates are ranked by stable identity first and fallback heuristics second
 
-Source: `initializeQuickAccessRuntimeRegistry`, `updateQuickAccessRuntimeStatus`, `getQuickAccessRuntimeStatus`
-
-Rules:
-
-1. runtime status entries are keyed by `documentId` when available; fallback key is `<tabId>:<frameId>`.
-2. stale entries older than `4500` ms are pruned.
-3. tab removal clears all registry entries for that tab.
-4. status priority order is:
-   - active session + `joined`
-   - `prejoin`
-   - `joined`
-   - `ended`
-   - `unknown`/other
-5. status query returns highest-priority current entry; ties resolve by latest `receivedAt`.
-
-## C-QA-002: Runtime status publish and teardown behavior
-
-Source: `publishQuickAccessRuntimeStatus`, `startPresenceMonitor`, `teardownPlatformRuntime`
+Source: `scoreContinuationCandidate`, `findFallbackContinuationCandidate`, `evaluateContinuationResume`, `findMeetingSessionContinuationCandidate` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts)
 
 Rules:
 
-1. content runtime publishes status snapshots through `updateQuickAccessRuntimeStatus`.
-2. presence monitor publishes status on each interval tick and at monitor start.
-3. runtime teardown clears background quick-access state through `clearQuickAccessRuntimeStatus`.
+1. Candidate scoring rejects sessions when the continuation window is disabled, the platform differs, the reference time is outside the continuation window, or the stored session is still live with no `endTime`.
+2. Shared stable identifiers score `100 + sharedIdentifierCount` and take precedence over URL or title fallback matching.
+3. Microsoft Teams requests without shared stable identifiers do not fall back to URL or title matching.
+4. Non-Teams fallback scoring uses normalized reusable URL equality first, then provider label plus normalized title equality.
+5. Fallback candidate ranking sorts by descending score and then by descending reference timestamp.
+6. `findMeetingSessionContinuationCandidate(request)` tries stored fingerprint lookup first and fallback ranking second.
+7. A candidate is returned only when the stored session is not still live and `evaluateContinuationResume(...)` returns `ok: true`.
+
+## C-RCONT-007: Session reuse appends rejoin history only for successful force-reuse resumes
+
+Source: `resolveMeetingSession` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts)
+
+Rules:
+
+1. `resolveMeetingSession(request)` creates a fresh session immediately when `reusePolicy === "force-new"`.
+2. Teams requests without stable identity create a fresh session unless they explicitly request `force-reuse` with a `resumeSessionId`.
+3. Stored-session lookup prefers an explicitly requested `resumeSessionId`; otherwise it uses the latest stored session with the same meeting fingerprint.
+4. If no stored session exists or the stored session is not eligible for reuse, `resolveMeetingSession(request)` creates a fresh session.
+5. When reuse succeeds with `reusePolicy === "force-reuse"`, the merged session appends a `rejoinHistory` item containing `previousEndTime`, `resumedAt`, and `gapMs`.
+6. A reused ended session transitions to `lifecycleState: "reopened"`, clears `endTime`, and updates `lastSeenAt` and `updatedAt` to the reopen timestamp.
 
 ## Test Traceability
 
-- [runtime-session-continuation-traceability-matrix.md](../quality/references/runtime-session-continuation-traceability-matrix.md)
+- [../quality/references/runtime-session-continuation-traceability-matrix.md](../quality/references/runtime-session-continuation-traceability-matrix.md)
+
+Each rule maps to one or more traceability cases with explicit `implemented` or `planned` status.
 
 ## Change Control
 
-If runtime lifecycle, session continuation, prompt semantics, or quick-access status behavior changes in code, update this contract and its traceability matrix in the same change set.
+If continuation lookup, reuse-policy resolution, recent-session prompting, or rejoin-history semantics change in code, update this contract and its traceability matrix in the same change set.

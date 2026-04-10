@@ -11,6 +11,13 @@ Canonical runtime smoke convention for this repository:
 - `Deterministic Live Smoke (DLS)`
 - command shape: `pnpm chrome:smoke:live <provider> <scenario>`
 
+Mandatory owner checkpoint for DLS completion:
+
+1. run the DLS command in a visible session
+2. repository owner watches the run result and behavior
+3. repository owner gives explicit approval in the same thread
+4. without explicit owner approval, DLS status is `pending-owner-review` and the task is not done
+
 Test authoring must follow:
 
 - [test-writing-standards.md](./test-writing-standards.md)
@@ -110,6 +117,7 @@ Each implementation summary must include:
 3. explicit note that `pnpm test:google:coverage` was run for code changes
 4. explanation of any deferred test work and approval status
 5. scenario coverage statement for touched modules (which implemented scenarios were run)
+6. explicit owner approval note for each DLS acceptance run
 
 ## Deferral Rules
 
@@ -133,3 +141,4 @@ For runtime-sensitive module work, done means:
 3. aggregate pass state is green for all executed commands
 4. evidence is recorded with exact commands and outcomes
 5. runtime-sensitive acceptance evidence uses DLS (`chrome:smoke:live*`) unless an explicit diagnostic exception is recorded
+6. each DLS acceptance run includes explicit repository-owner visual approval in the same thread

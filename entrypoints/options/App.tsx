@@ -774,7 +774,7 @@ function InlineStatus({ status, message }: InlineStatusProps) {
       : status === "verified" || status === "success"
         ? {
             container:
-              "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_72%,white)]",
+              "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_98%,white)]",
             text: "text-[var(--app-text-muted)]",
           }
       : {
