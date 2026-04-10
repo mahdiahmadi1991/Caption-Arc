@@ -37,6 +37,49 @@ type DropdownMenuPosition = {
   maxHeight: number;
 };
 
+function computeMenuPosition(
+  triggerEl: HTMLButtonElement
+): DropdownMenuPosition {
+  const rect = triggerEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 8;
+  const menuChromeHeight = 20;
+  const maxScrollableHeight = 288;
+  const availableBelow =
+    window.innerHeight - rect.bottom - gap - viewportPadding;
+  const availableAbove = rect.top - gap - viewportPadding;
+  const placeAbove = availableBelow < 180 && availableAbove > availableBelow;
+  const maxHeight = Math.round(
+    Math.max(
+      120,
+      Math.min(
+        maxScrollableHeight,
+        (placeAbove ? availableAbove : availableBelow) - 8
+      )
+    )
+  );
+  const menuHeight = maxHeight + menuChromeHeight;
+  const width = Math.round(
+    Math.min(rect.width, window.innerWidth - viewportPadding * 2)
+  );
+  const left = Math.round(
+    Math.min(
+      Math.max(viewportPadding, rect.left),
+      window.innerWidth - width - viewportPadding
+    )
+  );
+  const unclampedTop = placeAbove
+    ? rect.top - gap - menuHeight
+    : rect.bottom + gap;
+  const top = Math.round(
+    Math.min(
+      Math.max(viewportPadding, unclampedTop),
+      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
+    )
+  );
+  return { top, left, width, maxHeight };
+}
+
 export function DropdownSelect({
   value,
   onChange,
@@ -58,6 +101,15 @@ export function DropdownSelect({
     null
   );
   const listboxId = useId();
+
+  const menuPositionRef = useRef<DropdownMenuPosition | null>(null);
+  useEffect(() => {
+    menuPositionRef.current = menuPosition;
+  }, [menuPosition]);
+
+  const rafIdRef = useRef<number | null>(null);
+  const settleTimeoutRef = useRef<number | null>(null);
+  const lastScrollPosRef = useRef<DropdownMenuPosition | null>(null);
 
   const selectedIndex = useMemo(
     () => options.findIndex((option) => option.id === value),
@@ -125,57 +177,101 @@ export function DropdownSelect({
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
+      // ensure any scheduled work is cleared
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (settleTimeoutRef.current) {
+        window.clearTimeout(settleTimeoutRef.current);
+        settleTimeoutRef.current = null;
+      }
       setMenuPosition(null);
       return;
     }
 
-    const updateMenuPosition = () => {
-      const triggerRect = triggerRef.current?.getBoundingClientRect();
-      if (!triggerRect) {
-        return;
+    // initial baseline position (React state)
+    const initialPos = computeMenuPosition(triggerRef.current);
+    setMenuPosition(initialPos);
+    menuPositionRef.current = initialPos;
+
+    const menuEl = () => menuRef.current as HTMLDivElement | null;
+    const triggerEl = () => triggerRef.current as HTMLButtonElement | null;
+
+    // Throttled scroll handler using requestAnimationFrame and transform updates.
+    const handleScroll = () => {
+      const trigger = triggerEl();
+      const menu = menuEl();
+      if (!trigger || !menu) return;
+
+      // compute latest position
+      const pos = computeMenuPosition(trigger);
+      lastScrollPosRef.current = pos;
+
+      // schedule one rAF to apply transform (do not set React state here)
+      if (rafIdRef.current == null) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = null;
+          const baseline = menuPositionRef.current || pos;
+          const dx = pos.left - baseline.left;
+          const dy = pos.top - baseline.top;
+          // apply GPU-accelerated transform for smooth movement
+          menu.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+          // ensure width and maxHeight are kept in sync
+          menu.style.width = `${pos.width}px`;
+          const scrollable = menu.querySelector('.mc-app-scrollbar') as HTMLElement | null;
+          if (scrollable) scrollable.style.maxHeight = `${pos.maxHeight}px`;
+
+          // settle: if no further scroll for 120ms, commit baseline and clear transform
+          if (settleTimeoutRef.current) {
+            window.clearTimeout(settleTimeoutRef.current);
+          }
+          settleTimeoutRef.current = window.setTimeout(() => {
+            settleTimeoutRef.current = null;
+            // commit baseline into React state so further re-renders stay in sync
+            setMenuPosition(pos);
+            menuPositionRef.current = pos;
+            // clear transform (menu will be painted at new top/left)
+            menu.style.transform = "none";
+          }, 120);
+        });
       }
-
-      const viewportPadding = 12;
-      const menuGap = 8;
-      const menuChromeHeight = 20;
-      const maxScrollableHeight = 288;
-      const availableBelow =
-        window.innerHeight - triggerRect.bottom - menuGap - viewportPadding;
-      const availableAbove = triggerRect.top - menuGap - viewportPadding;
-      const placeAbove = availableBelow < 180 && availableAbove > availableBelow;
-      const visibleListHeight = Math.max(
-        120,
-        Math.min(
-          maxScrollableHeight,
-          (placeAbove ? availableAbove : availableBelow) - 8
-        )
-      );
-      const menuHeight = visibleListHeight + menuChromeHeight;
-      const unclampedTop = placeAbove
-        ? triggerRect.top - menuGap - menuHeight
-        : triggerRect.bottom + menuGap;
-      const maxTop = Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding);
-      const maxLeft = Math.max(viewportPadding, window.innerWidth - triggerRect.width - viewportPadding);
-
-      setMenuPosition({
-        top: Math.round(Math.min(Math.max(viewportPadding, unclampedTop), maxTop)),
-        left: Math.round(
-          Math.min(Math.max(viewportPadding, triggerRect.left), maxLeft)
-        ),
-        width: Math.round(
-          Math.min(triggerRect.width, window.innerWidth - viewportPadding * 2)
-        ),
-        maxHeight: Math.round(visibleListHeight),
-      });
     };
 
-    updateMenuPosition();
+    const handleResize = () => {
+      if (!triggerEl()) return;
+      // cancel any in-flight rAFs
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (settleTimeoutRef.current) {
+        window.clearTimeout(settleTimeoutRef.current);
+        settleTimeoutRef.current = null;
+      }
+      const pos = computeMenuPosition(triggerEl() as HTMLButtonElement);
+      setMenuPosition(pos);
+      menuPositionRef.current = pos;
+      const menu = menuEl();
+      if (menu) {
+        menu.style.transform = "none";
+      }
+    };
 
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
+    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+    window.addEventListener("resize", handleResize);
+
     return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (settleTimeoutRef.current) {
+        window.clearTimeout(settleTimeoutRef.current);
+        settleTimeoutRef.current = null;
+      }
     };
   }, [open]);
 
@@ -236,7 +332,7 @@ export function DropdownSelect({
 
   return (
     <div
-      className={`relative ${open ? "z-40" : "z-0"} ${className}`.trim()}
+      className={`relative ${className}`.trim()}
       ref={rootRef}
     >
       <button

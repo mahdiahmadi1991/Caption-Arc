@@ -185,6 +185,7 @@ export function useSettings() {
   const saveRequestIdRef = useRef(0);
   const immediateSaveSerializedRef = useRef<string | null>(null);
   const settingsRef = useRef(settings);
+  const autoVerifyPendingRef = useRef(false);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -204,6 +205,9 @@ export function useSettings() {
         }
         setSettings(merged);
         lastSavedSettingsRef.current = JSON.stringify(merged);
+        if (!merged.openaiApiKey.trim()) {
+          autoVerifyPendingRef.current = true;
+        }
         setSaveState({
           status: "saved",
           message: t("options.runtime.save.saved"),
@@ -529,6 +533,23 @@ export function useSettings() {
     setSettings(nextSettings);
     void saveSettingsImmediately(nextSettings);
   };
+
+  const verifyOpenAiSetupNowRef = useRef(verifyOpenAiSetupNow);
+  verifyOpenAiSetupNowRef.current = verifyOpenAiSetupNow;
+
+  useEffect(() => {
+    if (loading || !autoVerifyPendingRef.current) {
+      return;
+    }
+    if (connectionState.status !== "idle") {
+      return;
+    }
+    if (!/^sk-[A-Za-z0-9\-_]{32,}/.test(settings.openaiApiKey)) {
+      return;
+    }
+    autoVerifyPendingRef.current = false;
+    void verifyOpenAiSetupNowRef.current();
+  }, [settings.openaiApiKey, connectionState.status, loading]);
 
   const currentOpenAiApiKey = settings.openaiApiKey;
 
