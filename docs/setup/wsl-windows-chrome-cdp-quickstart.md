@@ -9,6 +9,11 @@ Canonical runtime smoke convention:
 - `Deterministic Live Smoke (DLS)`
 - command shape: `pnpm chrome:smoke:live <provider> <scenario>`
 
+Owner approval gate:
+
+- DLS completion requires repository-owner visual review and explicit in-thread approval
+- without explicit owner approval, smoke evidence remains `pending-owner-review`
+
 ## Preconditions
 
 1. Project dependencies installed.

@@ -771,6 +771,16 @@ function getGoogleMeetPageKind(
   return null;
 }
 
+function resetGoogleMeetProviderStateForTests(): void {
+  currentCaptionRegion = null;
+  currentChatRegion = null;
+  finalizationTimers.forEach((timer) => clearTimeout(timer));
+  finalizationTimers.clear();
+  capturedChatMessageIds.clear();
+  recentChatFingerprints.clear();
+  chatMessageCounter = 0;
+}
+
 export const googleMeetProviderInternals = {
   getGoogleMeetPageKind,
   getGoogleMeetPresence,
@@ -780,4 +790,7 @@ export const googleMeetProviderInternals = {
   hasGoogleMeetLeaveCallControl,
   isGoogleMeetCaptionsEnabled,
   tryEnableGoogleMeetLiveCaptions: googleMeetProvider.tryEnableLiveCaptions,
+  processCaption,
+  extractChatMessages,
+  resetGoogleMeetProviderStateForTests,
 };

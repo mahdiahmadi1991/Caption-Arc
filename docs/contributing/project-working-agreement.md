@@ -22,15 +22,16 @@ This rule is mandatory for the whole project.
 
 ### 2. Keep The In-Repo Plan Synced
 
-For large features or long-running discussions, confirmed product decisions must be written into an in-repo planning document as the conversation evolves.
+For large code/behavior features or long-running implementation discussions, confirmed product decisions must be written into an in-repo planning document as the conversation evolves.
 
 The goal is to reduce context-loss risk and keep implementation aligned with the latest confirmed business direction.
 
 Required behavior:
 
 - do not leave the execution plan only in chat
-- create or update a dedicated in-repo plan file in `docs/contributing/execution-plans/active/` before implementation proceeds
+- create or update a dedicated in-repo plan file in `docs/contributing/execution-plans/active/` before implementation proceeds on plan-required code/behavior work
 - follow the plan standard in [execution-plans.md](./execution-plans.md)
+- do not require a plan for every docs-only edit by default; follow the docs-only policy in [execution-plans.md](./execution-plans.md)
 - write plans at full implementation quality, with enough detail to guide a later pass without relying on chat history
 - when the repository owner asks for a plan, the source of truth must be the plan file, not a transient chat summary
 

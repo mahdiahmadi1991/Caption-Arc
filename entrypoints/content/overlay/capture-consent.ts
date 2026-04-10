@@ -527,3 +527,25 @@ export function requestSessionEndedDecision(
     primaryFocus: "primary",
   });
 }
+
+export const overlayPromptInternals = {
+  requestOverlayPrompt: requestOverlayPrompt as <TDecision extends string>(options: {
+    promptKind: PromptKind;
+    providerLabel: string;
+    title: string;
+    body: string;
+    ariaLabel: string;
+    secondaryActionLabel: string;
+    primaryActionLabel: string;
+    secondaryDecision: TDecision;
+    primaryDecision: TDecision;
+    escapeDecision: TDecision;
+    timeoutDecision: TDecision;
+    primaryFocus: "primary" | "secondary";
+    showWhenOverlayHidden?: boolean;
+    onBeforeShow?: () => void;
+    onBeforeSettle?: (decision: TDecision) => void;
+    onAfterResolve?: (decision: TDecision) => void;
+  }) => Promise<TDecision>,
+  removePromptState: resetCaptureConsentPrompt,
+};

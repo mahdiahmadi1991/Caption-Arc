@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -19,3 +21,15 @@ jobs:
 
       - name: Validate documentation contract
         run: node ./scripts/docs/validate-docs.mjs
+
+      - name: Validate business documentation sync
+        env:
+          BUSINESS_DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BUSINESS_DOCS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node ./scripts/docs/validate-business-docs-sync.mjs
+
+      - name: Validate behavior-contract sync
+        env:
+          BEHAVIOR_CONTRACT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BEHAVIOR_CONTRACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node ./scripts/docs/validate-behavior-contract-sync.mjs

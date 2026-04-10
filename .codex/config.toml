@@ -1,9 +1,11 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 # keep the global Codex config lightweight and enable the heavier
-# long-thread settings only for this repository.
+# long-thread settings via local, untracked user config when needed.
+# Do not commit machine-specific absolute project paths in this repository.
 
 profile = "long_threads"
+personality = "pragmatic"
 
 # GPT-5.4 in Codex supports experimental 1M context.
 # Standard window is 272K; above that usage is billed at 2x.
@@ -18,7 +20,7 @@ runtime_metrics = true
 # with heavy context and up-to-date checks.
 model_reasoning_effort = "high"
 web_search = "live"
-model = "gpt-5.4"
+model = "gpt-5.3-codex"
 personality = "pragmatic"
 
 [profiles.fast_ops]

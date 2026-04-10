@@ -340,3 +340,10 @@ export function destroyOverlay(): void {
   setWaveElement(null);
   setCaptureGuideElement(null);
 }
+
+export const overlayInternals = {
+  clampOverlayMountPosition,
+  clampOverlayMountSize,
+  applyStoredOverlayFrame,
+  primeCompactOverlayFrame,
+};

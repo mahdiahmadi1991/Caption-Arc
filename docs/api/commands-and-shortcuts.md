@@ -35,11 +35,20 @@ Alias notes:
 ```bash
 pnpm test
 pnpm test:google
+pnpm test:google:coverage
 pnpm test:google:watch
 pnpm test:targeted:plan
 pnpm test:targeted:run
 pnpm test:module:plan <module-path>
 pnpm test:module:run <module-path>
+```
+
+## Documentation Guardrail Commands
+
+```bash
+pnpm docs:check
+pnpm docs:check:business
+pnpm docs:check:behavior
 ```
 
 ## Runtime Debug And Smoke Commands
@@ -65,6 +74,10 @@ pnpm chrome:debug:bridge:setup
 pnpm chrome:debug:bridge:remove
 pnpm chrome:debug:bridge:show
 ```
+
+DLS acceptance gate:
+
+- runtime DLS commands are considered complete only after repository-owner visual review and explicit in-thread approval
 
 All command definitions are sourced from [`package.json`](../../package.json).
 

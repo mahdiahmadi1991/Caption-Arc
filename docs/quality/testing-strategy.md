@@ -12,6 +12,7 @@ This repository uses a layered testing model:
 - onboarding flow: [testing-onboarding.md](./testing-onboarding.md)
 - test authoring rules: [test-writing-standards.md](./test-writing-standards.md)
 - runtime onboarding reference: [references/agent-onboarding-cdp-runtime.md](./references/agent-onboarding-cdp-runtime.md)
+- behavior-contract governance: [../contributing/behavior-contract-governance.md](../contributing/behavior-contract-governance.md)
 
 ## Test Layers And Ownership
 
@@ -32,6 +33,7 @@ This repository uses a layered testing model:
 - module runner: `pnpm test:module:run <module-path>`
 - smoke tooling location: `scripts/manual-smoke/*`
 - canonical runtime smoke convention: `Deterministic Live Smoke (DLS)` via `pnpm chrome:smoke:live <provider> <scenario>`
+- acceptance checkpoint: each DLS run must be visually reviewed and explicitly approved by the repository owner before it is counted as complete
 - purpose:
   - validate browser extension behavior in live runtime context
   - validate startup prompts, provider detection, and overlay behavior
@@ -53,6 +55,7 @@ This repository uses a layered testing model:
   - run `pnpm test:google`
   - run `pnpm test:google:coverage`
   - run targeted smoke from `pnpm test:targeted:plan`
+  - run `pnpm docs:check:behavior`
 - if change touches shared runtime/provider routing:
   - include provider matrix smoke
 - if change touches only docs:

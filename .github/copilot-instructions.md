@@ -5,15 +5,19 @@ Use `AGENTS.md` as the repository-wide behavioral contract.
 For documentation work, treat these files as the source of truth:
 - `docs/contributing/documentation-standards.md`
 - `docs/contributing/execution-plans.md`
+- `docs/contributing/behavior-contract-governance.md`
 - `docs/setup/agent-testing-onboarding.md` (test selection, sequencing, and reporting protocol)
 - `docs/quality/test-writing-standards.md` (test authoring rules)
 
 Rules:
-- For non-trivial changes, create or update an Execution Plan in `docs/contributing/execution-plans/active/` before implementation.
+- For non-trivial code/behavior changes, create or update an Execution Plan in `docs/contributing/execution-plans/active/` before implementation.
+- Do not create an Execution Plan by default for docs-only edits (for example small README or copy/link updates) unless the repository owner explicitly asks for one.
 - Keep all canonical project documentation under `docs/`.
 - Do not create ad hoc Markdown files outside the approved structure unless explicitly required.
 - Never include secrets, local machine paths, usernames, private URLs, or sensitive identifiers in docs.
 - When behavior, architecture, setup, permissions, contracts, storage, release flow, or testing changes, update the corresponding docs in the same change.
+- When behavior-sensitive code changes runtime/system behavior, update canonical behavior contracts in `docs/api/` and matching traceability matrices in `docs/quality/references/`.
+- Run `pnpm docs:check:behavior` when behavior-sensitive runtime/system code changes.
 - For any thread that includes test execution, follow `docs/setup/agent-testing-onboarding.md` for scenario selection, command ordering, failure classification, and reporting format.
 - For runtime-sensitive test execution, keep `DETERMINISTIC_TEST_MODE=1` unless explicitly running diagnosis.
 - Use the canonical runtime smoke convention name `Deterministic Live Smoke (DLS)` and prefer `pnpm chrome:smoke:live <provider> <scenario>` (or `chrome:smoke:live:matrix`) for acceptance evidence.

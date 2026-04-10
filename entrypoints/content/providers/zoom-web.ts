@@ -53,10 +53,10 @@ const ZOOM_STATE_POLL_INTERVAL_MS = 900;
 const SYSTEM_TEXT_PATTERN =
   /^(connecting|local data storage.*|captions will be shown in .+|english \(us\)|you have left the meeting|you left the meeting|joining meeting.*|meeting recording.*)$/i;
 
-const elementToCaptionId = new WeakMap<Element, number>();
-const elementLastVisibleText = new WeakMap<Element, string>();
-const elementLastSpeaker = new WeakMap<Element, string>();
-const elementAccumulatedText = new WeakMap<Element, string>();
+let elementToCaptionId = new WeakMap<Element, number>();
+let elementLastVisibleText = new WeakMap<Element, string>();
+let elementLastSpeaker = new WeakMap<Element, string>();
+let elementAccumulatedText = new WeakMap<Element, string>();
 const finalizationTimers = new Map<number, ReturnType<typeof setTimeout>>();
 const captionUpdatedAt = new Map<number, number>();
 const capturedZoomChatMessageIds = new Set<string>();
@@ -68,6 +68,21 @@ const zoomDiagnosticsLogger = createDiagnosticsLogger({
   feature: "zoom-caption-pipeline",
   provider: "zoom-web",
 });
+
+export function resetZoomWebProviderState(): void {
+  for (const timer of finalizationTimers.values()) {
+    clearTimeout(timer);
+  }
+  finalizationTimers.clear();
+  captionUpdatedAt.clear();
+  capturedZoomChatMessageIds.clear();
+  elementToCaptionId = new WeakMap<Element, number>();
+  elementLastVisibleText = new WeakMap<Element, string>();
+  elementLastSpeaker = new WeakMap<Element, string>();
+  elementAccumulatedText = new WeakMap<Element, string>();
+  zoomDebugState = {};
+  zoomCaptionStateTrace.splice(0, zoomCaptionStateTrace.length);
+}
 
 function updateZoomDebugState(patch: Record<string, unknown>): void {
   zoomDebugState = {
@@ -1921,9 +1936,13 @@ export const zoomWebProvider: MeetingProvider = {
 };
 
 export const zoomWebProviderInternals = {
+  extractChatMessages,
+  startCaptionObserver: () => zoomWebProvider.startCaptionObserver(),
   extractCaptionEntries: getCaptionEntries,
+  extractZoomDeltaText,
   extractSpeakerAndText,
   extractZoomFallbackIdentifier,
+  extractZoomChatMessageId,
   extractZoomMeetingId,
   extractZoomMeetingNumber,
   getZoomMeetingPresence,
@@ -1943,6 +1962,8 @@ export const zoomWebProviderInternals = {
   isZoomSupportedRoute,
   isTopLevelZoomShellContext,
   isZoomMeetingContext,
+  mergeZoomRollingTranscript,
   normalizeZoomTitle,
+  resetZoomWebProviderState,
   shouldActivateZoomProvider,
 };

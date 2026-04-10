@@ -39,6 +39,11 @@ List uncertainties, trade-offs, and failure modes.
 
 List docs that must be created or updated.
 
+For behavior-sensitive changes include:
+
+- affected `docs/api/*-behavior-contract.md` files
+- affected `docs/quality/references/*traceability-matrix.md` files
+
 ## Testing and Coverage Impact
 
 List:

@@ -16,6 +16,8 @@
     "build:all:development": "pnpm build:chrome:development && pnpm build:firefox:development",
     "build:all:production": "pnpm build:chrome:production && pnpm build:firefox:production",
     "docs:check": "node ./scripts/docs/validate-docs.mjs",
+    "docs:check:business": "node ./scripts/docs/validate-business-docs-sync.mjs",
+    "docs:check:behavior": "node ./scripts/docs/validate-behavior-contract-sync.mjs",
     "zip": "pnpm zip:all:production",
     "zip:production": "pnpm zip:all:production",
     "zip:chrome:production": "wxt zip -b chrome --mode production",

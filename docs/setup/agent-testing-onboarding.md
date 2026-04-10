@@ -40,6 +40,7 @@ Examples:
 7. Use deterministic runtime mode as default (single-path execution, no fallback hopping).
 8. Keep live diagnostics visible in the same smoke terminal for faster triage.
 9. Record Firefox verification evidence for runtime-sensitive changes until Firefox runtime automation exists.
+10. Treat DLS acceptance as incomplete until repository owner visually reviews and explicitly approves the run in the same thread.
 
 ## Decision Model
 
@@ -256,3 +257,4 @@ A thread is not done until all of the following are true:
 4. The summary includes command-by-command evidence.
 5. Documentation is updated when test flow, runtime path, or validation policy changed.
 6. Runtime-sensitive changes include Firefox verification evidence per [../quality/firefox-manual-verification-checklist.md](../quality/firefox-manual-verification-checklist.md) until Firefox automation is added.
+7. Repository owner visual approval is recorded for each DLS acceptance run.

@@ -9,6 +9,10 @@ Canonical runtime smoke convention:
 - use module-specific DLS aliases when they exist for the touched feature, for example:
   - `pnpm chrome:smoke:live:i18n <provider> <scenario>`
 
+Mandatory owner checkpoint:
+
+- DLS is only complete after repository-owner visual review and explicit approval in the same thread
+
 ## Step 1: Understand The Runtime Surfaces
 
 Primary implementation surfaces:
@@ -30,6 +34,7 @@ For code changes:
 pnpm test:google
 pnpm test:google:coverage
 pnpm test:targeted:plan
+pnpm docs:check:behavior
 ```
 
 Then run the recommended targeted commands from `pnpm test:targeted:plan`.
@@ -94,12 +99,14 @@ Required summary content:
 2. pass/fail status
 3. coverage command execution result for code changes
 4. unresolved test gaps (if any) with explicit owner approval
+5. explicit owner approval for each DLS acceptance run
 
 ## CI Enforcement
 
-`Quality Gates` workflow re-runs:
+`Quality Gates` and `Docs Guardrails` workflows re-run:
 
 - `pnpm docs:check`
+- `pnpm docs:check:behavior`
 - `pnpm test:google`
 - `pnpm test:google:coverage`
 
@@ -109,6 +116,7 @@ Required summary content:
 - `pnpm test:google` passes
 - `pnpm test:google:coverage` executed for code changes
 - runtime smoke completed for runtime-sensitive changes
+- repository owner reviewed and approved each DLS acceptance run
 - all implemented smoke scenarios for touched modules executed in the same thread
 - all executed tests pass (or explicit owner-approved deferral recorded)
 - docs updated when behavior/contracts changed

@@ -57,6 +57,10 @@ pnpm test:module:plan <module-path>
 pnpm test:module:run <module-path>
 ```
 
+DLS acceptance note:
+
+- each DLS run must be visually reviewed and explicitly approved by the repository owner before the task can be marked done
+
 ## Detailed Runtime Guides
 
 - [../quality/references/agent-onboarding-cdp-runtime.md](../quality/references/agent-onboarding-cdp-runtime.md)
