@@ -71,6 +71,7 @@ import {
 } from "./overlay/capture-consent";
 import { buildMeetingSessionFingerprint } from "../shared/meeting-session";
 import { createDiagnosticsLogger } from "../shared/diagnostics-client";
+import { hasAcceptedCurrentTerms } from "../shared/legal";
 import type { QuickAccessRuntimeStatus } from "../shared/quick-access-status";
 import type {
   FindMeetingSessionContinuationCandidateResponse,
@@ -646,7 +647,7 @@ async function handleEndedSessionCloseRequest(): Promise<void> {
   await handleEndedSessionExit(provider);
 }
 
-async function loadSettings(): Promise<void> {
+async function loadSettings(): Promise<boolean> {
   const previousSettings = { ...settings };
   recordLifecycleDebug("settings-load-begin", {
     previousTranslationEnabled: previousSettings.translationEnabled,
@@ -659,6 +660,7 @@ async function loadSettings(): Promise<void> {
 
     if (response?.success && response.settings) {
       const saved = response.settings;
+      const termsAccepted = hasAcceptedCurrentTerms(saved.termsAcceptance);
       updateSettings(saved);
       normalizePendingSessionProfileSelection();
       if (saved.customPrompt !== undefined) {
@@ -700,11 +702,20 @@ async function loadSettings(): Promise<void> {
 
       syncContinuationWindowState();
       syncAssistantAvailabilityFromSettingsOnly();
+      if (!termsAccepted) {
+        clearQuickAccessRuntimeStatus();
+        if (runtimeInitialized) {
+          await teardownPlatformRuntime();
+        }
+        recordLifecycleDebug("settings-load-blocked-terms-unaccepted");
+        return false;
+      }
       recordLifecycleDebug("settings-load-complete", {
         overlayVisible: settings.overlayVisible,
         translationEnabled: settings.translationEnabled,
         targetLanguage: settings.targetLanguage,
       });
+      return true;
     }
   } catch (error) {
     void runtimeDiagnosticsLogger.error("settings_load_failed", {
@@ -712,6 +723,8 @@ async function loadSettings(): Promise<void> {
     });
     // Settings could not be loaded, using defaults
   }
+
+  return true;
 }
 
 function startSettingsSync(): void {
@@ -741,7 +754,16 @@ function startSettingsSync(): void {
       keys: Object.keys(changes),
     });
 
-    void loadSettings();
+    void (async () => {
+      const termsAccepted = await loadSettings();
+
+      if (termsAccepted && !runtimeInitialized && activeMeetingPlatform) {
+        recordLifecycleDebug("settings-sync-reinitialize-after-terms-accept", {
+          platform: activeMeetingPlatform,
+        });
+        await initializePlatformRuntime(activeMeetingPlatform);
+      }
+    })();
   };
 
   chrome.storage.onChanged.addListener(handleStorageChange);
@@ -1515,8 +1537,13 @@ export async function initializePlatformRuntime(
   setCaptureGuide(provider.getCaptureGuide());
   setActiveMeetingPlatform(provider.platform);
 
-  await loadSettings();
+  const termsAccepted = await loadSettings();
   startSettingsSync();
+
+  if (!termsAccepted) {
+    clearQuickAccessRuntimeStatus();
+    return null;
+  }
 
   if (settings.captureStartupBehavior === "off") {
     return () => undefined;

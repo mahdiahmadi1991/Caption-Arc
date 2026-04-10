@@ -16,6 +16,7 @@ export const deMessages = {
             loading: "Laden...",
             open: "Offen",
             show: "Zeigen",
+            continue: "Weiter",
             working: "Arbeiten..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const deMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "Datenschutzrichtlinie",
+            termsOfService: "Nutzungsbedingungen"
+        },
+        legal: {
+            version: "Fassung {version}",
+            copyright: "Urheberrecht © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "Ersteinrichtung",
+            title: "Bedingungen prüfen und akzeptieren, um fortzufahren",
+            body: "CaptionArc benötigt eine einmalige Zustimmung zu den aktuellen Nutzungsbedingungen, bevor Sie mit der Einrichtung fortfahren.",
+            version: "Versionsstand der Bedingungen {version}",
+            reviewPrompt: "Prüfen Sie vor der Zustimmung die aktuellen Nutzungsbedingungen und die Datenschutzrichtlinie.",
+            acceptanceNote: "Mit dem Fortfahren bestätigen Sie, dass Sie die aktuellen Nutzungsbedingungen geprüft haben und die Datenschutzrichtlinie verstehen.",
+            declinedBody: "CaptionArc bleibt auf diesem Gerät inaktiv, weil die aktuellen Nutzungsbedingungen abgelehnt wurden.",
+            declinedPrompt: "Prüfen Sie die aktuellen Bedingungen erneut, sobald Sie bereit sind fortzufahren.",
+            declinedNote: "CaptionArc bleibt blockiert, bis die aktuellen Nutzungsbedingungen für dieses Gerät akzeptiert werden.",
+            accept: "Bedingungen akzeptieren"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "Rechtliches",
+                loadingDescription: "Die aktuelle veröffentlichte Fassung der rechtlichen Dokumente wird geladen."
+            },
+            privacyPolicy: {
+                title: "Datenschutzrichtlinie",
+                subtitle: "Eine In-Product-Kopie derselben Datenschutzrichtlinie, die im Repository veröffentlicht ist.",
+                sourceNote: "Diese Seite rendert dieselbe Markdown-Quelle, die auch im Repository veröffentlicht wird, damit In-Product-Kopie und öffentliches Dokument übereinstimmen.",
+                loadingTitle: "Datenschutzrichtlinie wird geladen"
+            },
+            termsOfService: {
+                title: "Nutzungsbedingungen",
+                subtitle: "Prüfen Sie die aktuellen Bedingungen, Verantwortlichkeiten und rechtlichen Grenzen für CaptionArc.",
+                acceptEyebrow: "Ersteinrichtung",
+                acceptSubtitle: "Scrollen Sie durch die aktuellen Bedingungen, bevor Sie sie auf diesem Gerät akzeptieren.",
+                acceptPrompt: "Lesen Sie die aktuellen Nutzungsbedingungen, um die Zustimmung freizuschalten.",
+                scrollRequired: "Scrollen Sie bis zum Ende des Dokuments, um die Zustimmung zu aktivieren.",
+                scrollReady: "Sie haben das Ende der Bedingungen erreicht. Sie können jetzt akzeptieren und diese Seite schließen.",
+                accept: "Akzeptieren und schließen",
+                decline: "Ablehnen und schließen",
+                declineNote: "Wenn Sie diesen Bedingungen nicht zustimmen, schließen Sie diese Seite und verwenden Sie CaptionArc nicht.",
+                sourceNote: "Diese Seite rendert dieselbe Markdown-Quelle, die auch im Repository veröffentlicht wird, damit In-Product-Kopie und öffentliches Dokument übereinstimmen.",
+                alreadyAcceptedTitle: "Aktuelle Bedingungen bereits akzeptiert",
+                alreadyAcceptedBody: "Für dieses Gerät liegt bereits eine Zustimmung zur aktuellen Bedingungsversion vor.",
+                declinedTitle: "Die aktuellen Bedingungen wurden auf diesem Gerät abgelehnt",
+                declinedBody: "CaptionArc bleibt blockiert, bis die aktuelle Bedingungsversion auf diesem Gerät akzeptiert wird.",
+                version: "Fassung {version}",
+                loadingTitle: "Nutzungsbedingungen werden geladen"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const deMessages = {
             storeMeetingChat: {
                 label: "Store-Meeting-Chat",
                 description: "Speichern Sie unterstützte Besprechungschats, damit sie im Besprechungsverlauf, in Exporten und in Zusammenfassungen angezeigt werden können."
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "Mit Vorsicht verwenden",
+                warningLabel: "Rechts- und Datenschutzhinweis"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "Automatischer Capture-Start verringert Zustimmungsschutz",
+                    body: "Dieser Modus überspringt die Freigabe pro Meeting und startet die Erfassung, sobald ein unterstütztes Meeting erkannt wird.",
+                    pointOne: "Nutzen Sie ihn nur in Meetings, in denen Sie sicher sind, dass Sie aus dem Meeting abgeleitete Inhalte erfassen und aufbewahren dürfen.",
+                    pointTwo: "Je nach aktivierten Funktionen können gespeicherte Untertitel oder Chats später für Zusammenfassungen, Live-Hinweise oder Exporte verwendet werden.",
+                    pointThree: "Sie bleiben für alle Hinweis-, Einwilligungs-, Arbeitsplatz- oder Plattformanforderungen verantwortlich, die für Ihre Nutzung gelten.",
+                    confirm: "Automatischen Capture-Start aktivieren"
+                },
+                warning: {
+                    title: "Automatischer Capture-Start ist aktiv",
+                    body: "CaptionArc überspringt die Freigabe pro Meeting. Lassen Sie dies nur dort aktiv, wo Sie aus dem Meeting abgeleitete Inhalte rechtmäßig erfassen und aufbewahren dürfen."
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "Automatische Untertitelaktivierung greift für Sie in die Meeting-App ein",
+                    body: "Dieser Modus versucht, Live-Untertitel automatisch einzuschalten, wenn die unterstützte Meeting-Oberfläche dies erlaubt.",
+                    pointOne: "Die automatische Aktivierung kann sensibler sein als der geführte Modus, weil sie die Meeting-Oberfläche jedes Mal ohne manuellen Schritt verändert.",
+                    pointTwo: "Behalten Sie sie nur in Umgebungen bei, in denen eine automatische Untertitelaktivierung mit Ihrer Richtlinie und Ihrem Ablauf vereinbar ist.",
+                    pointThree: "Sie bleiben dafür verantwortlich, diese Automatisierung nur dort zu nutzen, wo Anbieterregeln und Meeting-Erwartungen dies zulassen.",
+                    confirm: "Automatische Untertitel aktivieren"
+                },
+                warning: {
+                    title: "Automatische Untertitelaktivierung ist aktiv",
+                    body: "CaptionArc versucht Untertitel automatisch einzuschalten, wenn der Anbieter dies unterstützt. Prüfen Sie diesen Modus sorgfältig für richtliniensensible Meetings."
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "Gespeicherter Meeting-Chat kann datenschutzsensibler sein",
+                    body: "Wenn dies aktiviert bleibt, wird unterstützter Meeting-Chat Teil Ihres gespeicherten Meeting-Datensatzes und kann in Verlauf, Exporten und KI-gestützten Folgeabläufen erscheinen.",
+                    pointOne: "Meeting-Chat kann sensiblere oder stärker identifizierende Inhalte enthalten als sichtbare Untertitel allein.",
+                    pointTwo: "Gespeicherter Chat kann später in Zusammenfassungen, Übersetzungen und im Assistentenkontext verwendet werden, wenn diese Funktionen genutzt werden.",
+                    pointThree: "Nutzen Sie die Chat-Speicherung nur dort, wo die Aufbewahrung dieses Inhalts zu Ihren Hinweis-, Einwilligungs- und Vertraulichkeitserwartungen passt.",
+                    confirm: "Chat-Speicherung aktivieren"
+                },
+                warning: {
+                    title: "Meeting-Chat-Speicherung ist aktiv",
+                    body: "Unterstützter Meeting-Chat wird für Verlauf, Export und KI-gestützte Nachverfolgung aufbewahrt. Lassen Sie dies nur aktiviert, wenn diese Aufbewahrung angemessen ist."
+                }
             }
         },
         openAiService: {

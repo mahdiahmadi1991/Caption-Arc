@@ -1,5 +1,6 @@
 import type { ThemePreference } from "../../shared/theme";
 import type { UiLanguageSetting } from "../../shared/i18n";
+import type { TermsAcceptance, TermsDecline } from "../../shared/legal";
 import type {
   SummaryGenerationMode,
   SummaryJobStatus,
@@ -80,6 +81,13 @@ export type OverlayPositionsByPlatform = Partial<
 
 export type CaptureStartupBehavior = "off" | "ask" | "always";
 export type CaptionActivationBehavior = "guided" | "automatic";
+export type LegalRiskAcknowledgementKey =
+  | "storeMeetingChat"
+  | "captureStartupAlways"
+  | "captionActivationAutomatic";
+export type LegalRiskAcknowledgements = Partial<
+  Record<LegalRiskAcknowledgementKey, number>
+>;
 export type { SummaryGenerationMode } from "../../shared/summary-generation";
 export type { SummaryJobStatus } from "../../shared/summary-generation";
 export type SummaryProfile = SummaryProfileShape;
@@ -100,6 +108,7 @@ export type SharedSettings = {
   overlayOpacity: number;
   overlayClickThrough: boolean;
   storeMeetingChat: boolean;
+  legalRiskAcknowledgements: LegalRiskAcknowledgements;
 };
 
 export type LocalDeviceSecrets = {
@@ -113,6 +122,8 @@ export type LocalDeviceSettings = {
   connectedCloudProviders: CloudSyncProvider[];
   overlayPositionsByPlatform: OverlayPositionsByPlatform;
   verificationSnapshot: VerificationSnapshot | null;
+  termsAcceptance: TermsAcceptance | null;
+  termsDecline: TermsDecline | null;
 };
 
 export type Settings = SharedSettings & LocalDeviceSecrets & LocalDeviceSettings;
@@ -132,6 +143,9 @@ export type PortableSettings = Omit<
   | "connectedCloudProviders"
   | "overlayPositionsByPlatform"
   | "verificationSnapshot"
+  | "termsAcceptance"
+  | "termsDecline"
+  | "openaiApiKey"
 >;
 
 export type PortableMeetingSession = Omit<

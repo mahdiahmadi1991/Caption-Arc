@@ -12,6 +12,7 @@ import {
   type SupportedUiLocale,
 } from "../shared/i18n";
 import { AppLoadingScreen } from "../shared/loading-screen";
+import { TermsGate } from "../shared/terms-gate";
 import "./styles.css";
 
 const popupRootElement = document.getElementById("root");
@@ -74,7 +75,9 @@ function PopupRoot() {
     <React.StrictMode>
       <I18nProvider locale={locale}>
         <div className="relative min-h-screen">
-          <App />
+          <TermsGate surface="popup">
+            <App />
+          </TermsGate>
           {!localeReady && (
             <AppLoadingScreen
               variant="overlay"

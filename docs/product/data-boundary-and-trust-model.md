@@ -5,6 +5,7 @@ This document states where data lives, when it moves, and under which product ac
 ## Data Classes
 
 - settings and preferences
+- persisted legal-risk acknowledgments for high-risk settings
 - device-local secrets (OpenAI API key)
 - meeting events (captions and optional chat)
 - generated outputs (translations, assistant outputs, summaries)
@@ -49,6 +50,12 @@ Primary references:
 
 1. Personal cloud vault sync (optional, browser-gated by capability checks).
 2. Encrypted backup export/import (`.mcbak`) with passphrase encryption.
+
+Current continuity boundary notes:
+
+- cloud sync keeps the OpenAI API key device-local
+- encrypted backup now also excludes the OpenAI API key and other device-local secret material
+- backup restore brings back shared settings and archive data, but device-local secret setup still has to be re-entered on the device when needed
 
 Primary references:
 

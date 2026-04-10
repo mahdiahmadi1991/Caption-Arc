@@ -5,6 +5,7 @@ const {
   queueCloudSyncReconciliationMock,
   scheduleCloudSyncRunMock,
   runCloudSyncNowMock,
+  stopCloudSyncEngineMock,
   enqueueCloudSyncTaskMock,
   getSettingsMock,
   saveSettingsMock,
@@ -15,6 +16,7 @@ const {
   queueCloudSyncReconciliationMock: vi.fn(),
   scheduleCloudSyncRunMock: vi.fn(),
   runCloudSyncNowMock: vi.fn(),
+  stopCloudSyncEngineMock: vi.fn(),
   enqueueCloudSyncTaskMock: vi.fn(),
   getSettingsMock: vi.fn(),
   saveSettingsMock: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock("../../entrypoints/background/cloud-sync/engine", () => ({
   queueCloudSyncReconciliation: queueCloudSyncReconciliationMock,
   runCloudSyncNow: runCloudSyncNowMock,
   scheduleCloudSyncRun: scheduleCloudSyncRunMock,
+  stopCloudSyncEngine: stopCloudSyncEngineMock,
   syncCheckpointConnections: syncCheckpointConnectionsMock,
 }));
 
@@ -38,6 +41,11 @@ vi.mock("../../entrypoints/background/cloud-sync/outbox", () => ({
 
 vi.mock("../../entrypoints/shared/browser-capabilities", () => ({
   filterSupportedCloudSyncProviders: vi.fn((providers: string[]) => providers),
+  getDiagnosticsStorageSelection: vi.fn(() => ({
+    areaName: "local",
+    area: undefined,
+    usesFallback: true,
+  })),
 }));
 
 vi.mock("../../entrypoints/background/cloud-sync/checkpoints", () => ({

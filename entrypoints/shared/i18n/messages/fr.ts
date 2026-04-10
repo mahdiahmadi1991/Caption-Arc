@@ -16,6 +16,7 @@ export const frMessages = {
             loading: "Chargement...",
             open: "Ouvert",
             show: "Afficher",
+            continue: "Continuer",
             working: "Travailler..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const frMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "Politique de confidentialité",
+            termsOfService: "Conditions d’utilisation"
+        },
+        legal: {
+            version: "Édition {version}",
+            copyright: "Droits d’auteur © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "Configuration initiale",
+            title: "Consultez et acceptez les conditions pour continuer",
+            body: "CaptionArc nécessite une acceptation unique des conditions d’utilisation en vigueur avant de poursuivre la configuration.",
+            version: "Version des conditions {version}",
+            reviewPrompt: "Consultez les conditions d’utilisation et la politique de confidentialité en vigueur avant d’accepter.",
+            acceptanceNote: "En continuant, vous confirmez avoir consulté les conditions d’utilisation en vigueur et compris la politique de confidentialité.",
+            declinedBody: "CaptionArc reste inactif sur cet appareil parce que les conditions d’utilisation en vigueur ont été refusées.",
+            declinedPrompt: "Consultez à nouveau les conditions actuelles lorsque vous serez prêt à continuer.",
+            declinedNote: "CaptionArc reste bloqué jusqu’à ce que les conditions d’utilisation en vigueur soient acceptées pour cet appareil.",
+            accept: "Accepter les conditions"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "Mentions légales",
+                loadingDescription: "Chargement de la dernière version publiée des documents juridiques de cette extension."
+            },
+            privacyPolicy: {
+                title: "Politique de confidentialité",
+                subtitle: "Une copie intégrée au produit de la même politique de confidentialité publiée dans le dépôt.",
+                sourceNote: "Cette page restitue la même source markdown que celle publiée dans le dépôt afin que la copie intégrée à l’extension et le document public restent alignés.",
+                loadingTitle: "Chargement de la politique de confidentialité"
+            },
+            termsOfService: {
+                title: "Conditions d’utilisation",
+                subtitle: "Consultez les conditions actuelles, les responsabilités et les limites juridiques de CaptionArc.",
+                acceptEyebrow: "Configuration initiale",
+                acceptSubtitle: "Faites défiler les conditions actuelles avant de les accepter sur cet appareil.",
+                acceptPrompt: "Lisez les conditions d’utilisation actuelles pour activer l’acceptation.",
+                scrollRequired: "Faites défiler jusqu’à la fin du document pour activer l’acceptation.",
+                scrollReady: "Vous avez atteint la fin des conditions. Vous pouvez maintenant accepter et fermer cette page.",
+                accept: "Accepter et fermer",
+                decline: "Refuser et fermer",
+                declineNote: "Si vous n’acceptez pas ces conditions, fermez cette page et n’utilisez pas CaptionArc.",
+                sourceNote: "Cette page restitue la même source markdown que celle publiée dans le dépôt afin que la copie intégrée à l’extension et le document public restent alignés.",
+                alreadyAcceptedTitle: "Conditions actuelles déjà acceptées",
+                alreadyAcceptedBody: "Cet appareil dispose déjà d’une acceptation enregistrée pour la version actuelle des conditions.",
+                declinedTitle: "Les conditions actuelles ont été refusées sur cet appareil",
+                declinedBody: "CaptionArc reste bloqué jusqu’à ce que la version actuelle des conditions soit acceptée sur cet appareil.",
+                version: "Édition {version}",
+                loadingTitle: "Chargement des conditions d’utilisation"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const frMessages = {
             storeMeetingChat: {
                 label: "Chat de réunion en magasin",
                 description: "Enregistrez le chat de réunion pris en charge afin qu'il puisse apparaître dans l'historique des réunions, les exportations et les résumés."
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "À utiliser avec précaution",
+                warningLabel: "Avis juridique et confidentialité"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "Le démarrage automatique de la capture réduit les garde-fous de consentement",
+                    body: "Ce mode ignore la demande d'approbation à chaque réunion et lance la capture dès qu'une réunion prise en charge est détectée.",
+                    pointOne: "Utilisez-le uniquement dans les réunions où vous êtes sûr de pouvoir capturer et conserver du contenu dérivé de la réunion.",
+                    pointTwo: "Selon ce que vous activez, d'autres fonctions pourront ensuite utiliser les sous-titres ou le chat enregistrés pour les résumés, l'aide en direct ou les exportations.",
+                    pointThree: "Vous restez responsable de toute exigence d'information, de consentement, de politique interne ou de politique de plateforme applicable à votre usage.",
+                    confirm: "Activer la capture automatique"
+                },
+                warning: {
+                    title: "La capture automatique est active",
+                    body: "CaptionArc ignorera l'étape d'approbation par réunion. Ne laissez ce mode actif que lorsque la capture et la conservation de contenu dérivé de la réunion sont licites et appropriées."
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "L'activation automatique des sous-titres agit dans l'application de réunion à votre place",
+                    body: "Ce mode tente d'activer automatiquement les sous-titres en direct lorsque la surface de réunion prise en charge le permet.",
+                    pointOne: "L'activation automatique peut être plus sensible que le mode guidé, car elle modifie l'interface de réunion sans étape manuelle de votre part à chaque fois.",
+                    pointTwo: "Conservez-la uniquement dans les environnements où l'activation automatique des sous-titres est acceptable selon votre politique et votre flux de travail.",
+                    pointThree: "Vous restez responsable de l'usage de cette automatisation uniquement là où les règles du fournisseur et les attentes de la réunion l'autorisent.",
+                    confirm: "Activer les sous-titres automatiques"
+                },
+                warning: {
+                    title: "L'activation automatique des sous-titres est active",
+                    body: "CaptionArc tentera d'activer automatiquement les sous-titres lorsque le fournisseur le permet. Vérifiez ce mode avec soin pour les réunions sensibles du point de vue des politiques."
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "Le stockage du chat de réunion peut accroître la sensibilité liée à la vie privée",
+                    body: "Si cette option reste activée, le chat pris en charge devient une partie de votre enregistrement de réunion sauvegardé et peut apparaître dans l'historique, les exportations et les suivis assistés par IA.",
+                    pointOne: "Le chat de réunion peut contenir des informations plus sensibles ou plus identifiantes que les sous-titres visibles seuls.",
+                    pointTwo: "Le chat enregistré pourra ensuite être inclus dans les résumés, les traductions et le contexte de l'assistant lorsque ces fonctions sont utilisées.",
+                    pointThree: "N'utilisez le stockage du chat que lorsque la conservation de ce contenu correspond à vos obligations d'information, de consentement et de confidentialité.",
+                    confirm: "Activer le stockage du chat"
+                },
+                warning: {
+                    title: "Le stockage du chat est actif",
+                    body: "Le chat pris en charge est conservé pour l'historique, l'exportation et le suivi assisté par IA. Laissez ce mode actif uniquement lorsque cette conservation est appropriée."
+                }
             }
         },
         openAiService: {

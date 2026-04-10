@@ -14,6 +14,7 @@ import {
   type SupportedUiLocale,
 } from "../shared/i18n";
 import { AppLoadingScreen } from "../shared/loading-screen";
+import { TermsGate } from "../shared/terms-gate";
 import "./styles.css";
 
 const optionsRootElement = document.getElementById("root");
@@ -110,7 +111,9 @@ function OptionsRoot() {
     <React.StrictMode>
       <I18nProvider locale={locale}>
         <div className="relative min-h-screen">
-          <App />
+          <TermsGate surface="options">
+            <App />
+          </TermsGate>
           {(!localeReady || localeSwitching) && (
             <AppLoadingScreen
               variant="overlay"

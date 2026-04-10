@@ -32,6 +32,8 @@ export type DiagnosticsRuntimeContext =
   | "options"
   | "popup"
   | "meeting-history"
+  | "privacy-policy"
+  | "terms-of-service"
   | "smoke";
 
 export type DiagnosticsSenderMetadata = {

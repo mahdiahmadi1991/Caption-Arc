@@ -16,6 +16,7 @@ export const koMessages = {
             loading: "로드 중...",
             open: "열기",
             show: "쇼",
+            continue: "계속",
             working: "일하는 중..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const koMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "개인정보 처리방침",
+            termsOfService: "서비스 약관"
+        },
+        legal: {
+            version: "버전 {version}",
+            copyright: "저작권 © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "초기 설정",
+            title: "계속하려면 약관을 검토하고 동의하세요",
+            body: "설정을 계속하기 전에 CaptionArc는 현재 서비스 약관에 대한 1회 동의를 요구합니다.",
+            version: "약관 버전 {version}",
+            reviewPrompt: "동의하기 전에 현재 서비스 약관과 개인정보 처리방침을 검토하세요.",
+            acceptanceNote: "계속하면 현재 서비스 약관을 검토했고 개인정보 처리방침을 이해했음을 확인하는 것으로 간주됩니다.",
+            declinedBody: "현재 서비스 약관이 거부되었기 때문에 이 기기에서 CaptionArc는 비활성 상태로 유지됩니다.",
+            declinedPrompt: "계속할 준비가 되면 현재 약관을 다시 검토하세요.",
+            declinedNote: "이 기기에서 현재 서비스 약관이 수락될 때까지 CaptionArc는 차단된 상태로 유지됩니다.",
+            accept: "약관 동의"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "법률",
+                loadingDescription: "이 확장 프로그램의 최신 게시 법률 문서를 불러오는 중입니다."
+            },
+            privacyPolicy: {
+                title: "개인정보 처리방침",
+                subtitle: "저장소에 게시된 동일한 개인정보 처리방침의 제품 내 사본입니다.",
+                sourceNote: "이 페이지는 저장소에 게시된 동일한 markdown 원본을 렌더링하여 확장 프로그램 내부 사본과 공개 문서가 일치하도록 합니다.",
+                loadingTitle: "개인정보 처리방침 불러오는 중"
+            },
+            termsOfService: {
+                title: "서비스 약관",
+                subtitle: "CaptionArc의 현재 약관, 책임 및 법적 경계를 검토하세요.",
+                acceptEyebrow: "초기 설정",
+                acceptSubtitle: "이 기기에서 동의하기 전에 현재 약관을 끝까지 스크롤하세요.",
+                acceptPrompt: "동의를 활성화하려면 현재 서비스 약관을 읽어야 합니다.",
+                scrollRequired: "동의를 활성화하려면 문서 끝까지 스크롤하세요.",
+                scrollReady: "약관 끝에 도달했습니다. 이제 동의하고 이 페이지를 닫을 수 있습니다.",
+                accept: "동의하고 닫기",
+                decline: "거부하고 닫기",
+                declineNote: "이 약관에 동의하지 않으면 이 페이지를 닫고 CaptionArc를 사용하지 마세요.",
+                sourceNote: "이 페이지는 저장소에 게시된 동일한 markdown 원본을 렌더링하여 확장 프로그램 내부 사본과 공개 문서가 일치하도록 합니다.",
+                alreadyAcceptedTitle: "현재 약관은 이미 동의되었습니다",
+                alreadyAcceptedBody: "이 기기에는 현재 약관 버전에 대한 동의 기록이 이미 있습니다.",
+                declinedTitle: "이 기기에서 현재 약관이 거부되었습니다",
+                declinedBody: "이 기기에서 현재 약관 버전이 수락될 때까지 CaptionArc는 차단된 상태로 유지됩니다.",
+                version: "버전 {version}",
+                loadingTitle: "서비스 약관 불러오는 중"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const koMessages = {
             storeMeetingChat: {
                 label: "매장 미팅 채팅",
                 description: "지원되는 회의 채팅을 저장하여 회의 기록, 내보내기 및 요약에 표시할 수 있습니다."
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "주의해서 사용",
+                warningLabel: "법률 및 개인정보 안내"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "항상 자동 시작 캡처는 동의 보호를 약화시킬 수 있습니다",
+                    body: "이 모드는 회의별 승인 안내를 건너뛰고, 지원되는 회의를 감지하자마자 캡처를 시작합니다.",
+                    pointOne: "회의에서 파생된 콘텐츠를 캡처하고 보관해도 된다고 확신하는 경우에만 사용하세요.",
+                    pointTwo: "활성화한 기능에 따라 저장된 자막이나 채팅이 이후 요약, 실시간 안내 또는 내보내기에 사용될 수 있습니다.",
+                    pointThree: "공지, 동의, 직장 정책, 플랫폼 정책 등 사용에 적용되는 요구사항에 대한 책임은 여전히 사용자에게 있습니다.",
+                    confirm: "항상 자동 시작 캡처 사용"
+                },
+                warning: {
+                    title: "항상 자동 시작 캡처가 활성화됨",
+                    body: "CaptionArc 는 회의별 승인 단계를 건너뜁니다. 회의 파생 콘텐츠를 적법하게 캡처하고 보관할 수 있는 경우에만 이 설정을 유지하세요."
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "자동 자막 활성화는 회의 앱을 대신 조작합니다",
+                    body: "이 모드는 지원되는 회의 화면이 허용할 때 실시간 자막을 자동으로 켜려고 시도합니다.",
+                    pointOne: "자동 활성화는 매번 수동 단계 없이 회의 UI 를 변경하므로 안내형 모드보다 더 민감할 수 있습니다.",
+                    pointTwo: "자동 자막 활성화가 정책과 워크플로에 맞는 환경에서만 유지하세요.",
+                    pointThree: "이 자동화를 사용할 책임은 공급자 규칙과 회의 기대가 허용하는 경우에 한해 여전히 사용자에게 있습니다.",
+                    confirm: "자동 자막 활성화 사용"
+                },
+                warning: {
+                    title: "자동 자막 활성화가 활성화됨",
+                    body: "공급자가 지원하면 CaptionArc 가 자막을 자동으로 켜려고 시도합니다. 정책상 민감한 회의에서는 이 모드를 신중하게 검토하세요."
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "회의 채팅 저장은 개인정보 민감도를 높일 수 있습니다",
+                    body: "이 설정이 켜져 있으면 지원되는 회의 채팅이 저장된 회의 기록의 일부가 되며, 기록, 내보내기, AI 지원 후속 흐름에 나타날 수 있습니다.",
+                    pointOne: "회의 채팅에는 보이는 자막만보다 더 민감하거나 식별 가능한 내용이 포함될 수 있습니다.",
+                    pointTwo: "이 기능들을 사용할 때 저장된 채팅은 이후 요약, 번역, 도우미 컨텍스트에 포함될 수 있습니다.",
+                    pointThree: "해당 콘텐츠 보관이 공지, 동의, 기밀성 기대에 맞는 경우에만 채팅 저장을 사용하세요.",
+                    confirm: "회의 채팅 저장 사용"
+                },
+                warning: {
+                    title: "회의 채팅 저장이 활성화됨",
+                    body: "지원되는 회의 채팅이 기록, 내보내기, AI 지원 후속 처리를 위해 보관되고 있습니다. 이런 보관이 적절한 경우에만 이 설정을 유지하세요."
+                }
             }
         },
         openAiService: {

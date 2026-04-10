@@ -16,6 +16,7 @@ export const zhMessages = {
             loading: "加载中...",
             open: "打开",
             show: "显示",
+            continue: "继续",
             working: "工作..."
         },
         brands: {
@@ -52,6 +53,58 @@ export const zhMessages = {
                 zh: "中文",
                 ja: "日本語",
                 ko: "한국어"
+            }
+        },
+        links: {
+            github: "GitHub",
+            privacyPolicy: "隐私政策",
+            termsOfService: "服务条款"
+        },
+        legal: {
+            version: "版本 {version}",
+            copyright: "版权所有 © {year} CaptionArc"
+        },
+        firstRunTerms: {
+            eyebrow: "首次设置",
+            title: "查看并接受条款后继续",
+            body: "在继续设置之前，CaptionArc 需要您一次性接受当前的服务条款。",
+            version: "条款版本 {version}",
+            reviewPrompt: "接受前请先查看当前的服务条款和隐私政策。",
+            acceptanceNote: "继续即表示您确认已查看当前服务条款并理解隐私政策。",
+            declinedBody: "由于当前服务条款已被拒绝，CaptionArc 在此设备上将保持未激活状态。",
+            declinedPrompt: "当您准备继续时，请再次查看当前条款。",
+            declinedNote: "在此设备接受当前服务条款之前，CaptionArc 将保持被阻止状态。",
+            accept: "接受条款"
+        },
+        legalPages: {
+            shared: {
+                eyebrow: "法律",
+                loadingDescription: "正在加载此扩展程序当前发布的法律文档。"
+            },
+            privacyPolicy: {
+                title: "隐私政策",
+                subtitle: "在产品内显示与仓库中发布的同一份隐私政策。",
+                sourceNote: "此页面渲染与仓库中发布的相同 markdown 源，以便扩展内副本与公开文档保持一致。",
+                loadingTitle: "正在加载隐私政策"
+            },
+            termsOfService: {
+                title: "服务条款",
+                subtitle: "查看 CaptionArc 当前的条款、责任和法律边界。",
+                acceptEyebrow: "首次设置",
+                acceptSubtitle: "在此设备上接受之前，请滚动阅读当前条款直到末尾。",
+                acceptPrompt: "阅读当前服务条款后才能启用接受。",
+                scrollRequired: "请滚动到文档末尾以启用接受。",
+                scrollReady: "您已到达条款末尾。现在可以接受并关闭此页面。",
+                accept: "接受并关闭",
+                decline: "拒绝并关闭",
+                declineNote: "如果您不同意这些条款，请关闭此页面并不要使用 CaptionArc。",
+                sourceNote: "此页面渲染与仓库中发布的相同 markdown 源，以便扩展内副本与公开文档保持一致。",
+                alreadyAcceptedTitle: "当前条款已被接受",
+                alreadyAcceptedBody: "此设备已记录当前条款版本的接受状态。",
+                declinedTitle: "当前条款已在此设备上被拒绝",
+                declinedBody: "在此设备接受当前条款版本之前，CaptionArc 将保持被阻止状态。",
+                version: "版本 {version}",
+                loadingTitle: "正在加载服务条款"
             }
         },
         units: {
@@ -210,6 +263,54 @@ export const zhMessages = {
             storeMeetingChat: {
                 label: "商店会议聊天",
                 description: "保存支持的会议聊天，以便它可以显示在会议历史记录、导出和摘要中。"
+            }
+        },
+        legalRisk: {
+            shared: {
+                eyebrow: "请谨慎使用",
+                warningLabel: "法律与隐私提示"
+            },
+            captureStartupAlways: {
+                dialog: {
+                    title: "始终自动开始捕获会降低同意保护",
+                    body: "此模式会跳过每场会议的批准提示，并在检测到受支持的会议后立即开始捕获流程。",
+                    pointOne: "仅在你确信自己可以捕获并保留会议衍生内容的会议中使用此模式。",
+                    pointTwo: "根据你启用的功能，已保存的字幕或聊天之后可能会用于摘要、实时辅助或导出。",
+                    pointThree: "与通知、同意、工作场所政策或平台政策相关的要求，仍由你自行负责。",
+                    confirm: "启用自动开始捕获"
+                },
+                warning: {
+                    title: "自动开始捕获已启用",
+                    body: "CaptionArc 将跳过每场会议的批准步骤。只有在你可以合法捕获并保留会议衍生内容的场景中才应保持启用。"
+                }
+            },
+            captionActivationAutomatic: {
+                dialog: {
+                    title: "自动字幕激活会代你与会议应用交互",
+                    body: "当受支持的会议界面允许时，此模式会尝试自动打开实时字幕。",
+                    pointOne: "自动激活可能比引导模式更敏感，因为它会在每次没有你手动操作的情况下更改会议界面。",
+                    pointTwo: "只有在你的政策和工作流程接受自动字幕激活的环境中才应保持启用。",
+                    pointThree: "你仍需自行负责仅在提供商规则和会议预期允许的情况下使用此自动化。",
+                    confirm: "启用自动字幕激活"
+                },
+                warning: {
+                    title: "自动字幕激活已启用",
+                    body: "当提供商支持时，CaptionArc 会尝试自动打开字幕。对于政策敏感的会议，请谨慎使用此模式。"
+                }
+            },
+            storeMeetingChat: {
+                dialog: {
+                    title: "保存会议聊天可能提高隐私敏感度",
+                    body: "启用后，受支持的会议聊天会成为你已保存会议记录的一部分，并可能出现在历史记录、导出内容以及 AI 辅助后续流程中。",
+                    pointOne: "与可见字幕相比，会议聊天可能包含更敏感或更容易识别身份的内容。",
+                    pointTwo: "在使用这些功能时，已保存的聊天之后可能被纳入摘要、翻译和助手上下文。",
+                    pointThree: "只有在保留这些内容符合你的通知、同意和保密预期时，才应启用聊天保存。",
+                    confirm: "启用会议聊天保存"
+                },
+                warning: {
+                    title: "会议聊天保存已启用",
+                    body: "受支持的会议聊天正在被保留，用于历史记录、导出和 AI 辅助后续流程。只有在这种保留是合适的情况下才应保持启用。"
+                }
             }
         },
         openAiService: {

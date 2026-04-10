@@ -5,11 +5,13 @@ const {
   updateCloudSyncTaskMock,
   removeCloudSyncTaskMock,
   appendCloudSyncDiagnosticMock,
+  getSettingsMock,
 } = vi.hoisted(() => ({
   processCloudSyncTaskForProviderMock: vi.fn(),
   updateCloudSyncTaskMock: vi.fn(),
   removeCloudSyncTaskMock: vi.fn(),
   appendCloudSyncDiagnosticMock: vi.fn(),
+  getSettingsMock: vi.fn(),
 }));
 
 vi.mock("../../entrypoints/background/cloud-sync/providers", () => ({
@@ -39,6 +41,26 @@ vi.mock("../../entrypoints/background/cloud-sync/checkpoints", () => ({
 
 vi.mock("../../entrypoints/shared/browser-capabilities", () => ({
   filterSupportedCloudSyncProviders: vi.fn((providers: string[]) => providers),
+  getDiagnosticsStorageSelection: vi.fn(() => ({
+    areaName: "local",
+    area: undefined,
+    usesFallback: true,
+  })),
+}));
+
+vi.mock("../../entrypoints/background/settings", () => ({
+  getSettings: getSettingsMock,
+}));
+
+vi.mock("../../entrypoints/shared/legal", () => ({
+  hasAcceptedCurrentTerms: vi.fn(
+    (acceptance: { version?: string; acceptedAt?: number } | null | undefined) =>
+      Boolean(
+        acceptance &&
+          acceptance.version === "2026-04-10" &&
+          typeof acceptance.acceptedAt === "number"
+      )
+  ),
 }));
 
 import { cloudSyncEngineInternals } from "../../entrypoints/background/cloud-sync/engine";
@@ -47,6 +69,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Math, "random").mockReturnValue(0.5);
   vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+  getSettingsMock.mockResolvedValue({
+    settings: {
+      termsAcceptance: {
+        version: "2026-04-10",
+        acceptedAt: 1_000_000,
+      },
+    },
+  });
 });
 
 afterEach(() => {

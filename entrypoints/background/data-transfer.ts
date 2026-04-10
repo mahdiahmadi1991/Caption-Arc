@@ -29,7 +29,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function createPortableSettings(settings: Settings): PortableSettings {
   return {
-    openaiApiKey: settings.openaiApiKey,
     model: settings.model,
     targetLanguage: settings.targetLanguage,
     translationEnabled: settings.translationEnabled,
@@ -48,6 +47,7 @@ function createPortableSettings(settings: Settings): PortableSettings {
     overlayOpacity: settings.overlayOpacity,
     overlayClickThrough: settings.overlayClickThrough,
     storeMeetingChat: settings.storeMeetingChat,
+    legalRiskAcknowledgements: { ...settings.legalRiskAcknowledgements },
   };
 }
 

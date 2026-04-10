@@ -313,7 +313,13 @@ export function useSettings() {
         await optionsSettingsDiagnostics.debug("options_settings_autosave_started", {
           requestId,
         });
-        await chrome.runtime.sendMessage({ action: "saveSettings", settings });
+        const response = await chrome.runtime.sendMessage({
+          action: "saveSettings",
+          settings,
+        });
+        if (!response?.success) {
+          throw new Error(response?.error || "Settings autosave failed.");
+        }
         if (saveRequestIdRef.current !== requestId) {
           await optionsSettingsDiagnostics.trace("options_settings_autosave_superseded", {
             requestId,
@@ -389,7 +395,12 @@ export function useSettings() {
     void optionsSettingsDiagnostics.debug("options_settings_appearance_changed", {
       appearance,
     });
-    setSettings((prev) => ({ ...prev, appearance }));
+    const nextSettings = {
+      ...settingsRef.current,
+      appearance,
+    };
+    settingsRef.current = nextSettings;
+    setSettings(nextSettings);
   };
 
   const saveSettingsImmediately = async (
@@ -411,10 +422,13 @@ export function useSettings() {
       await optionsSettingsDiagnostics.info("options_settings_immediate_save_started", {
         requestId,
       });
-      await chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         action: "saveSettings",
         settings: nextSettings,
       });
+      if (!response?.success) {
+        throw new Error(response?.error || "Settings save failed.");
+      }
 
       if (saveRequestIdRef.current !== requestId) {
         await optionsSettingsDiagnostics.trace("options_settings_immediate_save_superseded", {
@@ -458,23 +472,123 @@ export function useSettings() {
     }
   };
 
+  const persistSettingsNow = async (
+    updates: Partial<Settings>
+  ): Promise<boolean> => {
+    const nextSettings = {
+      ...settingsRef.current,
+      ...updates,
+    } as Settings;
+    const serializedSettings = JSON.stringify(nextSettings);
+    const requestId = ++saveRequestIdRef.current;
+    immediateSaveSerializedRef.current = serializedSettings;
+
+    setSaveState({
+      status: "saving",
+      message: t("options.runtime.save.saving"),
+    });
+
+    try {
+      await optionsSettingsDiagnostics.info(
+        "options_settings_transactional_save_started",
+        {
+          requestId,
+          keys: Object.keys(updates),
+        }
+      );
+      const response = await chrome.runtime.sendMessage({
+        action: "saveSettings",
+        settings: nextSettings,
+      });
+      if (!response?.success) {
+        throw new Error(response?.error || "Settings save failed.");
+      }
+
+      if (saveRequestIdRef.current !== requestId) {
+        await optionsSettingsDiagnostics.trace(
+          "options_settings_transactional_save_superseded",
+          {
+            requestId,
+          }
+        );
+        return false;
+      }
+
+      settingsRef.current = nextSettings;
+      setSettings(nextSettings);
+      lastSavedSettingsRef.current = serializedSettings;
+      setSaveState({
+        status: "saved",
+        message: t("options.runtime.save.saved"),
+      });
+      await optionsSettingsDiagnostics.info(
+        "options_settings_transactional_save_completed",
+        {
+          requestId,
+          keys: Object.keys(updates),
+        }
+      );
+      return true;
+    } catch (error) {
+      if (saveRequestIdRef.current !== requestId) {
+        await optionsSettingsDiagnostics.trace(
+          "options_settings_transactional_save_failure_ignored",
+          {
+            requestId,
+          }
+        );
+        return false;
+      }
+
+      await optionsSettingsDiagnostics.error(
+        "options_settings_transactional_save_failed",
+        {
+          requestId,
+          keys: Object.keys(updates),
+          error,
+        }
+      );
+      setSaveState({
+        status: "error",
+        message: t("options.runtime.save.autosaveFailed"),
+      });
+      return false;
+    } finally {
+      if (immediateSaveSerializedRef.current === serializedSettings) {
+        immediateSaveSerializedRef.current = null;
+      }
+    }
+  };
+
   const updateSetting = <K extends keyof Settings>(
     key: K,
     value: Settings[K]
   ) => {
+    const previousSettings = settingsRef.current;
     const nextSettings = {
-      ...settingsRef.current,
+      ...previousSettings,
       [key]: value,
     } as Settings;
 
+    settingsRef.current = nextSettings;
     setSettings(nextSettings);
 
-    if (key === "uiLanguage" && settingsRef.current.uiLanguage !== value) {
+    if (key === "uiLanguage" && previousSettings.uiLanguage !== value) {
       emitUiLocaleSwitchStart();
       void saveSettingsImmediately(nextSettings, {
         uiLanguageChange: true,
       });
     }
+  };
+
+  const updateSettings = (updates: Partial<Settings>) => {
+    const nextSettings = {
+      ...settingsRef.current,
+      ...updates,
+    } as Settings;
+
+    settingsRef.current = nextSettings;
+    setSettings(nextSettings);
   };
 
   const verifyOpenAiSetupNow = async () => {
@@ -727,6 +841,8 @@ export function useSettings() {
     currentOpenAiApiKey,
     setCurrentOpenAiApiKey,
     updateSetting,
+    updateSettings,
+    persistSettingsNow,
     saveAppearance,
     verifyOpenAiSetupNow,
     exportDataBundle,

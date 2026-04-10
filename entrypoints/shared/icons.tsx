@@ -50,6 +50,24 @@ export function BeakerIcon(props: IconProps) {
   return <FlaskConical {...withDefaults(props)} />;
 }
 
+export function GithubIcon(props: IconProps) {
+  const resolved = withDefaults(props);
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...resolved}
+    >
+      <path d="M9 19c-4.5 1.5-4.5-2.5-6-3" />
+      <path d="M15 21v-3.9a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 19 3.77 5.07 5.07 0 0 0 18.91 1S17.73.65 15 2.48a13.38 13.38 0 0 0-6 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 3.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 6.96A3.37 3.37 0 0 0 9 17.1V21" />
+    </svg>
+  );
+}
+
 export function EyeIcon(props: IconProps) {
   return <Eye {...withDefaults(props)} />;
 }

@@ -51,6 +51,14 @@ function inferDiagnosticsRuntimeContext():
     if (location.pathname.endsWith("/meeting-history.html")) {
       return "meeting-history";
     }
+
+    if (location.pathname.endsWith("/privacy-policy.html")) {
+      return "privacy-policy";
+    }
+
+    if (location.pathname.endsWith("/terms-of-service.html")) {
+      return "terms-of-service";
+    }
   }
 
   if (location.protocol === "http:" || location.protocol === "https:") {

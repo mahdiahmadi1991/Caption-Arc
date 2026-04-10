@@ -16,6 +16,7 @@ export const enMessages = {
       loading: "Loading...",
       open: "Open",
       show: "Show",
+      continue: "Continue",
       working: "Working...",
     },
     brands: {
@@ -53,6 +54,76 @@ export const enMessages = {
         zh: "中文",
         ja: "日本語",
         ko: "한국어",
+      },
+    },
+    links: {
+      github: "GitHub",
+      privacyPolicy: "Privacy Policy",
+      termsOfService: "Terms of Service",
+    },
+    legal: {
+      version: "Version {version}",
+      copyright: "Copyright © {year} CaptionArc",
+    },
+    firstRunTerms: {
+      eyebrow: "First-run setup",
+      title: "Review and accept the Terms to continue",
+      body:
+        "CaptionArc needs one-time acceptance of the current Terms of Service before you continue with setup.",
+      version: "Terms version {version}",
+      reviewPrompt:
+        "Review the current Terms of Service and Privacy Policy before accepting.",
+      acceptanceNote:
+        "By continuing, you confirm that you reviewed the current Terms of Service and understand the Privacy Policy.",
+      declinedBody:
+        "CaptionArc remains inactive on this device because the current Terms of Service were declined.",
+      declinedPrompt:
+        "Review the current Terms again whenever you are ready to continue.",
+      declinedNote:
+        "CaptionArc stays blocked until the current Terms of Service are accepted for this device.",
+      accept: "Accept Terms",
+    },
+    legalPages: {
+      shared: {
+        eyebrow: "Legal",
+        loadingDescription:
+          "Loading the latest published legal copy for this extension.",
+      },
+      privacyPolicy: {
+        title: "Privacy Policy",
+        subtitle:
+          "A readable in-product copy of the same Privacy Policy published in the repository.",
+        sourceNote:
+          "This page renders the same markdown source that is published in the repository so the in-extension copy and the public document stay aligned.",
+        loadingTitle: "Loading Privacy Policy",
+      },
+      termsOfService: {
+        title: "Terms of Service",
+        subtitle:
+          "Review the current operating terms, responsibilities, and legal boundaries for CaptionArc.",
+        acceptEyebrow: "First-run setup",
+        acceptSubtitle:
+          "Scroll through the current Terms before accepting them for this device.",
+        acceptPrompt:
+          "Read through the current Terms of Service to unlock acceptance.",
+        scrollRequired:
+          "Scroll to the end of the document to enable acceptance.",
+        scrollReady:
+          "You have reached the end of the Terms. You can now accept and continue.",
+        accept: "Accept and continue",
+        decline: "Decline",
+        declineNote:
+          "Declining keeps CaptionArc inactive on this device until you return and accept the current Terms.",
+        sourceNote:
+          "This page renders the same markdown source that is published in the repository so the in-extension copy and the public document stay aligned.",
+        alreadyAcceptedTitle: "Current Terms already accepted",
+        alreadyAcceptedBody:
+          "This device already has a recorded acceptance for the current Terms version.",
+        declinedTitle: "Current Terms were declined on this device",
+        declinedBody:
+          "CaptionArc stays blocked until the current Terms version is accepted on this device.",
+        version: "Version {version}",
+        loadingTitle: "Loading Terms of Service",
       },
     },
     units: {
@@ -232,6 +303,69 @@ export const enMessages = {
         label: "Store meeting chat",
         description:
           "Save supported meeting chat so it can appear in meeting history, exports, and summaries.",
+      },
+    },
+    legalRisk: {
+      shared: {
+        eyebrow: "Use with care",
+        warningLabel: "Legal and privacy notice",
+      },
+      captureStartupAlways: {
+        dialog: {
+          title: "Always-start capture reduces consent safeguards",
+          body:
+            "This mode skips the per-meeting approval prompt and starts the capture flow as soon as a supported meeting is detected.",
+          pointOne:
+            "Use it only in meetings where you are confident you may capture and retain meeting-derived content.",
+          pointTwo:
+            "Other features may later use saved captions or chat for summaries, live guidance, or exports, depending on what you enable.",
+          pointThree:
+            "You remain responsible for any notice, consent, workplace-policy, or platform-policy requirements that apply to your use.",
+          confirm: "Enable always-start capture",
+        },
+        warning: {
+          title: "Always-start capture is active",
+          body:
+            "CaptionArc will skip the per-meeting approval step. Keep this on only where you can lawfully capture and retain meeting-derived content.",
+        },
+      },
+      captionActivationAutomatic: {
+        dialog: {
+          title: "Automatic caption activation interacts with the meeting app for you",
+          body:
+            "This mode attempts to switch on live captions automatically when the supported meeting surface allows it.",
+          pointOne:
+            "Automatic activation can be more sensitive than guided mode because it changes the meeting UI without a manual step from you each time.",
+          pointTwo:
+            "Keep it for environments where automated caption activation is acceptable under your policy and workflow.",
+          pointThree:
+            "You remain responsible for using this automation only where provider rules and meeting expectations allow it.",
+          confirm: "Enable automatic caption activation",
+        },
+        warning: {
+          title: "Automatic caption activation is active",
+          body:
+            "CaptionArc will try to switch captions on automatically when the provider supports it. Review this mode carefully for policy-sensitive meetings.",
+        },
+      },
+      storeMeetingChat: {
+        dialog: {
+          title: "Stored meeting chat can increase privacy sensitivity",
+          body:
+            "When this stays on, supported meeting chat becomes part of your saved meeting record and can appear in history, exports, and AI-assisted follow-up flows.",
+          pointOne:
+            "Meeting chat can contain more sensitive or identifying material than visible captions alone.",
+          pointTwo:
+            "Saved chat may later be included in summaries, translations, and assistant context when those features are used.",
+          pointThree:
+            "Use chat storage only where retaining that content fits your notice, consent, and confidentiality expectations.",
+          confirm: "Enable meeting chat storage",
+        },
+        warning: {
+          title: "Meeting chat storage is active",
+          body:
+            "Supported meeting chat is being retained for history, export, and AI-assisted follow-up. Keep this on only where that retention is appropriate.",
+        },
       },
     },
     openAiService: {
@@ -723,7 +857,7 @@ export const enMessages = {
       backupFile: {
         title: "Encrypted backup file",
         description:
-          "The exported backup contains your settings, summary profiles, saved meeting sessions, transcripts, chat history, translations, and summaries. Use it when cloud sync is unavailable or when you need a portable encrypted snapshot.",
+          "The exported backup contains your shared settings, summary profiles, saved meeting sessions, transcripts, chat history, translations, and summaries. Device-local secrets such as the OpenAI API key stay out of the backup. Use it when cloud sync is unavailable or when you need a portable encrypted snapshot.",
         export: "Export all data",
         import: "Import backup file",
       },
@@ -739,12 +873,12 @@ export const enMessages = {
         scope: {
           title: "Scope",
           description:
-            "One encrypted file contains both settings and the complete session archive.",
+            "One encrypted file contains shared settings and the complete session archive, but not device-local secrets.",
         },
         restoreBehavior: {
           title: "Restore behavior",
           description:
-            "Import replaces the current local archive and settings with the backup file you choose, then the sync engine can reconcile again.",
+            "Import replaces the current local archive and shared settings with the backup file you choose. Device-local secrets such as the OpenAI API key must still be entered on the device after restore.",
         },
         useCase: {
           title: "Use case",

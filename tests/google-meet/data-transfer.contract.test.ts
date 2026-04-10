@@ -43,6 +43,9 @@ beforeEach(() => {
       openaiApiKey: "sk-live",
       model: "gpt-5-mini",
       connectedCloudProviders: ["google-drive"],
+      legalRiskAcknowledgements: {
+        storeMeetingChat: 101,
+      },
     },
   });
   saveSettingsMock.mockResolvedValue({ success: true });
@@ -83,6 +86,11 @@ describe("Data transfer contract", () => {
     expect(response.data?.bundleVersion).toBe(1);
     expect(response.data?.manifest.sessionCount).toBe(1);
     expect(response.data?.settings.connectedCloudProviders).toBeUndefined();
+    expect(response.data?.settings.openaiApiKey).toBeUndefined();
+    expect(response.data?.settings.termsAcceptance).toBeUndefined();
+    expect(response.data?.settings.legalRiskAcknowledgements).toEqual({
+      storeMeetingChat: 101,
+    });
     expect(response.data?.sessions).toHaveLength(1);
   });
 
@@ -162,5 +170,37 @@ describe("Data transfer contract", () => {
     expect(saveSettingsMock).toHaveBeenCalledTimes(2);
     expect(saveSettingsMock.mock.calls[0]?.[0]).toMatchObject({ model: "gpt-5.2" });
     expect(saveSettingsMock.mock.calls[1]?.[0]).toMatchObject({ model: "gpt-5-mini" });
+  });
+
+  test("DXFER-004: import drops legacy exported OpenAI API keys from portable settings", async () => {
+    const imported = await importAppDataBundle({
+      bundleVersion: 1,
+      manifest: {
+        kind: "captionarc-data-bundle",
+        bundleVersion: 1,
+        exportedAt: Date.now(),
+        sessionCount: 0,
+      },
+      settings: {
+        ...createDefaultSettings(),
+        openaiApiKey: "sk-legacy-exported",
+        model: "gpt-5.2",
+        legalRiskAcknowledgements: {
+          captureStartupAlways: 808,
+        },
+      },
+      sessions: [],
+    });
+
+    expect(imported.success).toBe(true);
+    expect(saveSettingsMock).toHaveBeenCalledTimes(1);
+    const savedSettings = saveSettingsMock.mock.calls[0]?.[0];
+    expect(savedSettings).toMatchObject({
+      model: "gpt-5.2",
+      legalRiskAcknowledgements: {
+        captureStartupAlways: 808,
+      },
+    });
+    expect(savedSettings).not.toHaveProperty("openaiApiKey");
   });
 });

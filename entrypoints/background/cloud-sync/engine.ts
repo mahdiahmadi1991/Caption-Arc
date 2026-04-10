@@ -30,6 +30,8 @@ import {
   processCloudSyncTaskForProvider,
 } from "./providers";
 import { filterSupportedCloudSyncProviders } from "../../shared/browser-capabilities";
+import { getSettings } from "../settings";
+import { hasAcceptedCurrentTerms } from "../../shared/legal";
 
 const MAX_TRANSIENT_RETRY_COUNT = 3;
 const TRANSIENT_RETRY_BASE_DELAY_MS = 2_000;
@@ -304,6 +306,17 @@ export async function queueCloudSyncReconciliation(
 }
 
 async function processCloudSyncCycle(reason: string): Promise<void> {
+  const { settings } = await getSettings();
+  if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+    await updateEngineState({
+      running: false,
+      lastCompletedRunAt: Date.now(),
+      scheduledAt: undefined,
+      lastRunReason: `${reason}:terms-required`,
+    });
+    return;
+  }
+
   await updateEngineState({
     running: true,
     lastRunAt: Date.now(),
@@ -357,6 +370,17 @@ async function processCloudSyncCycle(reason: string): Promise<void> {
   );
 
   for (const task of dueTasks) {
+    const { settings } = await getSettings();
+    if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
+      await updateEngineState({
+        running: false,
+        scheduledAt: undefined,
+        lastRunReason: `${reason}:terms-revoked`,
+        lastCompletedRunAt: Date.now(),
+      });
+      return;
+    }
+
     const processingResult = await processTaskAcrossProviders(task, updatedCheckpoints);
     updatedCheckpoints = processingResult.checkpoints;
     await saveCloudSyncCheckpoints(updatedCheckpoints);
@@ -412,6 +436,26 @@ export async function runCloudSyncNow(reason = "manual"): Promise<void> {
     runInFlight = null;
   });
   await runInFlight;
+}
+
+export async function stopCloudSyncEngine(): Promise<void> {
+  if (scheduledRunHandle !== null) {
+    timerApi.clearTimeout(scheduledRunHandle);
+    scheduledRunHandle = null;
+    scheduledRunAt = null;
+  }
+
+  if (runInFlight) {
+    await runInFlight.catch(() => undefined);
+    runInFlight = null;
+  }
+
+  await updateEngineState({
+    running: false,
+    scheduledAt: undefined,
+    lastRunReason: "terms-revoked",
+    lastCompletedRunAt: Date.now(),
+  });
 }
 
 export async function getCloudSyncStateSnapshot(): Promise<CloudSyncState> {

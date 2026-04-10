@@ -12,9 +12,13 @@ Settings models are declared in [`entrypoints/background/types/index.ts`](../../
 Current settings boundary notes:
 
 - `SharedSettings` contains synced cross-device preferences such as translation, summaries, appearance, and overlay behavior.
+- `SharedSettings` also contains persisted legal-risk acknowledgment timestamps for higher-risk settings.
 - `LocalDeviceSecrets` contains the device-local OpenAI API key.
-- `LocalDeviceSettings` contains device-specific state such as `deviceId`, `deviceLabel`, `uiLanguage`, connected cloud providers, overlay positions, and the local OpenAI verification snapshot.
+- `LocalDeviceSettings` contains device-specific state such as `deviceId`, `deviceLabel`, `uiLanguage`, connected cloud providers, overlay positions, the local OpenAI verification snapshot, and the local Terms-of-Service acceptance and decline records.
 - `uiLanguage` is local-only and must not be added to synced shared settings or portable import/export settings payloads.
+- `termsAcceptance` is local-only and must not be added to synced shared settings or portable import/export settings payloads.
+- `termsDecline` is local-only and must not be added to synced shared settings or portable import/export settings payloads.
+- portable backup settings must not export `LocalDeviceSecrets`, including the OpenAI API key
 - `targetLanguage` and `summaryLanguage` must resolve to supported codes from [`entrypoints/shared/language-metadata.ts`](../../entrypoints/shared/language-metadata.ts). The current catalog includes `en`, `vi`, `fa`, `zh`, `ja`, `ko`, `es`, `fr`, `de`, `pt`, `ru`, `ar`, `hi`, `bn`, `ur`, `tl`, `ta`, `uk`, `ms`, `sw`, `te`, `it`, `th`, `id`, `nl`, `pl`, and `tr`.
 
 ## Session Schema

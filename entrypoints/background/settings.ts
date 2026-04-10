@@ -1,5 +1,6 @@
 import type {
   CloudSyncProvider,
+  LegalRiskAcknowledgements,
   LocalDeviceSecrets,
   LocalDeviceSettings,
   Settings,
@@ -22,6 +23,7 @@ import {
   isOpenAiConfigured,
 } from "../shared/openai-service";
 import { normalizeUiLanguageSetting } from "../shared/ui-language";
+import type { TermsAcceptance, TermsDecline } from "../shared/legal";
 import { noteCloudSyncSettingsSaved } from "./cloud-sync";
 
 import { createBackgroundDiagnosticsLogger } from "./diagnostics";
@@ -69,6 +71,30 @@ function normalizeCaptionActivationBehavior(
   value: unknown
 ): Settings["captionActivationBehavior"] {
   return value === "automatic" ? "automatic" : "guided";
+}
+
+function normalizeLegalRiskAcknowledgements(
+  value: unknown,
+  fallback: LegalRiskAcknowledgements
+): LegalRiskAcknowledgements {
+  if (!isRecord(value)) {
+    return { ...fallback };
+  }
+
+  const normalized: LegalRiskAcknowledgements = {};
+
+  for (const key of [
+    "storeMeetingChat",
+    "captureStartupAlways",
+    "captionActivationAutomatic",
+  ] as const) {
+    const acknowledgedAt = value[key];
+    if (typeof acknowledgedAt === "number" && Number.isFinite(acknowledgedAt)) {
+      normalized[key] = acknowledgedAt;
+    }
+  }
+
+  return normalized;
 }
 
 function normalizeModel(value: unknown, fallback: string): string {
@@ -134,6 +160,46 @@ function normalizeVerificationSnapshot(
       : Date.now();
 
   return { status, message, signature, verifiedAt };
+}
+
+function normalizeTermsAcceptance(value: unknown): TermsAcceptance | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const version =
+    typeof value.version === "string" ? value.version.trim() : "";
+  const acceptedAt =
+    typeof value.acceptedAt === "number" ? value.acceptedAt : Number.NaN;
+
+  if (!version || !Number.isFinite(acceptedAt)) {
+    return null;
+  }
+
+  return {
+    version,
+    acceptedAt,
+  };
+}
+
+function normalizeTermsDecline(value: unknown): TermsDecline | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const version =
+    typeof value.version === "string" ? value.version.trim() : "";
+  const declinedAt =
+    typeof value.declinedAt === "number" ? value.declinedAt : Number.NaN;
+
+  if (!version || !Number.isFinite(declinedAt)) {
+    return null;
+  }
+
+  return {
+    version,
+    declinedAt,
+  };
 }
 
 function normalizeConnectedCloudProviders(
@@ -229,6 +295,7 @@ function splitSettings(settings: Settings): SettingsState {
     overlayOpacity: settings.overlayOpacity,
     overlayClickThrough: settings.overlayClickThrough,
     storeMeetingChat: settings.storeMeetingChat,
+    legalRiskAcknowledgements: { ...settings.legalRiskAcknowledgements },
   };
 
   const secrets: LocalDeviceSecrets = {
@@ -242,6 +309,10 @@ function splitSettings(settings: Settings): SettingsState {
     connectedCloudProviders: [...settings.connectedCloudProviders],
     overlayPositionsByPlatform: { ...settings.overlayPositionsByPlatform },
     verificationSnapshot: settings.verificationSnapshot,
+    termsAcceptance: settings.termsAcceptance
+      ? { ...settings.termsAcceptance }
+      : null,
+    termsDecline: settings.termsDecline ? { ...settings.termsDecline } : null,
   };
 
   return {
@@ -356,6 +427,10 @@ function sanitizeSettingsShape(
       typeof input.storeMeetingChat === "boolean"
         ? input.storeMeetingChat
         : fallback.storeMeetingChat,
+    legalRiskAcknowledgements: normalizeLegalRiskAcknowledgements(
+      input.legalRiskAcknowledgements,
+      fallback.legalRiskAcknowledgements
+    ),
     deviceId: normalizeDeviceId(input.deviceId, fallback.deviceId),
     deviceLabel: normalizeDeviceLabel(input.deviceLabel, fallback.deviceLabel),
     uiLanguage: normalizeUiLanguageSetting(input.uiLanguage ?? fallback.uiLanguage),
@@ -370,7 +445,23 @@ function sanitizeSettingsShape(
     verificationSnapshot: normalizeVerificationSnapshot(
       input.verificationSnapshot
     ),
+    termsAcceptance: normalizeTermsAcceptance(input.termsAcceptance),
+    termsDecline: normalizeTermsDecline(input.termsDecline),
   };
+
+  if (
+    normalized.termsAcceptance &&
+    normalized.termsDecline &&
+    normalized.termsAcceptance.version === normalized.termsDecline.version
+  ) {
+    if (
+      normalized.termsAcceptance.acceptedAt >= normalized.termsDecline.declinedAt
+    ) {
+      normalized.termsDecline = null;
+    } else {
+      normalized.termsAcceptance = null;
+    }
+  }
 
   normalized.defaultSummaryProfileId =
     getSelectableDefaultSummaryProfileId(normalized);
@@ -475,7 +566,7 @@ export async function getSettings(): Promise<{
 
 export async function saveSettings(
   settings: Partial<Settings>
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; settings: Settings }> {
   await settingsDiagnostics.info("settings_save_started", {
     keys: Object.keys(settings),
   });
@@ -491,7 +582,7 @@ export async function saveSettings(
     keys: Object.keys(settings),
     connectedCloudProviders: updated.connectedCloudProviders.length,
   });
-  return { success: true };
+  return { success: true, settings: updated };
 }
 
 export async function recordOpenAiVerificationSuccess(

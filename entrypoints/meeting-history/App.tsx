@@ -16,6 +16,10 @@ import {
 import { useT } from "../shared/i18n";
 import { useResolvedTheme } from "../shared/use-resolved-theme";
 import { BrandLockup } from "../shared/brand";
+import {
+  GitHubHeaderLink,
+  LegalFooter,
+} from "../shared/extension-page-chrome";
 import { IconButton } from "../shared/icon-button";
 import { AppLoadingScreen } from "../shared/loading-screen";
 import type { OpenAiServiceAvailability } from "../shared/openai-service";
@@ -200,6 +204,7 @@ function DependencyBanner({
 
 export default function App() {
   const t = useT();
+  const manifestVersion = useMemo(() => chrome.runtime.getManifest().version, []);
   const {
     sessions,
     loading,
@@ -391,6 +396,7 @@ export default function App() {
               bytesUsed={storageInfo.bytesUsed}
               quota={storageInfo.quota}
             />
+            <GitHubHeaderLink />
             <IconButton
               onClick={openSettings}
               icon={<GearIcon />}
@@ -683,6 +689,8 @@ export default function App() {
                 onToggleStar={toggleSessionStar}
               />
         )}
+
+        <LegalFooter className="mt-8" version={manifestVersion} />
       </div>
     </div>
   );
