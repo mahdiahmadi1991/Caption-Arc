@@ -959,7 +959,7 @@ const ACTION_BUTTON_CLASSNAMES: Record<
   default:
     "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)] hover:bg-[var(--app-surface-soft)] hover:text-[var(--app-text)]",
   accent:
-    "border-[var(--app-accent-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--app-accent-soft)_86%,white),color-mix(in_srgb,var(--app-accent-soft)_68%,var(--app-surface)))] text-[var(--app-accent)] hover:bg-[color:color-mix(in_srgb,var(--app-accent-soft)_78%,var(--app-surface))]",
+    "border-[var(--app-accent-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--app-accent-soft)_100%,white),color-mix(in_srgb,var(--app-accent-soft)_100%,var(--app-surface)))] text-[var(--app-accent)] hover:bg-[color:color-mix(in_srgb,var(--app-accent-soft)_78%,var(--app-surface))]",
   danger:
     "border-[var(--app-danger-border)] bg-[color:color-mix(in_srgb,var(--app-danger-soft-strong)_72%,var(--app-surface))] text-[var(--app-danger)] shadow-[0_10px_20px_color-mix(in_srgb,var(--app-danger)_10%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--app-danger-soft-strong)_88%,var(--app-surface))]",
 };
@@ -2436,7 +2436,7 @@ export default function App() {
                         ]
                       )
                     }
-                    className="mt-4 w-full accent-[var(--app-accent)]"
+                    className="mt-4 w-full accent-[var(--app-accent)] mc-slider"
                   />
                   <div className="mt-2 flex items-center justify-between text-xs text-[var(--app-text-faint)]">
                     <span>
@@ -2492,7 +2492,7 @@ export default function App() {
                           Number(event.target.value)
                         )
                       }
-                      className="mt-4 w-full accent-[var(--app-accent)]"
+                      className="mt-4 w-full accent-[var(--app-accent)] mc-slider"
                     />
                     <div className="mt-2 flex items-center justify-between text-xs text-[var(--app-text-faint)]">
                       <span>{t("options.workspace.overlayOpacity.subtle")}</span>
@@ -2530,9 +2530,12 @@ export default function App() {
                     }
                     label={t("options.workspace.storeMeetingChat.label")}
                     description={t("options.workspace.storeMeetingChat.description")}
+                    className="lg:col-span-2"
                   />
                 </div>
               </SurfacePanel>
+
+              
             </SettingsSection>
 
             <SettingsSection

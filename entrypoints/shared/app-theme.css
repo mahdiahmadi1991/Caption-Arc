@@ -214,3 +214,37 @@ button:not(:disabled),
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+.mc-slider {
+  cursor: ew-resize;
+}
+
+.mc-slider::-webkit-slider-thumb {
+  cursor: grab;
+}
+
+.mc-slider:active {
+  cursor: grabbing;
+}
+
+.mc-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.mc-slider:focus {
+  outline: none;
+}
+
+.mc-slider:focus-visible {
+  outline: 2px solid var(--app-accent-border);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+:root[data-theme="dark"] .mc-slider {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .mc-slider {
+  color-scheme: light;
+}

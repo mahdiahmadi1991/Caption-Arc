@@ -20,7 +20,7 @@ runtime_metrics = true
 # with heavy context and up-to-date checks.
 model_reasoning_effort = "high"
 web_search = "live"
-model = "gpt-5.3-codex"
+model = "gpt-5.4"
 personality = "pragmatic"
 
 [profiles.fast_ops]
@@ -65,3 +65,6 @@ enabled = true
 
 [plugins."vercel@openai-curated"]
 enabled = true
+
+[projects."/home/mehdi/repositories/caption-arc"]
+trust_level = "trusted"
