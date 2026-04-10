@@ -232,6 +232,8 @@ export default function App() {
     summarizingSessionId,
     summaryJobStatus,
     summaryJobStatuses,
+    requestedSummaryExpanded,
+    requestedSummaryKey,
     filteredSessions,
     openSession,
     closeSession,
@@ -643,6 +645,8 @@ export default function App() {
             translatingSessionId={translatingSessionId}
             summarizingSessionId={summarizingSessionId}
             summaryJobStatus={summaryJobStatus}
+            requestedSummaryExpanded={requestedSummaryExpanded}
+            requestedSummaryKey={requestedSummaryKey}
             onTranslateCaption={translateCaption}
             onTranslateAllCaptions={translateAllCaptions}
             onGenerateSummary={generateSummary}

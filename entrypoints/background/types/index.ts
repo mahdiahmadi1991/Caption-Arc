@@ -239,6 +239,14 @@ export type GenerateMeetingSummaryRequest = {
   profileId: string;
 };
 
+export type UpdateMeetingHistoryViewStateRequest = {
+  selectedSessionId?: string | null;
+  currentUrl?: string | null;
+  viewInstanceId?: string | null;
+  visible: boolean;
+  focused: boolean;
+};
+
 export type FinalizeMeetingSessionEndRequest = {
   session: MeetingSession;
   enqueueAutomaticSummary?: boolean;
@@ -272,6 +280,11 @@ export type GetMeetingSummaryJobStatusesResponse = {
 export type CancelMeetingSummaryJobResponse = {
   success: boolean;
   cancelled?: boolean;
+  error?: string;
+};
+
+export type UpdateMeetingHistoryViewStateResponse = {
+  success: boolean;
   error?: string;
 };
 

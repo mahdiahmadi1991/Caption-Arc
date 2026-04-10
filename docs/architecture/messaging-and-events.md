@@ -16,7 +16,7 @@ Background dispatches by `action` and returns structured response objects.
 - translation and text generation:
   - `translate`, `generateText`
 - meeting history and sessions:
-  - `getMeetingHistory`, `getMeetingHistoryIndex`, `getMeetingSession`, `saveMeetingSession`, `storeMeetingSessionShell`, `updateMeetingSession`, `deleteMeetingSession`, `resolveMeetingSession`, `findMeetingSessionContinuationCandidate`, `finalizeMeetingSessionEnd`
+  - `getMeetingHistory`, `getMeetingHistoryIndex`, `getMeetingSession`, `saveMeetingSession`, `storeMeetingSessionShell`, `updateMeetingSession`, `deleteMeetingSession`, `resolveMeetingSession`, `findMeetingSessionContinuationCandidate`, `finalizeMeetingSessionEnd`, `updateMeetingHistoryViewState`
 - summary jobs:
   - `getMeetingSummaryJobStatus`, `getMeetingSummaryJobStatuses`, `generateMeetingSummary`, `cancelMeetingSummaryJob`
 - session translation:
@@ -33,3 +33,5 @@ Background dispatches by `action` and returns structured response objects.
 - background listener returns `true` for async responses.
 - unknown actions return `{ success: false, error: "Unknown action" }`.
 - summary retries use `chrome.alarms` and persisted queue state.
+- Meeting History reports selected-session, visibility, and focus state so background can suppress same-session summary-ready notifications.
+- summary-ready notification clicks route back into `meeting-history.html` with session and summary-target query state.

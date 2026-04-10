@@ -26,11 +26,14 @@ import {
   finalizeMeetingSessionEnd,
   updateMeetingSession,
   cancelMeetingSummaryJob,
+  updateMeetingHistoryViewState,
   translateSessionCaption,
   translateSessionCaptions,
   generateMeetingSummary,
   clearMeetingHistory,
   getStorageUsage,
+  handleMeetingHistoryTabRemoved,
+  handleSummaryReadyNotificationClick,
   shutdownMeetingSummaryQueueForTermsRevocation,
 } from "./history";
 import {
@@ -281,6 +284,18 @@ export default defineBackground(() => {
     }
   });
 
+  if (chrome.tabs?.onRemoved?.addListener) {
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      handleMeetingHistoryTabRemoved(tabId);
+    });
+  }
+
+  if (chrome.notifications?.onClicked?.addListener) {
+    chrome.notifications.onClicked.addListener((notificationId) => {
+      void handleSummaryReadyNotificationClick(notificationId);
+    });
+  }
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     void backgroundLogger.trace("message_received", {
       action: typeof message?.action === "string" ? message.action : null,
@@ -512,6 +527,12 @@ async function handleMessage(
     case "generateMeetingSummary":
       return generateMeetingSummary(
         message as Parameters<typeof generateMeetingSummary>[0]
+      );
+
+    case "updateMeetingHistoryViewState":
+      return updateMeetingHistoryViewState(
+        message as Parameters<typeof updateMeetingHistoryViewState>[0],
+        sender
       );
 
     case "clearMeetingHistory":

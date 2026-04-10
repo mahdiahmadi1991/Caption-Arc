@@ -64,6 +64,12 @@ export const arMessages = {
             version: "الإصدار {version}",
             copyright: "حقوق الطبع والنشر © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "الملخص جاهز: {title}",
+                message: "انقر لفتح الملخص الكامل في سجل الاجتماعات."
+            }
+        },
         firstRunTerms: {
             eyebrow: "الإعداد الأولي",
             title: "راجع الشروط ووافق عليها للمتابعة",

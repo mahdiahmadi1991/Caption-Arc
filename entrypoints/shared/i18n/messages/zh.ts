@@ -64,6 +64,12 @@ export const zhMessages = {
             version: "版本 {version}",
             copyright: "版权所有 © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "{title} 的摘要已准备就绪",
+                message: "点击可在会议历史中打开完整摘要。"
+            }
+        },
         firstRunTerms: {
             eyebrow: "首次设置",
             title: "查看并接受条款后继续",

@@ -14,6 +14,7 @@ import type {
   TranslateSessionCaptionResponse,
   TranslateSessionCaptionsRequest,
   TranslateSessionCaptionsResponse,
+  UpdateMeetingHistoryViewStateRequest,
 } from "./types";
 import {
   buildMeetingSessionDerivedData,
@@ -74,11 +75,19 @@ import {
   queueMeetingAssistantProcessing,
 } from "./assistant";
 import { createBackgroundDiagnosticsLogger } from "./diagnostics";
+import { getMeetingHistoryPageUrl } from "../shared/legal";
+import {
+  buildMeetingHistorySummaryTargetUrl,
+  readMeetingHistoryUrlState,
+} from "../meeting-history/url-state";
+import { getSummaryReadyNotificationCopy } from "../shared/summary-ready-notification";
 
 const meetingSummaryJobStatuses = new Map<string, SummaryJobStatus>();
 const activeMeetingSummaryJobs = new Map<string, { controller: AbortController }>();
 const MEETING_SUMMARY_QUEUE_STORAGE_KEY = "meetingSummaryQueue";
 const SUMMARY_JOB_RETRY_ALARM = "meeting-summary-job-retry";
+const SUMMARY_READY_NOTIFICATION_PREFIX = "summary-ready";
+const SUMMARY_READY_NOTIFICATION_ICON = "icon-128.png";
 const AUTO_SUMMARY_MAX_ATTEMPTS = 3;
 const AUTO_SUMMARY_RECONCILE_WINDOW_MS = 60 * 60 * 1000;
 const AUTO_SUMMARY_RECONCILE_LIMIT = 5;
@@ -103,8 +112,18 @@ type PersistedMeetingSummaryJob = {
   lastError?: string;
 };
 
+type MeetingHistoryViewState = {
+  key: string;
+  tabId: number | null;
+  selectedSessionId: string | null;
+  visible: boolean;
+  focused: boolean;
+  updatedAt: number;
+};
+
 let meetingSummaryQueueInitialized = false;
 let meetingSummaryQueueProcessingPromise: Promise<void> | null = null;
+const meetingHistoryViewStates = new Map<string, MeetingHistoryViewState>();
 
 class SummaryJobCancelledError extends Error {
   constructor() {
@@ -402,6 +421,258 @@ async function emitMeetingSummaryJobStatus(
 
 function clearMeetingSummaryJobStatus(sessionId: string): void {
   meetingSummaryJobStatuses.delete(sessionId);
+}
+
+function buildSummaryReadyNotificationId(
+  sessionId: string,
+  summaryKey: string
+): string {
+  return `${SUMMARY_READY_NOTIFICATION_PREFIX}:${encodeURIComponent(sessionId)}|${encodeURIComponent(summaryKey)}`;
+}
+
+function parseSummaryReadyNotificationId(notificationId: string): {
+  sessionId: string;
+  summaryKey: string;
+} | null {
+  if (!notificationId.startsWith(`${SUMMARY_READY_NOTIFICATION_PREFIX}:`)) {
+    return null;
+  }
+
+  const encodedTarget = notificationId.slice(
+    SUMMARY_READY_NOTIFICATION_PREFIX.length + 1
+  );
+  const separatorIndex = encodedTarget.indexOf("|");
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const encodedSessionId = encodedTarget.slice(0, separatorIndex);
+  const encodedSummaryKey = encodedTarget.slice(separatorIndex + 1);
+
+  try {
+    const sessionId = decodeURIComponent(encodedSessionId);
+    const summaryKey = decodeURIComponent(encodedSummaryKey);
+
+    return sessionId && summaryKey ? { sessionId, summaryKey } : null;
+  } catch {
+    return null;
+  }
+}
+
+function getMeetingHistoryViewStateKey(
+  request: UpdateMeetingHistoryViewStateRequest,
+  sender: chrome.runtime.MessageSender
+): string | null {
+  if (typeof sender.documentId === "string" && sender.documentId.trim()) {
+    return `document:${sender.documentId.trim()}`;
+  }
+
+  if (typeof sender.tab?.id === "number") {
+    return `tab:${sender.tab.id}`;
+  }
+
+  if (
+    typeof request.viewInstanceId === "string" &&
+    request.viewInstanceId.trim()
+  ) {
+    return `view:${request.viewInstanceId.trim()}`;
+  }
+
+  return null;
+}
+
+function setMeetingHistoryViewState(
+  key: string,
+  sender: chrome.runtime.MessageSender,
+  request: UpdateMeetingHistoryViewStateRequest
+): void {
+  meetingHistoryViewStates.set(key, {
+    key,
+    tabId: typeof sender.tab?.id === "number" ? sender.tab.id : null,
+    selectedSessionId:
+      typeof request.selectedSessionId === "string" && request.selectedSessionId.trim()
+        ? request.selectedSessionId.trim()
+        : null,
+    visible: request.visible === true,
+    focused: request.focused === true,
+    updatedAt: Date.now(),
+  });
+}
+
+function removeMeetingHistoryViewStateForTab(tabId: number): void {
+  for (const [key, state] of meetingHistoryViewStates.entries()) {
+    if (state.tabId === tabId) {
+      meetingHistoryViewStates.delete(key);
+    }
+  }
+}
+
+function shouldSuppressSummaryReadyNotification(sessionId: string): boolean {
+  for (const state of meetingHistoryViewStates.values()) {
+    if (
+      state.selectedSessionId === sessionId &&
+      state.visible &&
+      state.focused
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function resolveSummaryReadyNotificationCopy(session: MeetingSession): {
+  title: string;
+  message: string;
+} {
+  const browserLocale =
+    chrome.i18n?.getUILanguage?.() || globalThis.navigator?.language || "en";
+  const meetingLabel =
+    session.title?.trim() || session.providerLabel || "Meeting";
+
+  const copy = getSummaryReadyNotificationCopy({
+    browserLocale,
+    title: meetingLabel,
+  });
+
+  return {
+    title: copy.title,
+    message: copy.message,
+  };
+}
+
+async function maybeShowSummaryReadyNotification(
+  session: MeetingSession,
+  summary: NonNullable<GenerateMeetingSummaryResponse["summary"]>
+): Promise<boolean> {
+  if (shouldSuppressSummaryReadyNotification(session.id)) {
+    await summaryDiagnosticsLogger.debug("summary_ready_notification_suppressed", {
+      sessionId: session.id,
+      summaryKey: summary.key,
+    }, {
+      sessionId: session.id,
+    });
+    return false;
+  }
+
+  if (!chrome.notifications?.create) {
+    return false;
+  }
+
+  try {
+    const notificationId = buildSummaryReadyNotificationId(session.id, summary.key);
+    const copy = resolveSummaryReadyNotificationCopy(session);
+
+    await chrome.notifications.create(notificationId, {
+      type: "basic",
+      iconUrl: SUMMARY_READY_NOTIFICATION_ICON,
+      title: copy.title,
+      message: copy.message,
+    });
+
+    await summaryDiagnosticsLogger.info("summary_ready_notification_created", {
+      sessionId: session.id,
+      summaryKey: summary.key,
+      notificationId,
+    }, {
+      sessionId: session.id,
+    });
+    return true;
+  } catch (error) {
+    await summaryDiagnosticsLogger.warn("summary_ready_notification_failed", {
+      sessionId: session.id,
+      summaryKey: summary.key,
+      error,
+    }, {
+      sessionId: session.id,
+    });
+    return false;
+  }
+}
+
+async function openMeetingHistoryForSummaryTarget(params: {
+  sessionId: string;
+  summaryKey: string;
+}): Promise<boolean> {
+  const targetUrl = buildMeetingHistorySummaryTargetUrl(
+    getMeetingHistoryPageUrl(),
+    params
+  );
+
+  try {
+    const [tabs, lastFocusedWindowTabs] = await Promise.all([
+      chrome.tabs.query({}),
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }),
+    ]);
+    const historyBaseUrl = getMeetingHistoryPageUrl();
+    const lastFocusedTab = lastFocusedWindowTabs[0];
+    const matchingTab = tabs
+      .filter(
+        (tab): tab is chrome.tabs.Tab & { id: number; url: string } =>
+          typeof tab.id === "number" &&
+          typeof tab.url === "string" &&
+          tab.url.startsWith(historyBaseUrl)
+      )
+      .map((tab) => {
+        const historyUrlState = readMeetingHistoryUrlState(tab.url);
+        let score = 0;
+
+        if (tab.url === targetUrl) {
+          score += 1_000;
+        }
+
+        if (typeof lastFocusedTab?.id === "number" && tab.id === lastFocusedTab.id) {
+          score += 500;
+        }
+
+        if (
+          typeof lastFocusedTab?.windowId === "number" &&
+          tab.windowId === lastFocusedTab.windowId
+        ) {
+          score += 250;
+        }
+
+        if (historyUrlState.selectedSessionId === params.sessionId) {
+          score += 100;
+        }
+
+        if (historyUrlState.targetSummaryKey === params.summaryKey) {
+          score += 100;
+        }
+
+        if (tab.active) {
+          score += 50;
+        }
+
+        return { tab, score };
+      })
+      .sort((left, right) => right.score - left.score)[0]?.tab;
+
+    if (matchingTab) {
+      await chrome.tabs.update(matchingTab.id, {
+        active: true,
+        url: targetUrl,
+      });
+
+      if (typeof matchingTab.windowId === "number" && chrome.windows?.update) {
+        await chrome.windows.update(matchingTab.windowId, { focused: true });
+      }
+
+      return true;
+    }
+
+    await chrome.tabs.create({ url: targetUrl });
+    return true;
+  } catch (error) {
+    await summaryDiagnosticsLogger.error("summary_ready_notification_navigation_failed", {
+      sessionId: params.sessionId,
+      summaryKey: params.summaryKey,
+      error,
+    }, {
+      sessionId: params.sessionId,
+    });
+    return false;
+  }
 }
 
 export async function initializeMeetingSummaryQueue(): Promise<void> {
@@ -1857,6 +2128,7 @@ async function runMeetingSummaryJob(
       state: "completed",
       message: "Summary ready",
     });
+    await maybeShowSummaryReadyNotification(updatedSession, summary);
     await removePersistedMeetingSummaryJob(request.sessionId);
     await scheduleMeetingSummaryRetryAlarm();
 
@@ -2597,6 +2869,59 @@ export async function getStorageUsage(): Promise<{
   return { success: true, bytesUsed, quota };
 }
 
+export async function updateMeetingHistoryViewState(
+  request: UpdateMeetingHistoryViewStateRequest,
+  sender: chrome.runtime.MessageSender
+): Promise<{ success: boolean; error?: string }> {
+  const key = getMeetingHistoryViewStateKey(request, sender);
+  if (!key) {
+    await summaryDiagnosticsLogger.warn("meeting_history_view_state_tab_resolution_failed", {
+      documentId: sender.documentId || null,
+      senderUrl: sender.url || null,
+      currentUrl: request.currentUrl || null,
+      viewInstanceId: request.viewInstanceId || null,
+      selectedSessionId: request.selectedSessionId || null,
+      visible: request.visible,
+      focused: request.focused,
+    }, {
+      sessionId:
+        typeof request.selectedSessionId === "string" && request.selectedSessionId.trim()
+          ? request.selectedSessionId.trim()
+          : undefined,
+    });
+    return {
+      success: false,
+      error: "Meeting history view state requires a sender identity.",
+    };
+  }
+
+  setMeetingHistoryViewState(key, sender, request);
+  return { success: true };
+}
+
+export async function handleSummaryReadyNotificationClick(
+  notificationId: string
+): Promise<boolean> {
+  const target = parseSummaryReadyNotificationId(notificationId);
+  if (!target) {
+    return false;
+  }
+
+  if (chrome.notifications?.clear) {
+    try {
+      await chrome.notifications.clear(notificationId);
+    } catch {
+      // Navigation should still continue if clear fails.
+    }
+  }
+
+  return openMeetingHistoryForSummaryTarget(target);
+}
+
+export function handleMeetingHistoryTabRemoved(tabId: number): void {
+  removeMeetingHistoryViewStateForTab(tabId);
+}
+
 export const historySummaryInternals = {
   getAutomaticSummaryRequest,
   generateMeetingSummaryText,
@@ -2609,6 +2934,27 @@ export const historySummaryInternals = {
   savePersistedMeetingSummaryJobs,
   upsertPersistedMeetingSummaryJob,
   removePersistedMeetingSummaryJob,
+  buildSummaryReadyNotificationId,
+  handleSummaryReadyNotificationClick,
+  updateMeetingHistoryViewState,
+  handleMeetingHistoryTabRemoved,
+  setMeetingHistoryViewStateForTests(
+    key: number | string,
+    state: UpdateMeetingHistoryViewStateRequest
+  ) {
+    const sender =
+      typeof key === "number"
+        ? ({ tab: { id: key } } as chrome.runtime.MessageSender)
+        : ({ documentId: key } as chrome.runtime.MessageSender);
+    const resolvedKey = getMeetingHistoryViewStateKey(state, sender);
+    if (!resolvedKey) {
+      throw new Error("Expected a stable meeting history view state key for tests.");
+    }
+    setMeetingHistoryViewState(resolvedKey, sender, state);
+  },
+  getMeetingHistoryViewStatesForTests() {
+    return new Map(meetingHistoryViewStates);
+  },
   setMeetingSummaryQueueInitializedForTests(nextValue: boolean) {
     meetingSummaryQueueInitialized = nextValue;
   },
@@ -2626,6 +2972,7 @@ export const historySummaryInternals = {
   resetMeetingSummaryInternalsForTests() {
     activeMeetingSummaryJobs.clear();
     meetingSummaryJobStatuses.clear();
+    meetingHistoryViewStates.clear();
     meetingSummaryQueueInitialized = false;
     meetingSummaryQueueProcessingPromise = null;
   },

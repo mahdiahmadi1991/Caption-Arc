@@ -64,6 +64,12 @@ export const deMessages = {
             version: "Fassung {version}",
             copyright: "Urheberrecht © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "Zusammenfassung für {title} ist fertig",
+                message: "Klicken Sie, um die vollständige Zusammenfassung im Besprechungsverlauf zu öffnen."
+            }
+        },
         firstRunTerms: {
             eyebrow: "Ersteinrichtung",
             title: "Bedingungen prüfen und akzeptieren, um fortzufahren",

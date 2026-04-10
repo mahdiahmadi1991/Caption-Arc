@@ -9,6 +9,7 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-10-summary-completion-notifications.md](./2026-04-10-summary-completion-notifications.md)
 - [2026-04-10-legal-compliance-hardening-wave-one.md](./2026-04-10-legal-compliance-hardening-wave-one.md)
 - [2026-04-10-terms-gate-review-fixes.md](./2026-04-10-terms-gate-review-fixes.md)
 - [2026-04-10-close-mode-terms-accept-fix.md](./2026-04-10-close-mode-terms-accept-fix.md)

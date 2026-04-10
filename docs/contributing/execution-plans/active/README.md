@@ -10,4 +10,5 @@ Rules:
 - docs-only edits do not require an execution plan by default unless requested by the repository owner or required by the planning standard
 
 Current plans:
+
 - [2026-04-10-dls-user-verification-and-full-traceability-closure.md](./2026-04-10-dls-user-verification-and-full-traceability-closure.md)

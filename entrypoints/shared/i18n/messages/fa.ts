@@ -65,6 +65,12 @@ export const faMessages = {
       version: "نسخه {version}",
       copyright: "© {year} CaptionArc",
     },
+    notifications: {
+      summaryReady: {
+        title: "{title}: خلاصه آماده است",
+        message: "برای باز کردن خلاصه کامل در تاریخچه جلسات کلیک کنید.",
+      },
+    },
     firstRunTerms: {
       eyebrow: "راه اندازی اولیه",
       title: "برای ادامه، شرایط استفاده را بررسی و تایید کنید",

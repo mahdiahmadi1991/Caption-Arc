@@ -19,6 +19,7 @@ Use this checklist together with:
 - translation toggle and target-language behavior
 - meeting history save/load/search flows
 - summary generation and retry/cancel behavior
+- summary-ready notification behavior, same-session suppression, and notification click routing to expanded summary detail
 - overlay visibility/click-through/opacity behavior
 
 ## Commands

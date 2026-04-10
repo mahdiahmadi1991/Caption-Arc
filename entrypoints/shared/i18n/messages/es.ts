@@ -64,6 +64,12 @@ export const esMessages = {
             version: "Versión {version}",
             copyright: "Derechos de autor © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "Resumen listo para {title}",
+                message: "Haz clic para abrir el resumen completo en el historial de reuniones."
+            }
+        },
         firstRunTerms: {
             eyebrow: "Configuración inicial",
             title: "Revise y acepte los términos para continuar",

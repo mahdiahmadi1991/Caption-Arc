@@ -52,6 +52,7 @@ Summary generation plans execution per session characteristics:
 - supports evidence extraction and merge for larger/riskier sessions
 - supports continuation and reconciliation fallback when needed
 - persists summary job status and retries transient failures
+- surfaces one browser-level completion notification only when the user is not already focused on the same session detail view
 
 Primary references:
 
@@ -64,6 +65,7 @@ Primary references:
 - summary jobs are persisted and recoverable across background restarts
 - retry behavior is bounded and source-aware (`manual` vs `automatic`)
 - OpenAI readiness state gates assistant and summary operational behavior
+- summary-ready notifications are click-routed back into Meeting History with the generated summary expanded
 
 Primary references:
 

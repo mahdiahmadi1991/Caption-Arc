@@ -64,6 +64,12 @@ export const ptMessages = {
             version: "Versão {version}",
             copyright: "Direitos autorais © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "Resumo pronto para {title}",
+                message: "Clique para abrir o resumo completo no histórico de reuniões."
+            }
+        },
         firstRunTerms: {
             eyebrow: "Configuração inicial",
             title: "Revise e aceite os termos para continuar",

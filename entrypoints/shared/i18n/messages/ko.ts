@@ -64,6 +64,12 @@ export const koMessages = {
             version: "버전 {version}",
             copyright: "저작권 © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "{title} 요약이 준비되었습니다",
+                message: "클릭하여 회의 기록에서 전체 요약을 여세요."
+            }
+        },
         firstRunTerms: {
             eyebrow: "초기 설정",
             title: "계속하려면 약관을 검토하고 동의하세요",

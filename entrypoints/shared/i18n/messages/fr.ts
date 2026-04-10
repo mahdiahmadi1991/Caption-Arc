@@ -64,6 +64,12 @@ export const frMessages = {
             version: "Édition {version}",
             copyright: "Droits d’auteur © {year} CaptionArc"
         },
+        notifications: {
+            summaryReady: {
+                title: "Résumé prêt pour {title}",
+                message: "Cliquez pour ouvrir le résumé complet dans l'historique des réunions."
+            }
+        },
         firstRunTerms: {
             eyebrow: "Configuration initiale",
             title: "Consultez et acceptez les conditions pour continuer",
