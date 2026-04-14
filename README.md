@@ -6,7 +6,7 @@ Turn browser meeting captions into live translation, AI guidance, searchable his
 
 ![Chrome supported](https://img.shields.io/badge/Chrome-supported-1f6feb?logo=googlechrome&logoColor=white)
 ![Firefox supported](https://img.shields.io/badge/Firefox-supported-E66000?logo=firefoxbrowser&logoColor=white)
-![License MIT](https://img.shields.io/badge/license-MIT-111827)
+![License AGPL v3+](https://img.shields.io/badge/license-AGPL--3.0--or--later-111827)
 ![Quality Gates](https://img.shields.io/github/actions/workflow/status/mahdiahmadi1991/caption-arc/quality-gates.yml?branch=develope&label=quality%20gates)
 
 CaptionArc is a browser extension for people who rely on live captions during web meetings and want more than a fleeting transcript. It captures visible captions from supported meeting pages, translates them with your OpenAI setup, can surface live AI guidance during the meeting, saves a local-first archive, and helps you come back later with search, exports, summaries, reusable meeting profiles, and optional personal cloud continuity.
@@ -274,4 +274,4 @@ The public roadmap is intentionally lightweight for now.
 
 Contributions should follow the repository guidance in [docs/contributing/README.md](./docs/contributing/README.md) and [AGENTS.md](./AGENTS.md).
 
-CaptionArc is released under the MIT License. See [LICENSE](./LICENSE).
+CaptionArc is released under the GNU Affero General Public License, version 3 or later. See [LICENSE](./LICENSE).

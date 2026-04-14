@@ -14,5 +14,6 @@ This section describes product intent, business-facing capability boundaries, an
 - [session-continuation-and-rejoin.md](./session-continuation-and-rejoin.md)
 - [business-kpi-framework.md](./business-kpi-framework.md)
 - [business-non-goals-and-scope-boundaries.md](./business-non-goals-and-scope-boundaries.md)
+- [monetization-readiness-checklist.md](./monetization-readiness-checklist.md)
 - [roadmap.md](./roadmap.md)
 - [backlog-summary.md](./backlog-summary.md)
