@@ -87,17 +87,17 @@ describe("Assistant runtime contract", () => {
     };
 
     updateSettings({
-      summaryProfiles: [defaultProfile as never, enabledProfile as never],
-      defaultSummaryProfileId: "default",
+      meetingProfiles: [defaultProfile as never, enabledProfile as never],
+      defaultMeetingProfileId: "default",
     });
 
     const resolvedFromSession = assistantServiceInternals.getResolvedMeetingProfile({
-      summaryProfileId: "focus",
+      meetingProfileId: "focus",
     } as never);
     expect(resolvedFromSession?.id).toBe("focus");
     expect(
       assistantServiceInternals.getResolvedAssistantEnabled({
-        summaryProfileId: "focus",
+        meetingProfileId: "focus",
         artifacts: {},
       } as never)
     ).toBe(true);
@@ -107,7 +107,7 @@ describe("Assistant runtime contract", () => {
     assistantServiceInternals.applyAssistantSession(
       {
         id: "session-1",
-        summaryProfileId: "default",
+        meetingProfileId: "default",
         artifacts: {
           assistantOutputs: {
             b: { id: "b", content: "later", createdAt: 20 },
@@ -137,7 +137,7 @@ describe("Assistant runtime contract", () => {
     assistantServiceInternals.applyAssistantSession(
       {
         id: "session-1",
-        summaryProfileId: "default",
+        meetingProfileId: "default",
         artifacts: {
           assistantOutputs: {
             a: { id: "a", content: "first", createdAt: 1 },
@@ -155,7 +155,7 @@ describe("Assistant runtime contract", () => {
     assistantServiceInternals.applyAssistantSession(
       {
         id: "session-1",
-        summaryProfileId: "default",
+        meetingProfileId: "default",
         artifacts: {
           assistantOutputs: {
             a: { id: "a", content: "first", createdAt: 1 },

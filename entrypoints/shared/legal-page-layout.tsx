@@ -3,7 +3,7 @@ import { BrandLockup } from "./brand";
 import {
   GitHubHeaderLink,
   LegalFooter,
-} from "./extension-page-chrome";
+} from "./extension-page-frame";
 import { ThemeToggle, type ThemeToggleLabels } from "./theme-toggle";
 import type { ThemePreference } from "./theme";
 import { useResolvedTheme } from "./use-resolved-theme";

@@ -35,7 +35,7 @@ let pendingSessionPreview: Pick<
   | "providerLabel"
   | "title"
   | "identifiers"
-  | "summaryProfileId"
+  | "meetingProfileId"
   | "startTime"
   | "rejoinHistory"
 > | null = null;
@@ -159,7 +159,7 @@ async function storeCurrentSessionShell(): Promise<void> {
 }
 
 function getResolvedDefaultProfileId(): string {
-  return settings.defaultSummaryProfileId || settings.summaryProfiles[0]?.id || "";
+  return settings.defaultMeetingProfileId || settings.meetingProfiles[0]?.id || "";
 }
 
 function resolveEffectivePendingSessionProfileId(
@@ -187,7 +187,7 @@ export function ensurePendingSessionProfileSelection(): void {
 }
 
 export function normalizePendingSessionProfileSelection(): void {
-  const validProfileIds = new Set(settings.summaryProfiles.map((profile) => profile.id));
+  const validProfileIds = new Set(settings.meetingProfiles.map((profile) => profile.id));
   const defaultProfileId = getResolvedDefaultProfileId();
 
   if (!pendingSessionProfileId || !validProfileIds.has(pendingSessionProfileId)) {
@@ -205,7 +205,7 @@ export function getPendingSessionProfileSelection(): {
 } {
   if (currentSession) {
     return {
-      profileId: currentSession.summaryProfileId || getResolvedDefaultProfileId() || null,
+      profileId: currentSession.meetingProfileId || getResolvedDefaultProfileId() || null,
       locked: true,
     };
   }
@@ -311,7 +311,7 @@ export async function loadStoredSessionPreview(
     providerLabel: session.providerLabel,
     title: session.title,
     identifiers: { ...(session.identifiers || {}) },
-    summaryProfileId: session.summaryProfileId,
+    meetingProfileId: session.meetingProfileId,
     startTime: session.startTime,
     rejoinHistory: [...(session.rejoinHistory || [])],
   };
@@ -563,7 +563,7 @@ export async function initMeetingSession(
     ResolveMeetingSessionRequest,
     "reusePolicy" | "resumeSessionId"
   >,
-  summaryProfileId?: string
+  meetingProfileId?: string
 ) {
   if (currentSession) return;
 
@@ -572,13 +572,13 @@ export async function initMeetingSession(
     providerLabel: metadata.providerLabel,
     hasResumeSessionId: Boolean(resolveOptions?.resumeSessionId),
     reusePolicy: resolveOptions?.reusePolicy || "default",
-    summaryProfileId: summaryProfileId || null,
+    meetingProfileId: meetingProfileId || null,
   });
 
   pendingSessionMetadata = null;
   pendingSessionPreview = null;
-  const effectiveSummaryProfileId = resolveEffectivePendingSessionProfileId(
-    summaryProfileId
+  const effectiveMeetingProfileId = resolveEffectivePendingSessionProfileId(
+    meetingProfileId
   );
   const resolvedSession = await chrome.runtime
     .sendMessage({
@@ -588,7 +588,7 @@ export async function initMeetingSession(
       sourceUrl: metadata.sourceUrl,
       title: metadata.title,
       identifiers: metadata.identifiers,
-      summaryProfileId: effectiveSummaryProfileId,
+      meetingProfileId: effectiveMeetingProfileId,
       reusePolicy: resolveOptions?.reusePolicy,
       resumeSessionId: resolveOptions?.resumeSessionId,
     })
@@ -605,7 +605,7 @@ export async function initMeetingSession(
           meetingUrl: metadata.sourceUrl,
           title: metadata.title,
           identifiers: metadata.identifiers,
-          summaryProfileId: effectiveSummaryProfileId,
+          meetingProfileId: effectiveMeetingProfileId,
           searchableText: "",
           startTime: Date.now(),
           events: [],
@@ -627,8 +627,8 @@ export async function initMeetingSession(
     sessionId: currentSession.id,
   });
 
-  if (!currentSession.summaryProfileId) {
-    currentSession.summaryProfileId = effectiveSummaryProfileId;
+  if (!currentSession.meetingProfileId) {
+    currentSession.meetingProfileId = effectiveMeetingProfileId;
   }
 
   getLatestMetadata = metadataProvider || null;
@@ -971,7 +971,7 @@ export function getCurrentSessionSnapshot(): Pick<
   | "providerLabel"
   | "title"
   | "identifiers"
-  | "summaryProfileId"
+  | "meetingProfileId"
   | "startTime"
   | "rejoinHistory"
 > & {
@@ -994,7 +994,7 @@ export function getCurrentSessionSnapshot(): Pick<
     providerLabel: currentSession.providerLabel,
     title: currentSession.title,
     identifiers: { ...currentSession.identifiers },
-    summaryProfileId: currentSession.summaryProfileId,
+    meetingProfileId: currentSession.meetingProfileId,
     startTime: currentSession.startTime,
     rejoinHistory: [...(currentSession.rejoinHistory || [])],
     currentSegmentStartTime,
@@ -1027,7 +1027,7 @@ export function getPendingSessionPreviewSnapshot(): Pick<
   | "providerLabel"
   | "title"
   | "identifiers"
-  | "summaryProfileId"
+  | "meetingProfileId"
   | "startTime"
   | "rejoinHistory"
 > | null {
@@ -1045,7 +1045,7 @@ function hydratePendingSessionPreview(session: MeetingSession): void {
     providerLabel: session.providerLabel,
     title: session.title,
     identifiers: { ...(session.identifiers || {}) },
-    summaryProfileId: session.summaryProfileId,
+    meetingProfileId: session.meetingProfileId,
     startTime: session.startTime,
     rejoinHistory: [...(session.rejoinHistory || [])],
   };

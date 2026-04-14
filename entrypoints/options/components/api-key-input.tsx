@@ -1,14 +1,16 @@
 import { useId, useState } from "react";
 import { EyeIcon, EyeOffIcon, OpenIcon } from "../../shared/icons";
+import { HelpPopover } from "../../shared/help-popover";
 import { useT } from "../../shared/i18n";
 import { Tooltip } from "../../shared/tooltip";
 
 type ApiKeyInputProps = {
   value: string;
   onChange: (value: string) => void;
+  helpMarkdown?: string;
 };
 
-export function ApiKeyInput({ value, onChange }: ApiKeyInputProps) {
+export function ApiKeyInput({ value, onChange, helpMarkdown }: ApiKeyInputProps) {
   const t = useT();
   const [showKey, setShowKey] = useState(false);
   const hintId = useId();
@@ -16,12 +18,20 @@ export function ApiKeyInput({ value, onChange }: ApiKeyInputProps) {
   return (
     <div className="rounded-[1.7rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[0_14px_30px_var(--app-shadow)] backdrop-blur-xl sm:p-5">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <label className="block text-sm font-medium text-[var(--app-text)]">
-          {t("options.openAiService.apiKeyInput.label")}
-          <span className="ms-2 font-normal text-[var(--app-text-faint)]">
-            ({t("options.openAiService.apiKeyInput.provider")})
-          </span>
-        </label>
+        <div className="pointer-events-none flex items-center gap-2">
+          <label className="pointer-events-auto block text-sm font-medium text-[var(--app-text)]">
+            {t("options.openAiService.apiKeyInput.label")}
+            <span className="ms-2 font-normal text-[var(--app-text-faint)]">
+              ({t("options.openAiService.apiKeyInput.provider")})
+            </span>
+          </label>
+          {helpMarkdown ? (
+            <HelpPopover
+              label={t("options.openAiService.apiKeyInput.label")}
+              markdown={helpMarkdown}
+            />
+          ) : null}
+        </div>
         <span className="inline-flex w-fit items-center rounded-full border border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--app-accent)]">
           {t("options.openAiService.apiKeyInput.storedLocally")}
         </span>

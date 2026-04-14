@@ -104,8 +104,9 @@ We do not describe CaptionArc here as routinely storing all meeting content on C
 
 Retention depends on the feature you use and the storage location involved:
 
-- local archive data remains on your device until you delete it or remove the extension data
-- optional synced copies may remain in connected third-party storage until deleted there or through the relevant sync/delete workflow
+- local archive data for ended, non-starred sessions is subject to the archive-retention window you choose in Settings; if you choose `Off`, CaptionArc does not automatically delete local archive sessions
+- starred sessions are excluded from the current automatic archive-pruning guardrails
+- optional synced copies may remain in connected third-party storage until deleted there or through the relevant sync/delete workflow; retention-driven local deletions are queued into the same cloud-delete workflow and may remain remotely until that sync completes
 - encrypted backup files remain wherever you save them until you delete them
 - device-local secrets such as the OpenAI API key stay on your device unless you remove or replace them there
 - support or privacy correspondence may be retained for a reasonable period needed to respond, document, and resolve the request

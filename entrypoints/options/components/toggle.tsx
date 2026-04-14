@@ -1,4 +1,5 @@
 import { SwitchControl } from "../../shared/switch-control";
+import { HelpPopover } from "../../shared/help-popover";
 
 type ToggleProps = {
   enabled: boolean;
@@ -6,6 +7,7 @@ type ToggleProps = {
   label: string;
   description?: string;
   className?: string;
+  helpMarkdown?: string;
 };
 
 export function Toggle({
@@ -14,6 +16,7 @@ export function Toggle({
   label,
   description,
   className,
+  helpMarkdown,
 }: ToggleProps) {
   return (
     <div
@@ -26,7 +29,14 @@ export function Toggle({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-[var(--app-text)]">{label}</h3>
+          <div className="pointer-events-none flex items-center gap-2">
+            <h3 className="pointer-events-auto font-medium text-[var(--app-text)]">
+              {label}
+            </h3>
+            {helpMarkdown ? (
+              <HelpPopover label={label} markdown={helpMarkdown} />
+            ) : null}
+          </div>
           {description && (
             <p className="mt-1 text-sm leading-relaxed text-[var(--app-text-muted)]">
               {description}

@@ -556,7 +556,7 @@ function buildRemoteSession(
       sessionFingerprint: metaPayload.sessionFingerprint,
       lifecycleState: metaPayload.lifecycleState,
       lastSeenAt: metaPayload.lastSeenAt,
-      summaryProfileId: metaPayload.summaryProfileId,
+      meetingProfileId: metaPayload.meetingProfileId,
       updatedAt:
         Math.max(metaPayload.updatedAt || 0, eventsPayload.updatedAt || 0) ||
         undefined,

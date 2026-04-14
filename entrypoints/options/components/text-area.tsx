@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "../../shared/icons";
+import { HelpPopover } from "../../shared/help-popover";
 import { useT } from "../../shared/i18n";
 import { getDynamicTextDirection } from "../../shared/text-direction";
 
@@ -15,6 +16,7 @@ type TextAreaProps = {
   defaultCollapsed?: boolean;
   maxLength?: number;
   showCharacterCount?: boolean;
+  helpMarkdown?: string;
 };
 
 export function TextArea({
@@ -29,8 +31,10 @@ export function TextArea({
   defaultCollapsed = false,
   maxLength,
   showCharacterCount = false,
+  helpMarkdown,
 }: TextAreaProps) {
   const t = useT();
+  const textAreaId = useId();
   const [collapsed, setCollapsed] = useState(
     collapsible ? defaultCollapsed : false
   );
@@ -46,18 +50,23 @@ export function TextArea({
   return (
     <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] backdrop-blur-xl sm:p-4">
       <div className="mb-2.5 flex items-start justify-between gap-3">
-        <label
-          className={`block text-sm font-medium text-[var(--app-text)] ${
+        <div
+          className={`flex items-center gap-2 text-sm font-medium text-[var(--app-text)] pointer-events-none ${
             disabled ? "opacity-60" : ""
           }`}
         >
-          {label}
+          <label htmlFor={textAreaId} className="pointer-events-auto">
+            <span>{label}</span>
+          </label>
+          {helpMarkdown ? (
+            <HelpPopover label={label} markdown={helpMarkdown} disabled={disabled} />
+          ) : null}
           {optional && (
-            <span className="ms-2 font-normal text-[var(--app-text-faint)]">
+            <span className="pointer-events-auto ms-2 font-normal text-[var(--app-text-faint)]">
               {t("common.optional")}
             </span>
           )}
-        </label>
+        </div>
         {collapsible && (
           <button
             type="button"
@@ -80,6 +89,7 @@ export function TextArea({
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)]">
           <textarea
+            id={textAreaId}
             value={value}
             disabled={disabled}
             onChange={(e) =>

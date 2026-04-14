@@ -19,6 +19,8 @@ This matrix maps cloud-sync behavior-contract rules to available validation surf
 | CSYNC-004 | C-CSYNC-002 | initialization and local-change hooks enqueue reconciliation and delayed runs instead of syncing inline | `tests/google-meet/cloud-sync-orchestration.contract.test.ts` | implemented |
 | CSYNC-005 | C-CSYNC-003 | transient failures back off with capped retry delay and promote to manual retry after the retry limit | `tests/google-meet/cloud-sync-engine-retries.contract.test.ts` | implemented |
 | CSYNC-006 | C-CSYNC-004 | resolving pending settings choices writes selected settings and immediately re-runs reconciliation | `tests/google-meet/cloud-sync-orchestration.contract.test.ts` | implemented |
+| CSYNC-007 | C-CSYNC-002 | retention-driven auto-prune deletions enqueue the same delete-session cloud tombstones as manual archive deletion | `tests/google-meet/meeting-history-retention.contract.test.ts` | implemented |
+| CSYNC-008 | C-CSYNC-002 | archive-retention `Off` prevents retention-driven auto-prune deletion from enqueueing any cloud tombstones | `tests/google-meet/meeting-history-retention.contract.test.ts` | implemented |
 
 ## Notes
 

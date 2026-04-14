@@ -11,7 +11,7 @@ This document describes how assistant and summary behavior is shaped at the prod
 
 ## Profile Model
 
-Summary and assistant behavior is profile-driven.
+Meeting-summary and assistant behavior is meeting-profile-driven.
 
 Profile controls include:
 
@@ -28,7 +28,7 @@ Profile controls include:
 
 Primary references:
 
-- `entrypoints/shared/summary-profiles.ts`
+- `entrypoints/shared/meeting-profiles.ts`
 - `entrypoints/options/App.tsx`
 
 ## Assistant Triggering Strategy

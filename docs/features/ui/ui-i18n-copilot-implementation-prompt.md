@@ -4,6 +4,14 @@ Use this prompt for the first implementation phase only.
 
 This prompt is intentionally narrow so the work stays reviewable.
 
+Historical note:
+
+- this prompt captures the original phase-1 popup-only bootstrap from 2026-04-07
+- it is not the canonical current inventory for shipped locales
+- the current repository ships 12 UI locales (`en`, `fa`, `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko`)
+- translation and meeting-output languages are defined separately in `entrypoints/shared/language-metadata.ts` and are broader than the UI locale set
+- for current-state work, prefer `docs/architecture/ui-i18n-strategy.md`, `docs/features/ui/ui-i18n-implementation-guide.md`, and `docs/features/ui/ui-i18n-coverage-inventory.md`
+
 ## Prompt
 
 Implement Phase 1 of UI i18n for CaptionArc.
@@ -36,15 +44,21 @@ Before meaningful code edits:
 
 ### Required files to create
 
-Create these files:
+Create these files for the historical phase-1 bootstrap:
 
 - `entrypoints/shared/i18n/types.ts`
-- `entrypoints/shared/i18n/messages/en.ts`
-- `entrypoints/shared/i18n/messages/fa.ts`
+- initial bootstrap catalogs:
+  - `entrypoints/shared/i18n/messages/en.ts`
+  - `entrypoints/shared/i18n/messages/fa.ts`
 - `entrypoints/shared/i18n/catalog.ts`
 - `entrypoints/shared/i18n/locale.ts`
 - `entrypoints/shared/i18n/index.ts`
 - `entrypoints/shared/i18n/react.tsx`
+
+Historical bootstrap note:
+
+- phase 1 only required `en.ts` and `fa.ts`
+- current repository state includes dedicated locale modules for the remaining shipped UI locales under `entrypoints/shared/i18n/messages/`
 
 ### Required files to update
 
@@ -60,9 +74,11 @@ Update any directly related popup file only if required by compilation or clean 
 
 ### Required settings model change
 
-Add a dedicated UI language setting with this exact type intent:
+Add a dedicated UI language setting with this historical phase-1 type intent:
 
 - `uiLanguage: "system" | "en" | "fa"`
+
+This type shape was correct for the historical phase-1 scope only. Current code accepts `"system"` plus the full shipped `SupportedUiLocale` set.
 
 Place `uiLanguage` in local device settings, not shared settings.
 
@@ -140,7 +156,9 @@ For this phase, include only the message keys required by the popup plus any min
 
 Do not pre-translate the entire repository.
 
-Add English and Persian catalogs for the popup scope only.
+Historical phase-1 scope only: add English and Persian catalogs for the popup scope only.
+
+Historical scope only. Do not treat this as the current shipped locale inventory.
 
 ### Explicit non-goals
 

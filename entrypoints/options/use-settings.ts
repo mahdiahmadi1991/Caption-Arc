@@ -201,7 +201,7 @@ export function useSettings() {
         await optionsSettingsDiagnostics.info("options_settings_load_completed", {
           hasApiKey: Boolean(merged.openaiApiKey.trim()),
           model: merged.model,
-          summaryProfileCount: merged.summaryProfiles.length,
+          meetingProfileCount: merged.meetingProfiles.length,
         });
         const savedSignature = getOpenAiConnectionSignature(merged);
         const savedSnapshot = merged.verificationSnapshot;

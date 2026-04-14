@@ -36,6 +36,11 @@ export const enMessages = {
       dark: "Use dark theme",
     },
     optional: "(optional)",
+    helpPopover: {
+      eyebrow: "Field guide",
+      moreAbout: "More about {label}",
+      close: "Close help",
+    },
     uiLanguage: {
       label: "Interface language",
       description:
@@ -300,6 +305,14 @@ export const enMessages = {
         description:
           "Decide what meeting data should be retained for later review, export, and summary generation.",
       },
+      meetingArchiveRetention: {
+        label: "Archive retention window",
+        description:
+          "Choose how long CaptionArc should keep ended, unstarred sessions before removing them from the local archive. Choose Off to disable all automatic archive deletion.",
+        off: "Off",
+        days: "{count} days",
+        oneYear: "1 year",
+      },
       storeMeetingChat: {
         label: "Store meeting chat",
         description:
@@ -457,6 +470,10 @@ export const enMessages = {
         description:
           "Strong all-round model with a balanced quality-to-speed profile.",
       },
+      gpt5: {
+          description: "Flagship GPT-5 model when you want stronger general quality than Mini or Nano without moving up to GPT-5.2.",
+          badge: "Flagship"
+      },
       gpt5Nano: {
         description:
           "Lowest-latency option for very fast responses, with simpler output quality.",
@@ -472,6 +489,156 @@ export const enMessages = {
           "Lower-cost GPT-4.1 variant for lighter workloads and moderate translation quality.",
         badge: "Lighter",
       },
+      gpt41Nano: {
+          description: "Smallest GPT-4.1 option for ultra-light tasks where cost and latency matter most."
+      },
+    },
+    help: {
+      apiKey: `Paste the OpenAI API key that CaptionArc should use on this device.
+
+- The key stays device-local and is not included in sync or encrypted archive export.
+- Use a project key that matches your own billing and access policy.
+- If verification fails, check for missing credits, revoked keys, or model access limits.`,
+      model: `Pick the OpenAI model that runs live translation, summaries, and assistant output.
+
+- Lighter models usually respond faster in live meetings.
+- Stronger models usually write better, but can cost more and feel slower.
+- If you are unsure, keep the recommended default.
+
+Example: use a faster model for live meetings, then switch to a stronger model if summary quality matters more than speed.`,
+      uiLanguage: `This changes the language of the CaptionArc interface itself.
+
+- It affects settings, meeting history, quick surfaces, and in-meeting UI text.
+- It does not change live translation output or summary language by itself.
+- Use the browser/system option if you want CaptionArc to follow the environment automatically.`,
+      translationInstructions: `These instructions are sent with every live-translation request.
+
+- Keep them short and specific.
+- Use them for terminology, tone, and subtitle cleanup rules.
+- Long policy-style prompts usually make live translation slower and less stable.
+
+Example: \`Keep product names in English and prefer short subtitle-style sentences.\``,
+      captureStartupBehavior: `This controls what happens when CaptionArc detects a supported meeting.
+
+- **Ask** shows a per-meeting prompt before capture starts.
+- **Always** starts capture without that extra prompt.
+- **Off** keeps capture idle until you turn it on manually for that meeting.
+
+Use **Ask** if you want the safer default.`,
+      captionActivationBehavior: `This controls how meeting captions get turned on.
+
+- **Guided** leaves the final step to you.
+- **Automatic** tries to switch captions on when the provider UI allows it.
+- Automatic mode is more sensitive because it interacts with the meeting surface for you.
+
+Use **Guided** unless automated caption activation is clearly acceptable in your workflow.`,
+      sessionContinuationWindow: `This sets how long CaptionArc may continue the same session when you rejoin the same meeting identity.
+
+- Short windows create new sessions more often.
+- Longer windows keep related rejoins grouped together.
+- \`0 minutes\` means every rejoin starts a new session.
+
+Example: with \`120 minutes\`, a meeting that ends at 10:00 can continue the same session until 12:00 if you rejoin the same meeting.`,
+      overlayClickThrough: `This controls whether the in-meeting overlay can intercept your mouse input.
+
+- Turn it on when you want clicks to pass through the overlay to the meeting underneath.
+- Turn it off when you need to interact directly with CaptionArc controls on the overlay.
+- Click-through is useful for passive reading, but less convenient when you adjust controls often.`,
+      meetingArchiveRetention: `This controls automatic cleanup for ended, unstarred sessions in the local archive.
+
+- Shorter windows remove old sessions sooner.
+- Longer windows keep more history on the device.
+- **Off** disables all automatic archive deletion.
+
+Starred sessions are still protected from automatic pruning.`,
+      storeMeetingChat: `This controls whether supported meeting chat becomes part of the saved meeting record.
+
+- When enabled, chat can appear in history, exports, summaries, and assistant context.
+- Chat often carries more sensitive names, decisions, or links than visible captions.
+- Keep it off unless saving chat clearly fits your policy and confidentiality needs.`,
+      meetingOutputLanguage: `This sets the default language for generated meeting outputs such as summaries and Meeting AI responses.
+
+- It is separate from the interface language and from live caption translation.
+- Pick the language you want to read the generated result in most of the time.
+- You can still override it later when your workflow needs a different output language.`,
+      profileName: `This name identifies a meeting profile across the settings UI and downstream AI workflows.
+
+- Keep it short enough to scan quickly in the profile list.
+- Name the meeting type, not a single one-off meeting.
+- Good names make it obvious when this profile should be used again.
+
+Example: Customer discovery, Weekly staff sync, or Board update.`,
+      profileDescription: `This description gives quick human context for when the meeting profile should be used.
+
+- Describe the meeting purpose, audience, or expected rhythm.
+- Keep it short and concrete so you can recognize the right profile at a glance.
+- This is profile metadata, not the place for long AI instructions.
+
+Example: Cross-functional weekly review with product, design, and engineering leads.`,
+      autoSummary: `This decides whether a meeting profile should generate a summary automatically when a meeting ends.
+
+- Turn it on for recurring meeting types where you almost always want a summary.
+- Keep it off if you only want summaries on demand.
+- Automatic summaries still depend on a valid OpenAI setup and saved meeting data.`,
+      summaryEffort: `This controls how much AI work the summary generator should spend for this meeting profile.
+
+- Lower effort is faster and cheaper.
+- Higher effort is better for longer or messier meetings.
+- **Balanced** is usually the safest default unless you already know the meeting type is unusually short or complex.`,
+      summaryInstructions: `These instructions shape the summary style for this meeting profile.
+
+- Use them for structure, audience, and recurring terminology.
+- Keep them focused on the final summary output, not on live assistant behavior.
+- Short, concrete instructions usually work better than long policy documents.
+
+Example: \`Write an executive summary first, then action items with owners.\``,
+      assistantEnabled: `This turns Meeting AI on or off for the selected meeting profile.
+
+- When off, the rest of the Meeting AI settings stay visible but do not affect live guidance.
+- Turn it on only for meeting types where live suggestions are genuinely useful.
+- Different profiles can keep different Meeting AI defaults.`,
+      assistantResponseIntent: `This decides the main job Meeting AI should optimize for in this meeting profile.
+
+- Use it to bias the assistant toward answering, coaching, summarizing, or surfacing risks.
+- It changes the default direction of suggestions, not just their wording.
+- Pick the intent that matches how you usually want help in that meeting type.`,
+      assistantResponseFormat: `This controls the shape of Meeting AI responses.
+
+- Short bullet formats are easier to scan quickly during a live meeting.
+- More spoken formats are better when you want wording you can say out loud.
+- Choose the format that best matches how you consume the suggestion under time pressure.`,
+      assistantResponseDepth: `This controls how brief or developed Meeting AI responses should be.
+
+- Lower depth favors speed and fast scanning.
+- Higher depth gives more context and reasoning, but can feel heavier in live use.
+- Keep it lighter for fast-paced calls and raise it for strategy or stakeholder meetings.`,
+      assistantResponseTone: `This biases the style of Meeting AI wording.
+
+- Tone can make a suggestion feel more direct, more neutral, or more diplomatic.
+- It does not change the core facts, but it changes how the suggestion lands.
+- Match it to the social context of the meeting, not just your personal preference.`,
+      assistantDeliveryBias: `This controls the tradeoff between fast output and more complete guidance.
+
+- Faster delivery is better when timing matters most.
+- Fuller delivery is better when nuance matters more than latency.
+- If you are unsure, keep the middle-ground setting.`,
+      assistantTriggerPolicy: `This decides when Meeting AI should produce guidance during the meeting.
+
+- Conservative policies reduce noise.
+- More proactive policies can surface more suggestions, but may interrupt more often.
+- Choose the lowest policy that still gives you help at the moments you care about.`,
+      assistantParticipantScope: `This defines whose speech or activity should influence Meeting AI suggestions.
+
+- Narrow scopes keep the assistant focused on the people who matter most to your role.
+- Wider scopes help when you need a room-level read of the conversation.
+- Use a narrower scope if the assistant feels too noisy or easily distracted.`,
+      assistantInstructions: `These instructions customize Meeting AI behavior for this meeting profile.
+
+- Use them for response style, recurring constraints, and domain-specific expectations.
+- Keep them distinct from summary instructions and live-translation instructions.
+- Prefer a few durable rules over a long list of edge cases.
+
+Example: \`Prioritize concise talking points and flag hidden risks before drafting an answer.\``,
     },
     translation: {
       bestFor: {
@@ -813,7 +980,7 @@ export const enMessages = {
           meetingSessions: "Meeting sessions",
           translations: "Translations",
           summaries: "Summaries",
-          summaryProfiles: "Summary profiles",
+          meetingProfiles: "Meeting profiles",
           sharedSettings: "Shared settings",
         },
         local: {
@@ -858,7 +1025,7 @@ export const enMessages = {
       backupFile: {
         title: "Encrypted backup file",
         description:
-          "The exported backup contains your shared settings, summary profiles, saved meeting sessions, transcripts, chat history, translations, and summaries. Device-local secrets such as the OpenAI API key stay out of the backup. Use it when cloud sync is unavailable or when you need a portable encrypted snapshot.",
+          "The exported backup contains your shared settings, meeting profiles, saved meeting sessions, transcripts, chat history, translations, and summaries. Device-local secrets such as the OpenAI API key stay out of the backup. Use it when cloud sync is unavailable or when you need a portable encrypted snapshot.",
         export: "Export all data",
         import: "Import backup file",
       },
@@ -890,9 +1057,9 @@ export const enMessages = {
       deleteArchive: {
         title: "Delete saved archive",
         syncedDescription:
-          "Delete the synced archive from this device, your connected cloud providers, and other synced devices. Your OpenAI setup, preferences, and summary profiles stay intact.",
+          "Delete the synced archive from this device, your connected cloud providers, and other synced devices. Your OpenAI setup, preferences, and meeting profiles stay intact.",
         localDescription:
-          "Remove all saved meeting sessions from local storage. This keeps your OpenAI setup, preferences, and summary profiles.",
+          "Remove all saved meeting sessions from local storage. This keeps your OpenAI setup, preferences, and meeting profiles.",
       },
       confirmDelete: {
         syncedTitle: "Delete synced archive everywhere?",

@@ -43,7 +43,7 @@ function computeMenuPosition(
   const rect = triggerEl.getBoundingClientRect();
   const viewportPadding = 12;
   const gap = 8;
-  const menuChromeHeight = 20;
+  const menuReservedHeight = 20;
   const maxScrollableHeight = 288;
   const availableBelow =
     window.innerHeight - rect.bottom - gap - viewportPadding;
@@ -58,7 +58,7 @@ function computeMenuPosition(
       )
     )
   );
-  const menuHeight = maxHeight + menuChromeHeight;
+  const menuHeight = maxHeight + menuReservedHeight;
   const width = Math.round(
     Math.min(rect.width, window.innerWidth - viewportPadding * 2)
   );

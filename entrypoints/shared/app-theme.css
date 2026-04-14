@@ -163,6 +163,164 @@ button:not(:disabled),
   border-top: 1px solid var(--app-border-strong);
 }
 
+.mc-app-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  color: var(--app-text-faint);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--app-shadow) 50%, transparent);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.mc-app-help-trigger-slot {
+  display: inline-flex;
+  flex: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  min-width: 1.85rem;
+  min-height: 1.85rem;
+  pointer-events: auto;
+}
+
+.mc-app-help-trigger:hover,
+.mc-app-help-trigger:focus-visible,
+.mc-app-help-trigger[data-open="true"] {
+  border-color: var(--app-accent-border);
+  background: color-mix(in srgb, var(--app-accent-soft) 82%, var(--app-surface));
+  color: var(--app-accent);
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--app-accent) 14%, transparent);
+}
+
+.mc-app-help-trigger:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.mc-app-help-popover {
+  position: fixed;
+  z-index: 2147483647;
+  width: max-content;
+  min-width: min(244px, calc(100vw - 24px));
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 32px));
+  border: 1px solid var(--app-border-strong);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--app-accent-soft) 68%, transparent), transparent 58%),
+    color-mix(in srgb, var(--app-surface-strong) 93%, transparent);
+  box-shadow: 0 28px 56px var(--app-shadow);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+  transform-origin: top center;
+  pointer-events: auto;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 180ms ease;
+  transform: var(--mc-help-popover-open-transform);
+}
+
+.mc-app-help-popover[data-state="closed"] {
+  opacity: 0;
+  visibility: hidden;
+  transform: var(--mc-help-popover-closed-transform);
+}
+
+.mc-app-help-popover[data-state="open"] {
+  opacity: 1;
+  visibility: visible;
+  transform: var(--mc-help-popover-open-transform);
+}
+
+.mc-app-help-popover::after {
+  content: "";
+  position: absolute;
+  left: var(--mc-help-popover-arrow-left, 50%);
+  width: 12px;
+  height: 12px;
+  background: color-mix(in srgb, var(--app-surface-strong) 93%, transparent);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.mc-app-help-popover[data-placement="top"]::after {
+  bottom: -7px;
+  border-right: 1px solid var(--app-border-strong);
+  border-bottom: 1px solid var(--app-border-strong);
+}
+
+.mc-app-help-popover[data-placement="bottom"]::after {
+  top: -7px;
+  border-left: 1px solid var(--app-border-strong);
+  border-top: 1px solid var(--app-border-strong);
+}
+
+.mc-app-help-popover__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 88%, transparent);
+}
+
+.mc-app-help-popover__eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--app-accent);
+}
+
+.mc-app-help-popover__title {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--app-text);
+}
+
+.mc-app-help-popover__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+  color: var(--app-text-faint);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.mc-app-help-popover__close:hover,
+.mc-app-help-popover__close:focus-visible {
+  border-color: var(--app-accent-border);
+  background: color-mix(in srgb, var(--app-accent-soft) 80%, var(--app-surface));
+  color: var(--app-accent);
+  outline: none;
+}
+
+.mc-app-help-popover__body {
+  padding: 12px 14px 14px;
+  overflow: auto;
+}
+
 .mc-theme-toggle {
   display: inline-flex;
   align-items: center;

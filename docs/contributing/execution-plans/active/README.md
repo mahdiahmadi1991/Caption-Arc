@@ -13,4 +13,4 @@ Current plans:
 
 - [2026-04-10-dls-user-verification-and-full-traceability-closure.md](./2026-04-10-dls-user-verification-and-full-traceability-closure.md)
 - [2026-04-13-meeting-assistant-audit-surface-hardening.md](./2026-04-13-meeting-assistant-audit-surface-hardening.md)
-- [2026-04-13-session-continuation-last-activity-window-fix.md](./2026-04-13-session-continuation-last-activity-window-fix.md)
+- [2026-04-14-cross-browser-cloud-sync-parity.md](./2026-04-14-cross-browser-cloud-sync-parity.md)

@@ -28,4 +28,4 @@ This matrix maps runtime-lifecycle behavior-contract rules to repository validat
 
 ## Notes
 
-1. Deterministic coverage exists for initialization rejection paths, content-script boot markers, reset-page candidate/confirmation guards, presence debounce, capture start/stop flows, lifecycle-sync prompt resolution, Teams reset-page handling, and teardown reset behavior.
+1. Runtime lifecycle coverage stays aligned with provider-specific reset-page detection and visibility rules exercised through deterministic browser smoke and contract tests.

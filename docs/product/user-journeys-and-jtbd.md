@@ -26,14 +26,14 @@ When the conversation moves quickly, I want live AI suggestions shaped to my mee
 
 Current journey:
 
-1. User selects a summary profile with assistant configuration.
+1. User selects a meeting profile with assistant configuration.
 2. Assistant trigger policy evaluates captured events (`questions_requests_only`, `salience_first`, `proactive`).
 3. Assistant streams short outputs to the in-meeting assistant surface.
 4. Outputs are attached to session artifacts for later review.
 
 Primary surfaces:
 
-- `entrypoints/shared/summary-profiles.ts`
+- `entrypoints/shared/meeting-profiles.ts`
 - `entrypoints/background/assistant.ts`
 - `entrypoints/content/overlay/assistant-surface.ts`
 

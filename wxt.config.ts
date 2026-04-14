@@ -10,7 +10,12 @@ const readConfigEnv = (name: string) => {
     return existingValue;
   }
 
-  for (const fileName of [".env.local", ".env"]) {
+  for (const fileName of [
+    ".secrets/.env.local",
+    ".secrets/.env",
+    ".env.local",
+    ".env",
+  ]) {
     const filePath = path.resolve(process.cwd(), fileName);
     if (!existsSync(filePath)) {
       continue;
@@ -39,7 +44,33 @@ const readConfigEnv = (name: string) => {
   return undefined;
 };
 
+const resolveBuildMode = (): "development" | "production" => {
+  const modeFromEnv = process.env.WXT_BUILD_MODE?.trim().toLowerCase();
+  if (modeFromEnv === "development" || modeFromEnv === "production") {
+    return modeFromEnv;
+  }
+
+  const modeFlagIndex = process.argv.findIndex((entry) => entry === "--mode");
+  const modeFromArg = process.argv[modeFlagIndex + 1]?.trim().toLowerCase();
+  if (modeFromArg === "development" || modeFromArg === "production") {
+    return modeFromArg;
+  }
+
+  const commandArgs = process.argv.slice(2).map((entry) => entry.trim().toLowerCase());
+  if (commandArgs.includes("build") || commandArgs.includes("zip")) {
+    return "production";
+  }
+
+  return "development";
+};
+
+const buildMode = resolveBuildMode();
 const googleOauthClientId = readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID");
+const chromeExtensionManifestKey =
+  (buildMode === "development"
+    ? readConfigEnv("WXT_CHROME_EXTENSION_KEY_DEVELOPMENT")
+    : readConfigEnv("WXT_CHROME_EXTENSION_KEY_PRODUCTION")) ||
+  readConfigEnv("WXT_CHROME_EXTENSION_KEY");
 const meetingHostPermissions = [
   "https://meet.google.com/*",
   "https://teams.microsoft.com/l/meetup-join/*",
@@ -82,6 +113,11 @@ export default defineConfig({
     name: "CaptionArc",
     description: "Capture and translate browser meeting captions in real-time",
     version: "1.3.0",
+    ...(chromeExtensionManifestKey
+      ? {
+          key: chromeExtensionManifestKey,
+        }
+      : {}),
     permissions: ["storage", "identity", "alarms", "notifications"],
     host_permissions: [
       ...meetingHostPermissions,

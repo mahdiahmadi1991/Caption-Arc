@@ -95,9 +95,9 @@ describe("Live translation language metadata contracts", () => {
       targetLanguage: "xx",
       translationEnabled: true,
       customPrompt: "",
-      summaryLanguage: "bn",
-      summaryProfiles: [],
-      defaultSummaryProfileId: "default",
+      meetingOutputLanguage: "bn",
+      meetingProfiles: [],
+      defaultMeetingProfileId: "default",
       appearance: "system",
       overlayVisible: true,
       captureStartupBehavior: "ask",
@@ -110,6 +110,6 @@ describe("Live translation language metadata contracts", () => {
 
     expect(parsed).not.toBeNull();
     expect(parsed?.targetLanguage).toBe("en");
-    expect(parsed?.summaryLanguage).toBe("bn");
+    expect(parsed?.meetingOutputLanguage).toBe("bn");
   });
 });

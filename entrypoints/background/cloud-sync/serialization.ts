@@ -15,6 +15,7 @@ import type {
 import type { Settings, SharedSettings } from "../types";
 import { DEFAULT_SETTINGS } from "../constants";
 import { normalizeLanguageCode } from "../../shared/language-metadata";
+import { normalizeMeetingArchiveRetentionDays } from "../../shared/meeting-archive-retention";
 import { normalizeSessionContinuationWindowMinutes } from "../../shared/settings-defaults";
 
 export type SerializedSessionMetaPayload = {
@@ -33,7 +34,7 @@ export type SerializedSessionMetaPayload = {
   startTime: number;
   endTime?: number;
   lastSeenAt?: number;
-  summaryProfileId?: string;
+  meetingProfileId?: string;
   rejoinHistory?: MeetingSessionRejoin[];
 };
 
@@ -408,12 +409,13 @@ export function buildSharedSettingsPayload(settings: Settings): SharedSettings {
     targetLanguage: settings.targetLanguage,
     translationEnabled: settings.translationEnabled,
     customPrompt: settings.customPrompt,
-    summaryLanguage: settings.summaryLanguage,
-    summaryProfiles: settings.summaryProfiles.map((profile) => ({
+    meetingOutputLanguage: settings.meetingOutputLanguage,
+    meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
+    meetingProfiles: settings.meetingProfiles.map((profile) => ({
       ...profile,
       assistant: { ...profile.assistant },
     })),
-    defaultSummaryProfileId: settings.defaultSummaryProfileId,
+    defaultMeetingProfileId: settings.defaultMeetingProfileId,
     appearance: settings.appearance,
     overlayVisible: settings.overlayVisible,
     captureStartupBehavior: settings.captureStartupBehavior,
@@ -455,7 +457,7 @@ export function buildSessionMetaPayload(session: MeetingSession): Record<string,
     startTime: session.startTime,
     endTime: session.endTime,
     lastSeenAt: session.lastSeenAt,
-    summaryProfileId: session.summaryProfileId,
+    meetingProfileId: session.meetingProfileId,
     rejoinHistory: session.rejoinHistory,
     summaryKeys: Object.keys(session.summaries || {}),
     eventCount: (session.events || []).length,
@@ -520,6 +522,11 @@ export function parseSharedSettingsPayload(payload: unknown): SharedSettings | n
   }
 
   const fallback = buildSharedSettingsPayload(DEFAULT_SETTINGS);
+  const rawMeetingProfiles = Array.isArray(payload.meetingProfiles)
+    ? payload.meetingProfiles
+    : Array.isArray(payload.summaryProfiles)
+      ? payload.summaryProfiles
+      : null;
 
   return {
     model: typeof payload.model === "string" ? payload.model : fallback.model,
@@ -535,12 +542,17 @@ export function parseSharedSettingsPayload(payload: unknown): SharedSettings | n
       typeof payload.customPrompt === "string"
         ? payload.customPrompt
         : fallback.customPrompt,
-    summaryLanguage: normalizeLanguageCode(
-      payload.summaryLanguage,
-      fallback.summaryLanguage
+    meetingOutputLanguage: normalizeLanguageCode(
+      payload.meetingOutputLanguage ?? payload.summaryLanguage,
+      fallback.meetingOutputLanguage
     ),
-    summaryProfiles: Array.isArray(payload.summaryProfiles)
-      ? payload.summaryProfiles.filter(isRecord).map((profile, index) => ({
+    meetingArchiveRetentionDays: normalizeMeetingArchiveRetentionDays(
+      typeof payload.meetingArchiveRetentionDays === "number"
+        ? payload.meetingArchiveRetentionDays
+        : fallback.meetingArchiveRetentionDays
+    ),
+    meetingProfiles: Array.isArray(rawMeetingProfiles)
+      ? rawMeetingProfiles.filter(isRecord).map((profile, index) => ({
           id:
             typeof profile.id === "string" && profile.id.trim()
               ? profile.id
@@ -620,11 +632,13 @@ export function parseSharedSettingsPayload(payload: unknown): SharedSettings | n
                 }
               : undefined,
         }))
-      : fallback.summaryProfiles,
-    defaultSummaryProfileId:
-      typeof payload.defaultSummaryProfileId === "string"
-        ? payload.defaultSummaryProfileId
-        : fallback.defaultSummaryProfileId,
+      : fallback.meetingProfiles,
+    defaultMeetingProfileId:
+      typeof payload.defaultMeetingProfileId === "string"
+        ? payload.defaultMeetingProfileId
+        : typeof payload.defaultSummaryProfileId === "string"
+          ? payload.defaultSummaryProfileId
+        : fallback.defaultMeetingProfileId,
     appearance:
       payload.appearance === "light" ||
       payload.appearance === "dark" ||
@@ -732,9 +746,11 @@ export function parseSessionMetaPayload(
     endTime: typeof payload.endTime === "number" ? payload.endTime : undefined,
     lastSeenAt:
       typeof payload.lastSeenAt === "number" ? payload.lastSeenAt : undefined,
-    summaryProfileId:
-      typeof payload.summaryProfileId === "string"
-        ? payload.summaryProfileId
+    meetingProfileId:
+      typeof payload.meetingProfileId === "string"
+        ? payload.meetingProfileId
+        : typeof payload.summaryProfileId === "string"
+          ? payload.summaryProfileId
         : undefined,
     rejoinHistory: sanitizeMeetingSessionRejoinHistory(payload.rejoinHistory),
   };

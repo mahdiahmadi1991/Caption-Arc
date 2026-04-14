@@ -11,13 +11,13 @@ export function mergeSharedSettings(
   incoming: SharedSettings
 ): SharedSettings {
   const mergedProfiles = new Map(
-    base.summaryProfiles.map((profile) => [
+    base.meetingProfiles.map((profile) => [
       profile.id,
       { ...profile, assistant: { ...profile.assistant } },
     ] as const)
   );
 
-  incoming.summaryProfiles.forEach((profile) => {
+  incoming.meetingProfiles.forEach((profile) => {
     mergedProfiles.set(profile.id, {
       ...profile,
       assistant: { ...profile.assistant },
@@ -27,15 +27,15 @@ export function mergeSharedSettings(
   const next: SharedSettings = {
     ...base,
     ...incoming,
-    summaryProfiles: [...mergedProfiles.values()],
+    meetingProfiles: [...mergedProfiles.values()],
   };
 
   if (
-    !next.summaryProfiles.some(
-      (profile) => profile.id === next.defaultSummaryProfileId
+    !next.meetingProfiles.some(
+      (profile) => profile.id === next.defaultMeetingProfileId
     )
   ) {
-    next.defaultSummaryProfileId = next.summaryProfiles[0]?.id || "";
+    next.defaultMeetingProfileId = next.meetingProfiles[0]?.id || "";
   }
 
   return next;

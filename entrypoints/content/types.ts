@@ -17,7 +17,7 @@ export type {
   SavedChatMessage,
   SavedMeetingEvent,
 } from "../shared/meeting-session";
-export type { SummaryProfile } from "../background/types";
+export type { MeetingProfile } from "../background/types";
 
 export type Caption = {
   id: number;

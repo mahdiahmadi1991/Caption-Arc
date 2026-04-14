@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   FlaskConical,
+  Info,
   LoaderCircle,
   Plus,
   RefreshCw,
@@ -48,6 +49,10 @@ export function AlertTriangleIcon(props: IconProps) {
 
 export function BeakerIcon(props: IconProps) {
   return <FlaskConical {...withDefaults(props)} />;
+}
+
+export function InfoIcon(props: IconProps) {
+  return <Info {...withDefaults(props)} />;
 }
 
 export function GithubIcon(props: IconProps) {

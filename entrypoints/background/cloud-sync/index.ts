@@ -69,7 +69,8 @@ export async function noteCloudSyncSettingsSaved(settings: Settings): Promise<vo
     contentHash: JSON.stringify({
       model: settings.model,
       targetLanguage: settings.targetLanguage,
-      summaryLanguage: settings.summaryLanguage,
+      meetingOutputLanguage: settings.meetingOutputLanguage,
+      meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
       appearance: settings.appearance,
       connectedCloudProviders: settings.connectedCloudProviders,
     }),

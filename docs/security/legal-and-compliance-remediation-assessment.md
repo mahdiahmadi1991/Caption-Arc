@@ -40,8 +40,8 @@ Primary implementation and documentation evidence:
 - [../architecture/storage-and-state.md](../architecture/storage-and-state.md)
 - [../security/privacy-disclosure-notes.md](../security/privacy-disclosure-notes.md)
 - [../../entrypoints/shared/settings-defaults.ts](../../entrypoints/shared/settings-defaults.ts)
-- [../../entrypoints/shared/i18n/messages/en.ts](../../entrypoints/shared/i18n/messages/en.ts)
-- [../../entrypoints/shared/summary-profiles.ts](../../entrypoints/shared/summary-profiles.ts)
+- [../../entrypoints/shared/i18n/messages/en.ts](../../entrypoints/shared/i18n/messages/en.ts) as the canonical authored catalog, together with the peer shipped locale catalogs under `entrypoints/shared/i18n/messages/*.ts`
+- [../../entrypoints/shared/meeting-profiles.ts](../../entrypoints/shared/meeting-profiles.ts)
 - [../../entrypoints/content/overlay/capture-consent.ts](../../entrypoints/content/overlay/capture-consent.ts)
 - [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
 - [../../entrypoints/content/translation.ts](../../entrypoints/content/translation.ts)
@@ -402,7 +402,8 @@ Keep the user-controlled options, but add stronger safeguards:
 The archive has retention guardrails in code:
 
 - max archived sessions: `250`
-- max archived session age: `180 days`
+- max archived session age: user-configurable through Settings, with current options `Off`, `30`, `90`, `180`, and `365` days and default `180 days`
+- when the user selects `Off`, all automatic archive deletion is disabled, including age, count, and storage-pressure pruning
 
 Evidence:
 
@@ -431,6 +432,7 @@ Publish a formal retention and deletion section in the privacy policy and releva
 
 - what is retained locally
 - when archived sessions are pruned automatically
+- what changes when the archive-retention setting is `Off`
 - how starred sessions are treated
 - what happens during manual archive deletion
 - what happens to synced copies

@@ -133,7 +133,7 @@ vi.mock("../../entrypoints/shared/legal", () => ({
   ),
 }));
 
-function installChromeRuntime() {
+function installExtensionRuntime() {
   vi.stubGlobal("defineBackground", (main: () => void) => {
     main();
     return {};
@@ -179,7 +179,7 @@ function installChromeRuntime() {
 }
 
 async function loadBackgroundModule() {
-  installChromeRuntime();
+  installExtensionRuntime();
   return await import("../../entrypoints/background/index");
 }
 

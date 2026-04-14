@@ -21,7 +21,7 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function installChromeMock(
+function installExtensionMock(
   handler: (message: Record<string, unknown>) => Promise<unknown> | unknown
 ) {
   const onChangedListeners = new Set<
@@ -143,7 +143,7 @@ describe("Options UI language switch contracts", () => {
   test("OPTIONS-I18N-001: uiLanguage changes emit switch start and save immediately", async () => {
     const initialSettings = createDefaultSettings();
     const saveDeferred = createDeferred<{ success: boolean }>();
-    const { sendMessage } = installChromeMock((message) => {
+    const { sendMessage } = installExtensionMock((message) => {
       if (message.action === "getSettings") {
         return { success: true, settings: initialSettings };
       }
@@ -195,7 +195,7 @@ describe("Options UI language switch contracts", () => {
 
   test("OPTIONS-I18N-002: non-uiLanguage settings stay on the delayed autosave path", async () => {
     const initialSettings = createDefaultSettings();
-    const { sendMessage } = installChromeMock((message) => {
+    const { sendMessage } = installExtensionMock((message) => {
       if (message.action === "getSettings") {
         return { success: true, settings: initialSettings };
       }
@@ -232,7 +232,7 @@ describe("Options UI language switch contracts", () => {
 
   test("OPTIONS-I18N-003: transactional saves run immediately and surface background rejection", async () => {
     const initialSettings = createDefaultSettings();
-    const { sendMessage } = installChromeMock((message) => {
+    const { sendMessage } = installExtensionMock((message) => {
       if (message.action === "getSettings") {
         return { success: true, settings: initialSettings };
       }

@@ -503,7 +503,7 @@ async function prepareMeetingStartupDecision(
       await loadStoredSessionPreview(persistedContinuationCandidate.sessionId);
       const previewSession = getPendingSessionPreviewSnapshot();
       setPendingSessionProfileSelection(
-        previewSession?.summaryProfileId || initialPendingProfileId,
+        previewSession?.meetingProfileId || initialPendingProfileId,
         { locked: true }
       );
       renderCaptions(true);
@@ -686,9 +686,9 @@ async function loadSettings(): Promise<boolean> {
           previousSettings.targetLanguage !== settings.targetLanguage ||
           previousSettings.translationEnabled !== settings.translationEnabled ||
           previousSettings.uiLanguage !== settings.uiLanguage ||
-          previousSettings.defaultSummaryProfileId !==
-            settings.defaultSummaryProfileId ||
-          previousSettings.summaryProfiles !== settings.summaryProfiles)
+          previousSettings.defaultMeetingProfileId !==
+            settings.defaultMeetingProfileId ||
+          previousSettings.meetingProfiles !== settings.meetingProfiles)
       ) {
         renderCaptions(true);
       }

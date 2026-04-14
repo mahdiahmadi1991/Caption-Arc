@@ -112,7 +112,7 @@ function createSession(
   };
 }
 
-function installChromeRuntime() {
+function installExtensionRuntime() {
   const storageState: Record<string, unknown> = {};
   const alarmsCreate = vi.fn(async () => undefined);
   const alarmsClear = vi.fn(async () => true);
@@ -178,9 +178,9 @@ beforeEach(() => {
   getSettingsMock.mockResolvedValue({
     settings: {
       ...defaults,
-      summaryLanguage: "fa",
-      defaultSummaryProfileId: defaults.summaryProfiles[0]?.id,
-      summaryProfiles: defaults.summaryProfiles.map((profile) => ({
+      meetingOutputLanguage: "fa",
+      defaultMeetingProfileId: defaults.meetingProfiles[0]?.id,
+      meetingProfiles: defaults.meetingProfiles.map((profile) => ({
         ...profile,
         autoSummarizeOnMeetingEnd: true,
         summaryGenerationMode: "balanced",
@@ -199,7 +199,7 @@ afterEach(() => {
 
 describe("Meeting summary pipeline contract", () => {
   test("MSUM-001: queue persistence is per-session with bounded retries and earliest retry alarm", async () => {
-    const { alarmsCreate } = installChromeRuntime();
+    const { alarmsCreate } = installExtensionRuntime();
     await historySummaryInternals.queueMeetingSummaryJob(
       {
         sessionId: "session-1",
@@ -246,12 +246,12 @@ describe("Meeting summary pipeline contract", () => {
     const defaults = createDefaultSettings();
     const settings = {
       ...defaults,
-      summaryLanguage: "fa",
-      summaryProfiles: defaults.summaryProfiles.map((profile) => ({
+      meetingOutputLanguage: "fa",
+      meetingProfiles: defaults.meetingProfiles.map((profile) => ({
         ...profile,
         autoSummarizeOnMeetingEnd: true,
       })),
-      defaultSummaryProfileId: defaults.summaryProfiles[0]?.id,
+      defaultMeetingProfileId: defaults.meetingProfiles[0]?.id,
     };
     const endedWithContent = createSession({}, 1, 40);
     const request = historySummaryInternals.getAutomaticSummaryRequest(
@@ -261,7 +261,7 @@ describe("Meeting summary pipeline contract", () => {
     expect(request).toEqual({
       sessionId: "session-1",
       targetLanguage: "fa",
-      profileId: settings.defaultSummaryProfileId,
+      profileId: settings.defaultMeetingProfileId,
     });
 
     const liveSession = createSession({ endTime: undefined, lifecycleState: "live" }, 1, 40);
@@ -289,7 +289,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-004: long summaries continue segment-by-segment and reconcile final draft", async () => {
-    installChromeRuntime();
+    installExtensionRuntime();
     historySummaryInternals.setActiveMeetingSummaryJobForTests("session-continue");
 
     generateTextChunkMock
@@ -317,7 +317,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-005: execution path uses direct prompts for small sessions and evidence extraction for large sessions", async () => {
-    installChromeRuntime();
+    installExtensionRuntime();
     const smallSession = createSession({}, 2, 40);
     const largeSession = createSession({}, 120, 180);
 
@@ -350,7 +350,7 @@ describe("Meeting summary pipeline contract", () => {
       {
         sessionId: smallSession.id,
         targetLanguage: "fa",
-        profileId: createDefaultSettings().summaryProfiles[0]!.id,
+        profileId: createDefaultSettings().meetingProfiles[0]!.id,
       },
       "manual"
     );
@@ -381,7 +381,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-006: successful summary completion creates a summary-ready notification when the user is not focused on the same session", async () => {
-    const { notificationsCreate } = installChromeRuntime();
+    const { notificationsCreate } = installExtensionRuntime();
     const session = createSession({}, 2, 40);
 
     generateTextChunkMock.mockResolvedValue({
@@ -395,7 +395,7 @@ describe("Meeting summary pipeline contract", () => {
       {
         sessionId: session.id,
         targetLanguage: "fa",
-        profileId: createDefaultSettings().summaryProfiles[0]!.id,
+        profileId: createDefaultSettings().meetingProfiles[0]!.id,
       },
       "manual"
     );
@@ -412,7 +412,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-007: summary-ready notifications are suppressed when the same session detail is visible and focused", async () => {
-    const { notificationsCreate } = installChromeRuntime();
+    const { notificationsCreate } = installExtensionRuntime();
     const session = createSession({}, 2, 40);
 
     historySummaryInternals.setMeetingHistoryViewStateForTests(9, {
@@ -432,7 +432,7 @@ describe("Meeting summary pipeline contract", () => {
       {
         sessionId: session.id,
         targetLanguage: "fa",
-        profileId: createDefaultSettings().summaryProfiles[0]!.id,
+        profileId: createDefaultSettings().meetingProfiles[0]!.id,
       },
       "manual"
     );
@@ -442,7 +442,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-008: presence updates use a stable view instance when sender.tab is unavailable", async () => {
-    installChromeRuntime();
+    installExtensionRuntime();
     const response = await historySummaryInternals.updateMeetingHistoryViewState(
       {
         selectedSessionId: "session-1",
@@ -469,7 +469,7 @@ describe("Meeting summary pipeline contract", () => {
   });
 
   test("MSUM-010: same-url meeting-history views keep independent presence state without sender tabs", async () => {
-    installChromeRuntime();
+    installExtensionRuntime();
 
     await historySummaryInternals.updateMeetingHistoryViewState(
       {
@@ -511,7 +511,7 @@ describe("Meeting summary pipeline contract", () => {
       tabsQuery,
       tabsUpdate,
       windowsUpdate,
-    } = installChromeRuntime();
+    } = installExtensionRuntime();
 
     tabsQuery.mockImplementation(
       async (queryInfo?: { active?: boolean; lastFocusedWindow?: boolean }) => {

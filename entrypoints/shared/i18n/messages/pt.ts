@@ -36,6 +36,11 @@ export const ptMessages = {
             dark: "Usar tema escuro"
         },
         optional: "(opcional)",
+        helpPopover: {
+            eyebrow: "Guia do campo",
+            moreAbout: "Mais sobre {label}",
+            close: "Fechar ajuda"
+        },
         uiLanguage: {
             label: "Idioma da interface",
             description: "Escolha o idioma usado pelo pop-up, configurações, histórico e interface de usuário na reunião.",
@@ -261,7 +266,15 @@ export const ptMessages = {
                 title: "Arquivo de reuniões",
                 description: "Decida quais dados da reunião devem ser retidos para posterior revisão, exportação e geração de resumo."
             },
-            storeMeetingChat: {
+            meetingArchiveRetention: {
+        label: "Janela de retenção do arquivo",
+        description:
+          "Escolha por quanto tempo o CaptionArc deve manter sessões encerradas e não destacadas antes de removê-las do arquivo local. Escolha Desativado para desligar toda exclusão automática do arquivo.",
+        off: "Desativado",
+        days: "{count} dias",
+        oneYear: "1 ano",
+      },
+      storeMeetingChat: {
                 label: "Armazenar bate-papo de reunião",
                 description: "Salve o bate-papo da reunião compatível para que ele possa aparecer no histórico, nas exportações e nos resumos da reunião."
             }
@@ -389,6 +402,10 @@ export const ptMessages = {
             gpt51: {
                 description: "Modelo forte e versátil com um perfil equilibrado entre qualidade e velocidade."
             },
+            gpt5: {
+                description: "Modelo GPT-5 principal quando você quer uma qualidade geral mais forte que Mini ou Nano sem subir para o GPT-5.2.",
+                badge: "Principal"
+            },
             gpt5Nano: {
                 description: "Opção de menor latência para respostas muito rápidas, com qualidade de saída mais simples.",
                 badge: "Mais rápido"
@@ -400,7 +417,157 @@ export const ptMessages = {
             gpt41Mini: {
                 description: "Variante GPT-4.1 de custo mais baixo para cargas de trabalho mais leves e qualidade de tradução moderada.",
                 badge: "Mais leve"
-            }
+            },
+            gpt41Nano: {
+                description: "A menor opção GPT-4.1 para tarefas ultraleves em que custo e latência importam mais."
+            },
+        },
+        help: {
+          apiKey: `Cole a chave da OpenAI API que o CaptionArc deve usar neste dispositivo.
+
+- A chave fica só neste dispositivo e não entra na sincronização nem na exportação de backup.
+- O ideal é usar uma chave alinhada com sua política de acesso e cobrança.
+- Se a verificação falhar, confira o estado da chave, o crédito do projeto e o acesso ao modelo.`,
+          model: `Escolha o modelo da OpenAI usado para tradução ao vivo, resumos e respostas do assistente.
+
+- Modelos mais leves costumam responder mais rápido durante reuniões.
+- Modelos mais fortes costumam escrever melhor, mas podem ser mais lentos e caros.
+- Se estiver em dúvida, mantenha o padrão recomendado.
+
+Exemplo: use um modelo rápido durante a reunião e troque para um mais forte se a qualidade do resumo passar a importar mais do que a velocidade.`,
+          uiLanguage: `Esta opção muda o idioma da própria interface do CaptionArc.
+
+- Ela afeta configurações, histórico de reuniões, superfícies rápidas e o texto da interface durante a reunião.
+- Sozinha, ela não muda o idioma da tradução ao vivo nem dos resumos.
+- Use a opção do navegador/sistema se quiser que o CaptionArc siga o ambiente automaticamente.`,
+          translationInstructions: `Estas instruções são enviadas com cada pedido de tradução ao vivo.
+
+- Escreva de forma curta e específica.
+- Use para terminologia, tom e regras de limpeza das legendas.
+- Prompts longos demais costumam deixar a tradução ao vivo mais lenta e menos estável.
+
+Exemplo: \`Mantenha os nomes dos produtos em inglês e prefira frases curtas no estilo de legenda.\``,
+          captureStartupBehavior: `Isso controla o que acontece quando o CaptionArc detecta uma reunião compatível.
+
+- **Perguntar** mostra uma confirmação antes de iniciar a captura.
+- **Sempre** inicia a captura sem essa confirmação extra.
+- **Desligado** mantém a captura inativa até você ligar manualmente.
+
+Se você quer a opção mais segura, use **Perguntar**.`,
+          captionActivationBehavior: `Isso controla como as legendas da reunião são ativadas.
+
+- **Guiado** deixa a etapa final com você.
+- **Automático** tenta ativar as legendas quando a interface do provedor permite.
+- O modo automático é mais sensível porque interage com a interface da reunião por você.
+
+Use **Guiado** a menos que a ativação automática seja realmente necessária.`,
+          sessionContinuationWindow: `Essa janela define por quanto tempo o CaptionArc pode continuar a mesma sessão quando você entra novamente na mesma reunião.
+
+- Janelas curtas criam novas sessões com mais frequência.
+- Janelas longas mantêm reentradas relacionadas na mesma sessão.
+- \`0 minutos\` significa que cada reentrada inicia uma nova sessão.
+
+Exemplo: com \`120 minutos\`, se uma reunião terminou às 10:00, ela pode continuar como a mesma sessão até 12:00 se você voltar à mesma reunião.`,
+          overlayClickThrough: `Isso controla se a camada da sobreposição durante a reunião captura seus cliques ou deixa que eles passem.
+
+- Ative quando quiser que os cliques atravessem a sobreposição e cheguem à reunião.
+- Desative quando precisar interagir diretamente com os controles do CaptionArc na sobreposição.
+- O modo de clique transparente é bom para leitura passiva, mas menos prático se você ajusta controles com frequência.`,
+          meetingArchiveRetention: `Isso controla a limpeza automática de sessões encerradas e sem estrela no arquivo local.
+
+- Períodos mais curtos removem o histórico antigo mais cedo.
+- Períodos mais longos mantêm mais histórico no dispositivo.
+- **Desligado** desativa toda exclusão automática do arquivo.
+
+Sessões com estrela continuam protegidas contra limpeza automática.`,
+          storeMeetingChat: `Isso controla se o chat compatível da reunião vira parte do registro salvo da reunião.
+
+- Quando ativado, o chat pode aparecer no histórico, nas exportações, nos resumos e no contexto do assistente.
+- O chat costuma trazer nomes, decisões ou links mais sensíveis do que as legendas visíveis.
+- Deixe desligado, a menos que salvar o chat se encaixe claramente na sua política e nas suas exigências de confidencialidade.`,
+          meetingOutputLanguage: `Define o idioma padrão das saídas da reunião, como resumos e respostas do Meeting AI.
+
+- Isso é separado do idioma da interface e da tradução ao vivo.
+- Escolha o idioma em que você normalmente quer ler o resultado final.
+- Se precisar, ainda será possível trocar o idioma de saída depois.`,
+          profileName: `Este nome identifica um perfil de reunião nas configurações e nos fluxos de IA que vêm depois.
+
+- Mantenha-o curto o suficiente para ser lido rapidamente na lista de perfis.
+- Nomeie o tipo de reunião, não uma reunião única e pontual.
+- Um bom nome deixa claro quando esse perfil deve ser reutilizado.
+
+Exemplo: Descoberta com clientes, Sincronização semanal da equipe ou Atualização do conselho.`,
+          profileDescription: `Esta descrição dá um contexto humano rápido sobre quando esse perfil de reunião deve ser usado.
+
+- Descreva de forma breve o objetivo, o público ou o ritmo recorrente da reunião.
+- Mantenha curto e concreto para reconhecer o perfil certo num relance.
+- Isso é metadado do perfil, não o lugar para instruções longas de IA.
+
+Exemplo: Revisão semanal multifuncional com líderes de produto, design e engenharia.`,
+          autoSummary: `Decide se este perfil deve gerar um resumo automaticamente quando a reunião terminar.
+
+- Ative para tipos de reunião recorrentes em que você quase sempre quer um resumo.
+- Deixe desligado se prefere resumos apenas sob demanda.
+- Resumos automáticos ainda dependem de uma configuração válida da OpenAI e de dados salvos da reunião.`,
+          summaryEffort: `Controla quanto trabalho de IA deve ser gasto no resumo deste perfil.
+
+- Menos esforço é mais rápido e mais barato.
+- Mais esforço combina melhor com reuniões longas ou desorganizadas.
+- Se estiver em dúvida, **Equilibrado** costuma ser a opção mais segura.`,
+          summaryInstructions: `Estas instruções moldam o estilo do resumo para este perfil.
+
+- Use para estrutura, público e terminologia recorrente.
+- Mantenha o foco na saída do resumo, não no comportamento do assistente ao vivo.
+- Instruções curtas e concretas geralmente funcionam melhor do que textos longos de política.
+
+Exemplo: \`Comece com um resumo executivo e depois liste ações com responsáveis.\``,
+          assistantEnabled: `Liga ou desliga o Meeting AI para este perfil.
+
+- Quando está desligado, as outras configurações do Meeting AI continuam visíveis, mas não afetam a orientação ao vivo.
+- Ative só para tipos de reunião em que sugestões ao vivo realmente ajudam.
+- Cada perfil pode ter um padrão diferente para o Meeting AI.`,
+          assistantResponseIntent: `Define a principal função que o Meeting AI deve priorizar neste perfil.
+
+- Serve para puxar o assistente mais para responder, orientar, resumir ou destacar riscos.
+- Não muda só a redação; muda a direção geral das sugestões.
+- Escolha a intenção que mais combina com a ajuda que você costuma querer nesse tipo de reunião.`,
+          assistantResponseFormat: `Controla o formato das respostas do Meeting AI.
+
+- Formatos curtos em tópicos são mais fáceis de escanear no meio da reunião.
+- Formatos mais falados são melhores quando você quer dizer a sugestão quase do jeito que veio.
+- Escolha o formato mais fácil de consumir sob pressão de tempo.`,
+          assistantResponseDepth: `Controla o quanto as respostas do Meeting AI devem ser curtas ou desenvolvidas.
+
+- Menor profundidade favorece velocidade e leitura rápida.
+- Maior profundidade traz mais contexto e raciocínio, mas pode parecer pesada ao vivo.
+- Deixe mais leve para chamadas rápidas e aumente para reuniões estratégicas.`,
+          assistantResponseTone: `Ajusta o tom padrão do texto do Meeting AI.
+
+- O tom pode deixar a sugestão mais direta, mais neutra ou mais diplomática.
+- Não muda os fatos centrais, mas muda a forma como a sugestão chega.
+- Ajuste de acordo com o contexto social da reunião, não só com sua preferência pessoal.`,
+          assistantDeliveryBias: `Define o equilíbrio entre saída rápida e orientação mais completa.
+
+- Entrega rápida é melhor quando o tempo pesa mais.
+- Entrega mais completa é melhor quando nuance importa mais que latência.
+- Se estiver em dúvida, mantenha a configuração intermediária.`,
+          assistantTriggerPolicy: `Decide em que momentos o Meeting AI deve sugerir algo durante a reunião.
+
+- Políticas mais conservadoras reduzem ruído.
+- Políticas mais ativas trazem mais sugestões, mas também podem interromper mais.
+- Escolha o menor nível que ainda ajude nos momentos importantes.`,
+          assistantParticipantScope: `Define de quem a fala ou atividade deve influenciar as sugestões do Meeting AI.
+
+- Escopos mais estreitos mantêm o assistente focado nas pessoas mais importantes para o seu papel.
+- Escopos mais amplos ajudam quando você quer uma leitura geral da sala.
+- Se o assistente parecer barulhento ou distraído, reduza o escopo.`,
+          assistantInstructions: `Estas instruções personalizam o comportamento do Meeting AI para este perfil.
+
+- Use para estilo de resposta, restrições recorrentes e expectativas específicas do domínio.
+- Mantenha separado das instruções de resumo e de tradução ao vivo.
+- Algumas regras duráveis normalmente funcionam melhor do que uma lista longa de exceções.
+
+Exemplo: \`Priorize talking points curtos e destaque riscos ocultos antes de redigir uma resposta.\``,
         },
         translation: {
             bestFor: {
@@ -697,7 +864,7 @@ export const ptMessages = {
                     meetingSessions: "Sessões de reunião",
                     translations: "Traduções",
                     summaries: "Resumos",
-                    summaryProfiles: "Perfis resumidos",
+                    meetingProfiles: "Perfis de reunião",
                     sharedSettings: "Configurações compartilhadas"
                 },
                 local: {
@@ -739,7 +906,7 @@ export const ptMessages = {
         dataRecovery: {
             backupFile: {
                 title: "Arquivo de backup criptografado",
-                description: "O backup exportado contém suas configurações, perfis resumidos, sessões de reuniões salvas, transcrições, histórico de bate-papo, traduções e resumos. Use-o quando a sincronização na nuvem não estiver disponível ou quando você precisar de um instantâneo criptografado portátil.",
+                description: "O backup exportado contém suas configurações compartilhadas, perfis de reunião, sessões salvas, transcrições, histórico de chat, traduções e resumos. Segredos locais do dispositivo, como a chave de API da OpenAI, ficam fora do backup. Use-o quando a sincronização na nuvem não estiver disponível ou quando precisar de um snapshot criptografado portátil.",
                 export: "Exportar todos os dados",
                 import: "Importar arquivo de backup"
             },
@@ -766,8 +933,8 @@ export const ptMessages = {
             },
             deleteArchive: {
                 title: "Excluir arquivo salvo",
-                syncedDescription: "Exclua o arquivo sincronizado deste dispositivo, dos seus provedores de nuvem conectados e de outros dispositivos sincronizados. Sua configuração, preferências e perfis de resumo de OpenAI permanecem intactos.",
-                localDescription: "Remova todas as sessões de reunião salvas do armazenamento local. Isso mantém sua configuração, preferências e perfis de resumo de OpenAI."
+                syncedDescription: "Exclua o arquivo sincronizado deste dispositivo, dos provedores de nuvem conectados e de outros dispositivos sincronizados. Sua configuração da OpenAI, preferências e perfis de reunião permanecem intactos.",
+                localDescription: "Remova todas as sessões salvas do armazenamento local. Isso mantém sua configuração da OpenAI, preferências e perfis de reunião."
             },
             confirmDelete: {
                 syncedTitle: "Excluir arquivo sincronizado em todos os lugares?",

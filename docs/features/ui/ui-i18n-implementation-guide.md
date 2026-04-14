@@ -10,6 +10,16 @@ Canonical architecture reference:
 
 - `../../architecture/ui-i18n-strategy.md`
 
+Current inventory reference:
+
+- `./ui-i18n-coverage-inventory.md`
+
+Historical note:
+
+- the phase breakdown below preserves the original rollout order
+- early phase-1 examples mention only the initial bootstrap locales (`en` and `fa`)
+- current implementation ships 12 UI locales and uses a separate, broader AI language catalog for translation and meeting-output features
+
 ## Outcome
 
 The target end state is:
@@ -31,11 +41,12 @@ Goal:
 - add the `uiLanguage` setting plumbing
 - migrate the popup to the new translator
 
-Files expected in this phase:
+Files expected in this historical phase-1 bootstrap:
 
 - create `entrypoints/shared/i18n/types.ts`
-- create `entrypoints/shared/i18n/messages/en.ts`
-- create `entrypoints/shared/i18n/messages/fa.ts`
+- create the initial bootstrap locale catalogs:
+  - `entrypoints/shared/i18n/messages/en.ts`
+  - `entrypoints/shared/i18n/messages/fa.ts`
 - create `entrypoints/shared/i18n/catalog.ts`
 - create `entrypoints/shared/i18n/locale.ts`
 - create `entrypoints/shared/i18n/index.ts`
@@ -46,6 +57,11 @@ Files expected in this phase:
 - update `entrypoints/background/settings.ts`
 - update `entrypoints/popup/App.tsx`
 - update `entrypoints/popup/main.tsx`
+
+Historical bootstrap note:
+
+- phase 1 started with `en` and `fa` only
+- the repository now also ships dedicated locale catalogs for `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko` under `entrypoints/shared/i18n/messages/`
 
 Acceptance signals:
 
@@ -120,7 +136,7 @@ Goal:
 Expected files:
 
 - `_locales/en/messages.json`
-- `_locales/fa/messages.json`
+- any additional browser-metadata locale files intentionally added for the release scope
 - `wxt.config.ts` or manifest configuration if needed for `default_locale`
 
 Acceptance signals:
@@ -135,6 +151,7 @@ Acceptance signals:
 - `entrypoints/shared/i18n/catalog.ts` registers the full shipped locale set and keeps English as the fallback locale.
 - non-English locale catalogs are lazy-loaded through the shared catalog loader to reduce default bundle pressure.
 - `en` remains the canonical authored catalog and shipped non-English locales provide dedicated locale modules for user-facing UI namespaces.
+- AI-facing language choices for live translation and meeting output are defined separately in `entrypoints/shared/language-metadata.ts` and are broader than the UI locale set.
 - Phase 5 browser metadata localization via `_locales` remains future work.
 
 ## Required Design Rules
@@ -144,9 +161,11 @@ Acceptance signals:
 Never reuse:
 
 - `targetLanguage`
-- `summaryLanguage`
+- `meetingOutputLanguage`
 
 for UI copy selection.
+
+Also do not assume the shipped UI locale set and the AI language catalog are the same list. They are separate product surfaces with separate governance.
 
 ### Keep `uiLanguage` Local To The Device
 
@@ -183,7 +202,7 @@ Shipped locale policy:
 
 The shared i18n core should provide:
 
-- `type SupportedUiLocale = "en" | "fa"`
+- `type SupportedUiLocale = typeof SUPPORTED_UI_LOCALES[number]`
 - `type UiLanguageSetting = "system" | SupportedUiLocale`
 - `resolveUiLocale(setting, browserLocale)`
 - `getLocaleDirection(locale)`
@@ -192,9 +211,20 @@ The shared i18n core should provide:
 - `useI18n()`
 - `useT()`
 
+Current shipped UI locale set:
+
+- `en`, `fa`, `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko`
+
 The translator should support named interpolation:
 
 - example pattern: `t("popup.status.updatedMinutesAgo", { minutes: 5 })`
+
+For settings help popovers:
+
+- keep shared trigger and shell strings in `common.helpPopover.*`
+- keep field markdown in `options.help.*`
+- write markdown for compact popovers first: short paragraphs, short bullets, and at most one small example
+- when adding a new help entry, add it for every shipped locale in the same change instead of relying on partial follow-up translation
 
 Non-default locale catalogs may load asynchronously before a surface swaps locale. The surface should keep its previous locale active until the new catalog is ready, then apply `lang`, `dir`, and translated chrome in one transition.
 

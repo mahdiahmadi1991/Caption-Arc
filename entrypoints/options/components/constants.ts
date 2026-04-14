@@ -1,4 +1,5 @@
 import { LANGUAGE_OPTIONS } from "../../shared/language-metadata";
+import { MEETING_ARCHIVE_RETENTION_DAY_OPTIONS } from "../../shared/meeting-archive-retention";
 import type { UiTranslator } from "../../shared/i18n";
 
 const UI_LANGUAGE_LABEL_KEYS = {
@@ -38,6 +39,13 @@ export function getOpenAiModels(t: UiTranslator) {
       description: t("options.models.gpt51.description"),
     },
     {
+      id: "gpt-5",
+      name: "GPT-5",
+      description: t("options.models.gpt5.description"),
+      badgeLabel: t("options.models.gpt5.badge"),
+      badgeTone: "warning",
+    },
+    {
       id: "gpt-5-nano",
       name: "GPT-5 Nano",
       description: t("options.models.gpt5Nano.description"),
@@ -58,6 +66,11 @@ export function getOpenAiModels(t: UiTranslator) {
       badgeLabel: t("options.models.gpt41Mini.badge"),
       badgeTone: "neutral",
     },
+    {
+      id: "gpt-4.1-nano",
+      name: "GPT-4.1 Nano",
+      description: t("options.models.gpt41Nano.description"),
+    },
   ] as const;
 }
 
@@ -72,5 +85,17 @@ export function getLanguageOptions(t: UiTranslator) {
             ]
           )
         : language.name,
+  }));
+}
+
+export function getMeetingArchiveRetentionOptions(t: UiTranslator) {
+  return MEETING_ARCHIVE_RETENTION_DAY_OPTIONS.map((days) => ({
+    id: String(days),
+    name:
+      days === 0
+        ? t("options.workspace.meetingArchiveRetention.off")
+        : days === 365
+        ? t("options.workspace.meetingArchiveRetention.oneYear")
+        : t("options.workspace.meetingArchiveRetention.days", { count: days }),
   }));
 }

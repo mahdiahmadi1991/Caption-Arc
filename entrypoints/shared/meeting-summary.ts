@@ -1,6 +1,6 @@
 import type { MeetingSession, MeetingSummary } from "./meeting-session";
 import { getLanguageName } from "./language-metadata";
-import { resolveSummaryProfilePrompt } from "./summary-profiles";
+import { resolveMeetingProfilePrompt } from "./meeting-profiles";
 import type {
   SummaryEvidence,
   SummaryExecutionStrategy,
@@ -53,7 +53,7 @@ CRITICAL OUTPUT RULES:
 - Return only the summary in Markdown.
 
 Summary instructions:
-${resolveSummaryProfilePrompt({ id: profileId, prompt: summaryPrompt })}
+${resolveMeetingProfilePrompt({ id: profileId, prompt: summaryPrompt })}
 
 Transcript:
 ${transcript || "No transcript content was captured."}
@@ -88,7 +88,7 @@ CRITICAL OUTPUT RULES:
 - Translate all section titles, labels, bullets, and connective prose into ${languageName}, even if the user's profile names those sections in English.
 
 Summary instructions:
-${resolveSummaryProfilePrompt({ id: profileId, prompt: summaryPrompt })}
+${resolveMeetingProfilePrompt({ id: profileId, prompt: summaryPrompt })}
 
 Session evidence:
 
@@ -175,7 +175,7 @@ CRITICAL OUTPUT RULES:
 - Translate all headings, section labels, and explanatory text into ${languageName}, even when the user's profile describes them in English.
 
 Summary instructions:
-${resolveSummaryProfilePrompt({ id: profileId, prompt: summaryPrompt })}
+${resolveMeetingProfilePrompt({ id: profileId, prompt: summaryPrompt })}
 
 Merged session evidence:
 ${evidenceJson}

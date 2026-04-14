@@ -13,10 +13,11 @@ This matrix maps data-transfer behavior-contract rules to available validation s
 
 | Case ID | Contract ID | Behavior Summary | Validation Surface | Status |
 | --- | --- | --- | --- | --- |
-| DXFER-001 | C-DXFER-001 | export bundles use the fixed bundle manifest plus portable settings and normalized sessions | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
+| DXFER-001 | C-DXFER-001 | export bundles use the fixed bundle manifest plus portable settings, including archive retention, and normalized sessions | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
 | DXFER-002 | C-DXFER-002 | import normalization rejects malformed bundle kinds, versions, and payload shapes | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
 | DXFER-003 | C-DXFER-003 | import apply failures attempt settings rollback before surfacing errors | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
-| DXFER-004 | C-DXFER-001, C-DXFER-002 | backup portability excludes the device-local OpenAI API key and drops legacy secret fields on import | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
+| DXFER-004 | C-DXFER-001, C-DXFER-002 | backup portability excludes the device-local OpenAI API key, preserves portable archive retention, and drops legacy secret fields on import | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
+| DXFER-005 | C-DXFER-001, C-DXFER-002 | portable bundles preserve the canonical archive-retention `Off` value through export and import | `tests/google-meet/data-transfer.contract.test.ts` | implemented |
 
 ## Notes
 

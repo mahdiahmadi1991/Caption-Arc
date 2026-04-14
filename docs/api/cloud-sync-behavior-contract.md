@@ -41,10 +41,11 @@ Source: `initializeCloudSyncEngine`, `noteCloudSyncSettingsSaved`, `noteMeetingS
 Rules:
 
 1. Cloud-sync initialization synchronizes checkpoint connections, queues reconciliation, and schedules a delayed background-start run.
-2. Settings saves enqueue both shared-settings and device-profile sync tasks before scheduling a follow-up run.
+2. Settings saves enqueue both shared-settings and device-profile sync tasks before scheduling a follow-up run, and shared-settings sync includes the meeting archive retention preference.
 3. Session saves enqueue both session-metadata and session-events sync tasks keyed by session sync ID.
-4. Session deletion and archive-clear flows enqueue tombstone tasks and schedule a follow-up run instead of applying remote deletion inline.
-5. Provider targets are filtered through browser support before tasks are enqueued.
+4. Session deletion, retention-driven auto-prune deletion, and archive-clear flows enqueue tombstone tasks and schedule a follow-up run instead of applying remote deletion inline.
+5. When the archive-retention setting is `Off`, retention-driven auto-prune deletion does not enqueue any deletion work because all automatic archive deletion is disabled.
+6. Provider targets are filtered through browser support before tasks are enqueued.
 
 ## C-CSYNC-003: Queue processing retries transient provider failures with capped exponential delay and manual-retry promotion
 

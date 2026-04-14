@@ -27,18 +27,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function normalizePortableSettingsInput(input: unknown): PortableSettings {
+  if (!isRecord(input)) {
+    throw new Error("The data bundle settings payload is invalid.");
+  }
+
+  const settings = input as Settings & {
+    summaryLanguage?: string;
+    summaryProfiles?: Settings["meetingProfiles"];
+    defaultSummaryProfileId?: string;
+  };
+
+  return {
+    model: settings.model,
+    targetLanguage: settings.targetLanguage,
+    translationEnabled: settings.translationEnabled,
+    customPrompt: settings.customPrompt,
+    meetingOutputLanguage:
+      settings.meetingOutputLanguage || settings.summaryLanguage || "en",
+    meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
+    meetingProfiles:
+      settings.meetingProfiles || settings.summaryProfiles || [],
+    defaultMeetingProfileId:
+      settings.defaultMeetingProfileId || settings.defaultSummaryProfileId || "",
+    appearance: settings.appearance,
+    overlayVisible: settings.overlayVisible,
+    captureStartupBehavior: settings.captureStartupBehavior,
+    captionActivationBehavior: settings.captionActivationBehavior,
+    sessionContinuationWindowMinutes: settings.sessionContinuationWindowMinutes,
+    overlayOpacity: settings.overlayOpacity,
+    overlayClickThrough: settings.overlayClickThrough,
+    storeMeetingChat: settings.storeMeetingChat,
+    legalRiskAcknowledgements: { ...settings.legalRiskAcknowledgements },
+  };
+}
+
 function createPortableSettings(settings: Settings): PortableSettings {
   return {
     model: settings.model,
     targetLanguage: settings.targetLanguage,
     translationEnabled: settings.translationEnabled,
     customPrompt: settings.customPrompt,
-    summaryLanguage: settings.summaryLanguage,
-    summaryProfiles: settings.summaryProfiles.map((profile) => ({
+    meetingOutputLanguage: settings.meetingOutputLanguage,
+    meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
+    meetingProfiles: settings.meetingProfiles.map((profile) => ({
       ...profile,
       assistant: { ...profile.assistant },
     })),
-    defaultSummaryProfileId: settings.defaultSummaryProfileId,
+    defaultMeetingProfileId: settings.defaultMeetingProfileId,
     appearance: settings.appearance,
     overlayVisible: settings.overlayVisible,
     captureStartupBehavior: settings.captureStartupBehavior,
@@ -134,7 +170,7 @@ function normalizeAppDataBundle(input: unknown): AppDataBundle {
     throw new Error("The data bundle does not contain a session list.");
   }
 
-  const settings = createPortableSettings(input.settings as Settings);
+  const settings = normalizePortableSettingsInput(input.settings);
   const sessions = input.sessions.map((session) =>
     normalizeMeetingSession(session as StoredMeetingSession)
   );

@@ -119,9 +119,9 @@ describe("Session detail summary deep-link behavior", () => {
         React.createElement(SessionDetail, {
           session,
           translationTargetLanguage: "en",
-          summaryDefaultLanguage: "en",
-          summaryProfiles: settings.summaryProfiles,
-          defaultSummaryProfileId: settings.defaultSummaryProfileId,
+          meetingOutputDefaultLanguage: "en",
+          meetingProfiles: settings.meetingProfiles,
+          defaultMeetingProfileId: settings.defaultMeetingProfileId,
           openAiAvailability: {
             state: "ready",
             configured: true,
@@ -185,9 +185,9 @@ describe("Session detail summary deep-link behavior", () => {
         React.createElement(SessionDetail, {
           session,
           translationTargetLanguage: "en",
-          summaryDefaultLanguage: "en",
-          summaryProfiles: settings.summaryProfiles,
-          defaultSummaryProfileId: settings.defaultSummaryProfileId,
+          meetingOutputDefaultLanguage: "en",
+          meetingProfiles: settings.meetingProfiles,
+          defaultMeetingProfileId: settings.defaultMeetingProfileId,
           openAiAvailability: {
             state: "ready",
             configured: true,

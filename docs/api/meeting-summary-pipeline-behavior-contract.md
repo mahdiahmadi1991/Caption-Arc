@@ -39,10 +39,10 @@ Source: `getAutomaticSummaryRequest`, `maybeQueueAutomaticSummaryForEndedSession
 
 Rules:
 
-1. Automatic summary requests are not created unless summary language and at least one summary profile are configured.
+1. Automatic summary requests are not created unless meeting output language and at least one meeting profile are configured.
 2. Automatic summary requests are not created for still-live sessions.
 3. Automatic summary requests are not created when both captions and chat messages are empty.
-4. Automatic summary requests use the session summary profile or the resolved default profile.
+4. Automatic summary requests use the session meeting profile or the resolved default meeting profile.
 5. Automatic summary requests are skipped when the resolved profile does not enable `autoSummarizeOnMeetingEnd`.
 6. Automatic summary requests are skipped when an existing summary for the same profile and language is already newer than the latest session boundary.
 7. Automatic reconcile scans only ended sessions from the last `60` minutes and limits the candidate set to `5` sessions.

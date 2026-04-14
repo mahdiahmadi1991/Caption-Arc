@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 type SessionStore = Record<string, unknown>;
 type ChromeTabLike = { id?: number };
 
-function installChromeStorageSession(
+function installExtensionStorageSession(
   initialState: SessionStore = {},
   options?: { includeSession?: boolean }
 ) {
@@ -84,7 +84,7 @@ async function loadDiagnosticsCollector(
   options?: { includeSession?: boolean }
 ) {
   vi.resetModules();
-  const storage = installChromeStorageSession(initialState, options);
+  const storage = installExtensionStorageSession(initialState, options);
   const diagnosticsModule = await import("../../entrypoints/background/diagnostics");
   const sharedModule = await import("../../entrypoints/shared/diagnostics");
 

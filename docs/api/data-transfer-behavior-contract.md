@@ -25,7 +25,7 @@ Source: `createPortableSettings`, `createPortableSession`, `createAppDataBundle`
 Rules:
 
 1. Export bundles always use kind `captionarc-data-bundle` and bundle version `1`.
-2. Portable settings export captures shared AI and overlay preferences plus persisted legal-risk acknowledgments.
+2. Portable settings export captures shared AI, archive-retention, and overlay preferences plus persisted legal-risk acknowledgments.
 3. Portable settings export omits device-local fields such as connected cloud providers, overlay positions, device identity, verification snapshots, and the device-local OpenAI API key.
 4. Portable sessions are normalized before export.
 5. Portable sessions keep normalized event streams and assistant artifacts while omitting redundant top-level derived collections such as `captions`, `chatMessages`, `derived`, `searchableText`, and duplicated top-level `summaries`.
@@ -41,7 +41,7 @@ Rules:
 2. Imports reject bundle versions other than `1`.
 3. Imports reject payloads whose manifest kind is not `captionarc-data-bundle`.
 4. Imports reject payloads missing object-shaped settings or array-shaped sessions.
-5. Accepted bundle settings are reserialized through `createPortableSettings(...)` before application, which drops any unexpected device-local secret fields from imported settings payloads.
+5. Accepted bundle settings are reserialized through `createPortableSettings(...)` before application, which drops any unexpected device-local secret fields from imported settings payloads and re-normalizes the meeting archive retention window through the portable shared-settings shape, including the canonical `Off` value (`0`).
 6. Accepted bundle sessions are normalized through `normalizeMeetingSession(...)` before application.
 
 ## C-DXFER-003: Import apply failures attempt settings rollback before surfacing an error

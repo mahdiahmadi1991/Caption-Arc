@@ -6,7 +6,7 @@ import type { MeetingSession } from "./types";
 import type {
   MeetingAssistantOutput,
   SummaryJobStatus,
-  SummaryProfile,
+  MeetingProfile,
 } from "../../background/types";
 import {
   buildMeetingSessionTimelineSegments,
@@ -148,9 +148,9 @@ function getRequestedSummaryFallback(
 type SessionDetailProps = {
   session: MeetingSession;
   translationTargetLanguage: string;
-  summaryDefaultLanguage: string;
-  summaryProfiles: SummaryProfile[];
-  defaultSummaryProfileId: string;
+  meetingOutputDefaultLanguage: string;
+  meetingProfiles: MeetingProfile[];
+  defaultMeetingProfileId: string;
   openAiAvailability: OpenAiServiceAvailability;
   translatingCaptionKey: string | null;
   translatingSessionId: string | null;
@@ -865,9 +865,9 @@ function ExportMenu({
 export function SessionDetail({
   session,
   translationTargetLanguage,
-  summaryDefaultLanguage,
-  summaryProfiles,
-  defaultSummaryProfileId,
+  meetingOutputDefaultLanguage,
+  meetingProfiles,
+  defaultMeetingProfileId,
   openAiAvailability,
   translatingCaptionKey,
   translatingSessionId,
@@ -898,7 +898,9 @@ export function SessionDetail({
     hasSummaries,
     exportMarkdownTranscript,
   } = useSessionDetail(session);
-  const [summaryLanguage, setSummaryLanguage] = useState(summaryDefaultLanguage);
+  const [meetingOutputLanguage, setMeetingOutputLanguage] = useState(
+    meetingOutputDefaultLanguage
+  );
   const [bulkTranslationLanguage, setBulkTranslationLanguage] = useState(
     translationTargetLanguage
   );
@@ -920,12 +922,12 @@ export function SessionDetail({
     [session.summaries]
   );
   const [selectedProfileId, setSelectedProfileId] = useState(
-    session.summaryProfileId || defaultSummaryProfileId || summaryProfiles[0]?.id || ""
+    session.meetingProfileId || defaultMeetingProfileId || meetingProfiles[0]?.id || ""
   );
 
   useEffect(() => {
-    setSummaryLanguage(summaryDefaultLanguage);
-  }, [summaryDefaultLanguage, session.id]);
+    setMeetingOutputLanguage(meetingOutputDefaultLanguage);
+  }, [meetingOutputDefaultLanguage, session.id]);
 
   useEffect(() => {
     setItemTranslationLanguages({});
@@ -944,14 +946,14 @@ export function SessionDetail({
 
   useEffect(() => {
     const preferredProfileId =
-      session.summaryProfileId || defaultSummaryProfileId || summaryProfiles[0]?.id || "";
-    const nextProfileId = summaryProfiles.some(
+      session.meetingProfileId || defaultMeetingProfileId || meetingProfiles[0]?.id || "";
+    const nextProfileId = meetingProfiles.some(
       (profile) => profile.id === preferredProfileId
     )
       ? preferredProfileId
-      : summaryProfiles[0]?.id || "";
+      : meetingProfiles[0]?.id || "";
     setSelectedProfileId(nextProfileId);
-  }, [defaultSummaryProfileId, session.id, session.summaryProfileId, summaryProfiles]);
+  }, [defaultMeetingProfileId, session.id, session.meetingProfileId, meetingProfiles]);
 
   useEffect(() => {
     const requestedSummary =
@@ -972,30 +974,30 @@ export function SessionDetail({
       return;
     }
 
-    setSummaryLanguage(summaryTarget.language);
+    setMeetingOutputLanguage(summaryTarget.language);
     setSelectedProfileId(summaryTarget.profileId);
     setSelectedSummaryKey(summaryTarget.key);
     setSummaryExpanded(true);
   }, [requestedSummaryExpanded, requestedSummaryKey, session.id, session.summaries]);
 
   const selectedProfile =
-    summaryProfiles.find((profile) => profile.id === selectedProfileId) || null;
+    meetingProfiles.find((profile) => profile.id === selectedProfileId) || null;
   const sessionProfile =
-    summaryProfiles.find((profile) => profile.id === session.summaryProfileId) || null;
+    meetingProfiles.find((profile) => profile.id === session.meetingProfileId) || null;
   const matchingSummaries = useMemo(
     () =>
       getMeetingSummaryList(session.summaries).filter(
         (summary) =>
           summary.profileId === selectedProfileId &&
-          summary.language === summaryLanguage
+          summary.language === meetingOutputLanguage
       ),
-    [selectedProfileId, session.summaries, summaryLanguage]
+    [selectedProfileId, session.summaries, meetingOutputLanguage]
   );
   const activeSummary =
     matchingSummaries.find((summary) => summary.key === selectedSummaryKey) ||
     findLatestMeetingSummary(session.summaries, {
       profileId: selectedProfileId,
-      language: summaryLanguage,
+      language: meetingOutputLanguage,
     });
   const summaryVersionOptions = matchingSummaries.map((summary, index) => {
     const generatedAt = new Date(summary.generatedAt).toLocaleString(locale);
@@ -1033,7 +1035,7 @@ export function SessionDetail({
             : undefined,
     };
   });
-  const summaryDirection = getLanguageDirection(summaryLanguage);
+  const summaryDirection = getLanguageDirection(meetingOutputLanguage);
   const hasActiveSummaryJob =
     Boolean(summaryJobStatus) && !isTerminalSummaryJobState(summaryJobStatus?.state);
   const isSummarizing = summarizingSessionId === session.id || hasActiveSummaryJob;
@@ -1161,7 +1163,7 @@ export function SessionDetail({
             onCancel={() => onCancelSummary(session.id)}
             onRetry={() =>
               selectedProfile &&
-              onGenerateSummary(session.id, summaryLanguage, selectedProfile.id)
+              onGenerateSummary(session.id, meetingOutputLanguage, selectedProfile.id)
             }
             embedded
           />
@@ -1713,14 +1715,14 @@ export function SessionDetail({
               }
               onAction={() =>
                 selectedProfile &&
-                onGenerateSummary(session.id, summaryLanguage, selectedProfile.id)
+                onGenerateSummary(session.id, meetingOutputLanguage, selectedProfile.id)
               }
               actionLoading={isSummarizing}
               actionDisabled={
                 !selectedProfile || hasActiveSummaryJob || summaryActionsDisabled
               }
-              language={summaryLanguage}
-              onLanguageChange={setSummaryLanguage}
+              language={meetingOutputLanguage}
+              onLanguageChange={setMeetingOutputLanguage}
               languageOptions={LANGUAGE_OPTIONS.map((language) => ({
                 id: language.code,
                 name: language.name,
@@ -1731,20 +1733,20 @@ export function SessionDetail({
                   onChange={(nextProfileId) => {
                     setSelectedProfileId(nextProfileId);
                   }}
-                  options={summaryProfiles.map((profile) => ({
+                  options={meetingProfiles.map((profile) => ({
                     id: profile.id,
                     name: profile.name,
                     description: profile.description,
                     badgeLabel:
-                      profile.id === session.summaryProfileId
+                      profile.id === session.meetingProfileId
                         ? t("history.detail.summary.version.session")
-                        : profile.id === defaultSummaryProfileId
+                        : profile.id === defaultMeetingProfileId
                           ? t("history.detail.summary.version.default")
                           : undefined,
                     badgeTone:
-                      profile.id === session.summaryProfileId
+                      profile.id === session.meetingProfileId
                         ? "accent"
-                        : profile.id === defaultSummaryProfileId
+                        : profile.id === defaultMeetingProfileId
                           ? "neutral"
                           : undefined,
                   }))}
@@ -1899,7 +1901,7 @@ export function SessionDetail({
                     profile:
                       selectedProfile?.name ||
                       t("history.detail.summary.genericProfile"),
-                    language: getLanguageName(summaryLanguage),
+                    language: getLanguageName(meetingOutputLanguage),
                   })}
                 </p>
                 <p className="mt-2 text-sm text-[var(--app-text-muted)]">

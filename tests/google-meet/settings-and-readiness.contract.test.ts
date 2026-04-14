@@ -13,7 +13,7 @@ vi.mock("../../entrypoints/background/cloud-sync", () => ({
   noteCloudSyncSettingsSaved: cloudSyncSettingsSavedMock,
 }));
 
-function installChromeStorage(initialState: Store = {}) {
+function installExtensionStorage(initialState: Store = {}) {
   const storageState: Store = { ...initialState };
   const local = {
     get: vi.fn(async (keys?: string | string[]) => {
@@ -51,18 +51,33 @@ beforeEach(() => {
 describe("Settings and readiness contract", () => {
   test("SETRDY-001: settings load merges legacy and split-state payloads before normalization", async () => {
     const base = createDefaultSettings();
-    const storage = installChromeStorage({
+    const legacyCustomProfile = {
+      ...base.meetingProfiles[0]!,
+      id: "legacy-custom",
+      name: "Legacy Custom",
+    };
+    const {
+      meetingProfiles: _meetingProfiles,
+      defaultMeetingProfileId: _defaultMeetingProfileId,
+      meetingOutputLanguage: _meetingOutputLanguage,
+      ...legacyBase
+    } = base;
+    const storage = installExtensionStorage({
       settings: {
-        ...base,
+        ...legacyBase,
         model: "gpt-5.1",
         targetLanguage: "de",
         deviceLabel: "legacy-label",
+        summaryLanguage: "ja",
+        summaryProfiles: [base.meetingProfiles[0]!, legacyCustomProfile],
+        defaultSummaryProfileId: legacyCustomProfile.id,
       },
       settingsState: {
         schemaVersion: 1,
         shared: {
           model: "gpt-4.1",
           targetLanguage: "fa",
+          meetingArchiveRetentionDays: 30,
           legalRiskAcknowledgements: {
             storeMeetingChat: 55,
           },
@@ -87,6 +102,9 @@ describe("Settings and readiness contract", () => {
     expect(result.success).toBe(true);
     expect(result.settings.model).toBe("gpt-4.1");
     expect(result.settings.targetLanguage).toBe("fa");
+    expect(result.settings.meetingOutputLanguage).toBe("ja");
+    expect(result.settings.meetingArchiveRetentionDays).toBe(30);
+    expect(result.settings.defaultMeetingProfileId).toBe(legacyCustomProfile.id);
     expect(result.settings.openaiApiKey).toBe("key-from-state");
     expect(result.settings.deviceLabel).toBe("state-label");
     expect(result.settings.connectedCloudProviders).toEqual(["google-drive"]);
@@ -102,7 +120,7 @@ describe("Settings and readiness contract", () => {
 
   test("SETRDY-002: settings save persists both shapes and notifies cloud-sync", async () => {
     const base = createDefaultSettings();
-    const storage = installChromeStorage({
+    const storage = installExtensionStorage({
       settingsState: {
         schemaVersion: 1,
         shared: base,
@@ -123,6 +141,7 @@ describe("Settings and readiness contract", () => {
     const response = await saveSettings({
       model: "gpt-5.2",
       translationEnabled: true,
+      meetingArchiveRetentionDays: 365,
       connectedCloudProviders: ["onedrive"],
       legalRiskAcknowledgements: {
         captureStartupAlways: 101,
@@ -135,6 +154,7 @@ describe("Settings and readiness contract", () => {
 
     expect(response.success).toBe(true);
     expect(response.settings.model).toBe("gpt-5.2");
+    expect(response.settings.meetingArchiveRetentionDays).toBe(365);
     expect(response.settings.termsAcceptance).toEqual({
       version: "2026-04-10",
       acceptedAt: 4567,
@@ -144,6 +164,7 @@ describe("Settings and readiness contract", () => {
     const persistedState = storage.storageState.settingsState as Record<string, unknown>;
     expect(persistedSettings.model).toBe("gpt-5.2");
     expect(persistedSettings.translationEnabled).toBe(true);
+    expect(persistedSettings.meetingArchiveRetentionDays).toBe(365);
     expect(persistedSettings.legalRiskAcknowledgements).toEqual({
       captureStartupAlways: 101,
     });
@@ -161,7 +182,41 @@ describe("Settings and readiness contract", () => {
     expect((persistedState.shared as Record<string, unknown>).legalRiskAcknowledgements).toEqual({
       captureStartupAlways: 101,
     });
+    expect((persistedState.shared as Record<string, unknown>).meetingArchiveRetentionDays).toBe(365);
     expect(cloudSyncSettingsSavedMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("SETRDY-002B: archive retention off persists as the canonical shared value", async () => {
+    const base = createDefaultSettings();
+    const storage = installExtensionStorage({
+      settingsState: {
+        schemaVersion: 1,
+        shared: base,
+        secrets: { openaiApiKey: "" },
+        local: {
+          deviceId: base.deviceId,
+          deviceLabel: base.deviceLabel,
+          uiLanguage: base.uiLanguage,
+          connectedCloudProviders: [],
+          overlayPositionsByPlatform: {},
+          verificationSnapshot: null,
+          termsAcceptance: null,
+          termsDecline: null,
+        },
+      },
+    });
+    const { saveSettings } = await import("../../entrypoints/background/settings");
+
+    const response = await saveSettings({
+      meetingArchiveRetentionDays: 0,
+    });
+
+    expect(response.success).toBe(true);
+    expect(response.settings.meetingArchiveRetentionDays).toBe(0);
+    const persistedSettings = storage.storageState.settings as Record<string, unknown>;
+    const persistedState = storage.storageState.settingsState as Record<string, unknown>;
+    expect(persistedSettings.meetingArchiveRetentionDays).toBe(0);
+    expect((persistedState.shared as Record<string, unknown>).meetingArchiveRetentionDays).toBe(0);
   });
 
   test("SETRDY-003: OpenAI readiness uses current connection signature and snapshot state", () => {
@@ -201,7 +256,7 @@ describe("Settings and readiness contract", () => {
 
   test("SETRDY-004: verification success/failure clears stale readiness when OpenAI is not configured", async () => {
     const base = createDefaultSettings();
-    const storage = installChromeStorage({
+    const storage = installExtensionStorage({
       settings: {
         ...base,
         openaiApiKey: "",
@@ -229,7 +284,7 @@ describe("Settings and readiness contract", () => {
 
   test("SETRDY-006: invalid local terms acceptance records are discarded during normalization", async () => {
     const base = createDefaultSettings();
-    installChromeStorage({
+    installExtensionStorage({
       settingsState: {
         schemaVersion: 1,
         shared: {
@@ -262,7 +317,7 @@ describe("Settings and readiness contract", () => {
 
   test("SETRDY-008: current-version terms decisions reconcile to the latest local state and save returns the normalized settings", async () => {
     const base = createDefaultSettings();
-    installChromeStorage({
+    installExtensionStorage({
       settings: base,
     });
 
