@@ -86,7 +86,7 @@
     "open-ai"
   ],
   "author": "Mohammad Mahdi Ahmadi",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@10.18.3",
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
