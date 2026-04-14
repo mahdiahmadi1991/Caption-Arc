@@ -194,11 +194,6 @@ export const ptMessages = {
                 description: "A sincronização na nuvem é o principal caminho de continuidade. Use o arquivo criptografado como backup alternativo ou exclua o arquivo salvo quando precisar de uma redefinição limpa."
             }
         },
-        saveBadge: {
-            saving: "Salvando alterações",
-            attention: "Precisa de atenção",
-            saved: "Salvo automaticamente"
-        },
         workspace: {
             appearance: {
                 title: "Aparência",
@@ -240,7 +235,7 @@ export const ptMessages = {
             },
             sessionContinuation: {
                 title: "Janela de continuação da sessão",
-                description: "Decida quanto tempo CaptionArc deve oferecer para continuar a mesma sessão após voltar.",
+                description: "Decida por quanto tempo o CaptionArc deve oferecer a continuação da mesma sessão após a atividade mais recente da sessão (incluindo quando você sai da reunião).",
                 windowLabel: "Janela",
                 off: "Desligado",
                 oneHour: "1 hora",
@@ -875,13 +870,6 @@ export const ptMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "Carregando configurações...",
-                saving: "Salvando alterações automaticamente...",
-                saved: "Todas as alterações salvas automaticamente.",
-                loadFailed: "Não foi possível carregar as configurações salvas.",
-                autosaveFailed: "Falha no salvamento automático. Sua última alteração ainda é local nesta guia."
-            },
             connection: {
                 addApiKey: "Adicione sua chave de API OpenAI e teste a conexão.",
                 runTest: "Execute Test Connection para verificar sua chave OpenAI e modelo selecionado.",
@@ -1305,6 +1293,8 @@ export const ptMessages = {
             enablingCaptionsBody: "CaptionArc está tentando ativar as legendas para esta reunião agora.",
             readyTitle: "A captura está pronta",
             readyBody: "Comece a falar e linhas de legenda aparecerão aqui conforme a reunião continua.",
+            segmentEmptyTitle: "Sem itens de transcrição ou chat",
+            segmentEmptyBody: "Esta sessão não capturou legendas nem mensagens de chat da reunião.",
             close: "Fechar"
         },
         sessionSeparator: {

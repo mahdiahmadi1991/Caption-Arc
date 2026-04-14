@@ -37,8 +37,10 @@ const REGION_SELECTORS = [
   '[data-tid="closed-caption-renderer-wrapper"]',
   '[data-tid="closed-caption-v2-window-wrapper"]',
   '[data-tid="closed-caption-v2-virtual-list-content"]',
-  '[aria-label="Live Captions"]',
-  '[aria-label*="Hide live captions" i]',
+  'button[aria-label="Live Captions"]',
+  '[role="button"][aria-label="Live Captions"]',
+  'button[aria-label*="Hide live captions" i]',
+  '[role="button"][aria-label*="Hide live captions" i]',
   '[data-tid="captions-panel-dismiss-button"]',
 ].join(", ");
 
@@ -60,7 +62,8 @@ const CAPTION_WINDOW_SELECTORS = [
 
 const CAPTION_DISMISS_CONTROL_SELECTORS = [
   '[data-tid="captions-panel-dismiss-button"]',
-  '[aria-label*="Hide live captions" i]',
+  'button[aria-label*="Hide live captions" i]',
+  '[role="button"][aria-label*="Hide live captions" i]',
 ].join(", ");
 
 const SPEAKER_SELECTORS = [
@@ -119,6 +122,18 @@ const TEAMS_LEAVE_BUTTON_SELECTOR =
     '[data-track-module-name="StopMeetingButton"]',
     '[aria-keyshortcuts="Ctrl+Shift+H"]',
   ].join(", ");
+const TEAMS_HISTORY_HEARTBEAT_FRESH_WINDOW_MS = 90 * 1000;
+const TEAMS_LAST_MEETING_CONTEXT_FRESH_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+type TeamsMeetingCodeCandidate = {
+  meetingCode: string;
+  timestamp: number;
+};
+
+type TeamsCallHistoryHeartbeat = {
+  meetingCode?: string;
+  heartbeatTimestamp: number;
+};
 
 const teamsDiagnosticsLogger = createDiagnosticsLogger({
   runtime: "content",
@@ -1533,6 +1548,9 @@ function extractTeamsVisibleMeetingTitle(): string | undefined {
     if (!(candidate instanceof HTMLElement)) {
       continue;
     }
+    if (!isVisibleElement(candidate)) {
+      continue;
+    }
 
     const text = normalizeTeamsTitle(candidate.textContent || "");
     if (text) {
@@ -1543,7 +1561,9 @@ function extractTeamsVisibleMeetingTitle(): string | undefined {
   return undefined;
 }
 
-function extractTeamsMeetingCodeFromLastMeetingContext(): string | undefined {
+function extractTeamsMeetingCodeFromLastMeetingContext():
+  | TeamsMeetingCodeCandidate
+  | undefined {
   try {
     const rawValue = window.localStorage.getItem("lastMeetingContext");
     if (!rawValue) {
@@ -1566,14 +1586,30 @@ function extractTeamsMeetingCodeFromLastMeetingContext(): string | undefined {
       .filter((entry) => /^\d{6,}$/.test(entry.meetingCode))
       .sort((left, right) => right.timestamp - left.timestamp);
 
-    return entries[0]?.meetingCode;
+    const latest = entries[0];
+    if (!latest) {
+      return undefined;
+    }
+
+    if (
+      latest.timestamp <= 0 ||
+      Date.now() - latest.timestamp > TEAMS_LAST_MEETING_CONTEXT_FRESH_WINDOW_MS
+    ) {
+      return undefined;
+    }
+
+    return latest;
   } catch {
     return undefined;
   }
 }
 
-function extractTeamsMeetingCodeFromCallHistory(): string | undefined {
+function extractTeamsLatestCallHistoryHeartbeat():
+  | TeamsCallHistoryHeartbeat
+  | undefined {
   try {
+    const latestEntries: TeamsCallHistoryHeartbeat[] = [];
+
     for (let index = 0; index < window.localStorage.length; index += 1) {
       const key = window.localStorage.key(index);
       if (!key || !/CallingDropsCollectorService:CallEntries:History/i.test(key)) {
@@ -1602,77 +1638,87 @@ function extractTeamsMeetingCodeFromCallHistory(): string | undefined {
               : 0,
         }))
         .filter(
-          (entry): entry is { meetingCode: string; heartbeatTimestamp: number } =>
-            Boolean(entry.meetingCode && /^\d{6,}$/.test(entry.meetingCode))
+          (entry): entry is TeamsCallHistoryHeartbeat =>
+            Number.isFinite(entry.heartbeatTimestamp) && entry.heartbeatTimestamp > 0
         )
         .sort((left, right) => right.heartbeatTimestamp - left.heartbeatTimestamp)[0];
 
-      if (latestEntry?.meetingCode) {
-        return latestEntry.meetingCode;
+      if (latestEntry) {
+        latestEntries.push(latestEntry);
       }
     }
+
+    if (latestEntries.length === 0) {
+      return undefined;
+    }
+
+    latestEntries.sort(
+      (left, right) => right.heartbeatTimestamp - left.heartbeatTimestamp
+    );
+    return latestEntries[0];
   } catch {
     return undefined;
   }
-
-  return undefined;
 }
 
-function extractTeamsLocalMeetingCode(): string | undefined {
+function isTeamsFreshCallHistoryHeartbeat(
+  snapshot: TeamsCallHistoryHeartbeat | undefined
+): snapshot is TeamsCallHistoryHeartbeat {
+  if (!snapshot) {
+    return false;
+  }
+
   return (
-    extractTeamsMeetingCodeFromLastMeetingContext() ||
-    extractTeamsMeetingCodeFromCallHistory()
+    Date.now() - snapshot.heartbeatTimestamp <=
+    TEAMS_HISTORY_HEARTBEAT_FRESH_WINDOW_MS
   );
 }
 
-function extractTeamsThreadIdFromSessionStorage(): string | undefined {
-  try {
-    for (let index = 0; index < window.sessionStorage.length; index += 1) {
-      const key = window.sessionStorage.key(index);
-      if (!key || !/mainWindowNavHistory/i.test(key)) {
-        continue;
-      }
-
-      const rawValue = window.sessionStorage.getItem(key);
-      if (!rawValue) {
-        continue;
-      }
-
-      const historyEntries = JSON.parse(rawValue);
-      if (!Array.isArray(historyEntries)) {
-        continue;
-      }
-
-      for (const entry of historyEntries) {
-        const activeEntities = entry?.activeEntities;
-        if (!activeEntities || typeof activeEntities !== "object") {
-          continue;
-        }
-
-        const candidateIds = [
-          activeEntities.headerEntity?.id,
-          activeEntities.mainEntity?.id,
-          activeEntities.midNavEntity?.id,
-          activeEntities.startEntity?.id,
-          activeEntities.endEntity?.id,
-        ];
-
-        const threadId = candidateIds.find(
-          (value) =>
-            typeof value === "string" &&
-            /^19:meeting_.+@thread\.v2$/i.test(value.trim())
-        );
-
-        if (threadId) {
-          return threadId.trim();
-        }
-      }
-    }
-  } catch {
+function extractTeamsMeetingCodeFromCallHistory():
+  | TeamsMeetingCodeCandidate
+  | undefined {
+  const latestHeartbeat = extractTeamsLatestCallHistoryHeartbeat();
+  if (!isTeamsFreshCallHistoryHeartbeat(latestHeartbeat)) {
     return undefined;
   }
 
-  return undefined;
+  if (!latestHeartbeat.meetingCode || !/^\d{6,}$/.test(latestHeartbeat.meetingCode)) {
+    return undefined;
+  }
+
+  return {
+    meetingCode: latestHeartbeat.meetingCode,
+    timestamp: latestHeartbeat.heartbeatTimestamp,
+  };
+}
+
+function extractTeamsLocalMeetingCode(): string | undefined {
+  const latestHeartbeat = extractTeamsLatestCallHistoryHeartbeat();
+  if (
+    isTeamsFreshCallHistoryHeartbeat(latestHeartbeat) &&
+    (!latestHeartbeat.meetingCode ||
+      !/^\d{6,}$/.test(latestHeartbeat.meetingCode))
+  ) {
+    return undefined;
+  }
+
+  const fromCallHistory = extractTeamsMeetingCodeFromCallHistory();
+  const fromLastMeetingContext = extractTeamsMeetingCodeFromLastMeetingContext();
+
+  if (fromLastMeetingContext && fromCallHistory) {
+    if (fromCallHistory.timestamp > fromLastMeetingContext.timestamp) {
+      return fromCallHistory.meetingCode;
+    }
+
+    if (fromLastMeetingContext.timestamp > fromCallHistory.timestamp) {
+      return fromLastMeetingContext.meetingCode;
+    }
+
+    // Prefer call history on ties because it reflects active call heartbeats.
+    return fromCallHistory.meetingCode;
+  }
+
+  return fromLastMeetingContext?.meetingCode || fromCallHistory?.meetingCode;
 }
 
 function extractTeamsThreadId(url: URL): string | undefined {
@@ -1690,7 +1736,11 @@ function extractTeamsThreadId(url: URL): string | undefined {
     return threadId;
   }
 
-  return extractTeamsThreadIdFromSessionStorage();
+  return undefined;
+}
+
+function isTeamsMeetingThreadId(value: string | null | undefined): boolean {
+  return Boolean(value && /^19:meeting_.+@thread\.v2$/i.test(value.trim()));
 }
 
 function isTeamsLiveHost(url: URL): boolean {
@@ -1722,11 +1772,23 @@ function shouldUseStorageBackedTeamsMeetingCode(url: URL): boolean {
     return true;
   }
 
+  const latestHeartbeat = extractTeamsLatestCallHistoryHeartbeat();
+  if (isTeamsFreshCallHistoryHeartbeat(latestHeartbeat)) {
+    return Boolean(
+      latestHeartbeat.meetingCode &&
+        /^\d{6,}$/.test(latestHeartbeat.meetingCode)
+    );
+  }
+
   if (hasTeamsJoinNowControl()) {
     return true;
   }
 
-  if (isTeamsScheduledMeetingUrl(url) || hasTeamsScheduledMeetingReferrer()) {
+  if (
+    isTeamsScheduledMeetingUrl(url) ||
+    hasTeamsScheduledMeetingReferrer() ||
+    isTeamsMeetingThreadId(extractTeamsThreadId(url))
+  ) {
     return true;
   }
 
@@ -1876,7 +1938,20 @@ function isTeamsDirectCallContext(url: URL): boolean {
     return false;
   }
 
-  if (isTeamsScheduledMeetingUrl(url) || hasTeamsScheduledMeetingReferrer()) {
+  const latestHeartbeat = extractTeamsLatestCallHistoryHeartbeat();
+  if (isTeamsFreshCallHistoryHeartbeat(latestHeartbeat)) {
+    if (!latestHeartbeat.meetingCode || !/^\d{6,}$/.test(latestHeartbeat.meetingCode)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  if (
+    isTeamsScheduledMeetingUrl(url) ||
+    hasTeamsScheduledMeetingReferrer() ||
+    isTeamsMeetingThreadId(extractTeamsThreadId(url))
+  ) {
     return false;
   }
 
@@ -1884,23 +1959,37 @@ function isTeamsDirectCallContext(url: URL): boolean {
 }
 
 function isTeamsMeetingContext(url: URL): boolean {
-  const title =
-    extractTeamsVisibleMeetingTitle() || normalizeTeamsTitle(document.title || "");
+  const hasVisibleSignal = (selector: string): boolean =>
+    Array.from(document.querySelectorAll<HTMLElement>(selector)).some(
+      (candidate) => !isInsideExtension(candidate) && isVisibleElement(candidate)
+    );
+
+  const visibleMeetingTitle = extractTeamsVisibleMeetingTitle();
+  const title = visibleMeetingTitle || normalizeTeamsTitle(document.title || "");
   const hasMeetingTitle =
-    Boolean(title) &&
+    Boolean(visibleMeetingTitle) &&
     /^(meeting with|meet now|call with|incoming call|meeting)/i.test(title || "");
 
-  const hasCaptionControls =
-    document.querySelector('[data-tid="closed-captions-settings-menu-trigger-button"]') !==
-      null ||
-    document.querySelector('[data-tid="captions-panel-dismiss-button"]') !== null ||
-    document.querySelector('[aria-label*="Live Caption" i]') !== null ||
-    document.querySelector('[aria-label*="Hide live captions" i]') !== null;
+  const hasCaptionControls = hasVisibleSignal(
+    [
+      '[data-tid="closed-captions-settings-menu-trigger-button"]',
+      '[data-tid="captions-panel-dismiss-button"]',
+      'button[aria-label*="Live Caption" i]',
+      '[role="button"][aria-label*="Live Caption" i]',
+      'button[aria-label*="Hide live captions" i]',
+      '[role="button"][aria-label*="Hide live captions" i]',
+    ].join(", ")
+  );
 
-  const hasMeetingChrome =
-    document.querySelector('[data-tid*="calling-screen"]') !== null ||
-    document.querySelector('[data-tid*="call-control"]') !== null ||
-    document.querySelector('[data-tid*="meeting-stage"]') !== null;
+  const hasMeetingChrome = hasVisibleSignal(
+    [
+      '[data-tid*="calling-screen"]',
+      '[data-tid*="calling-stage"]',
+      '[data-tid="calling-pagination"]',
+      '[data-tid="calling-screen-avatar"]',
+      '[data-tid*="meeting-stage"]',
+    ].join(", ")
+  );
   const hasJoinNowControl = hasTeamsJoinNowControl();
   const hasLeaveControl = hasTeamsLeaveControl();
 

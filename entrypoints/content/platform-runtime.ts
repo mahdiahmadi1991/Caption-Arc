@@ -252,6 +252,14 @@ function shouldResetRuntimeOnCurrentPage(
     return true;
   }
 
+  if (
+    provider.platform === "zoom-web" &&
+    /^\/wc\/home(?:\/|$)/i.test(currentUrl.pathname) &&
+    !(provider.matchesPageContext?.(currentUrl) ?? false)
+  ) {
+    return true;
+  }
+
   return false;
 }
 

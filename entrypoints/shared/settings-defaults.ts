@@ -52,7 +52,7 @@ export function createDefaultSettings() {
     captionActivationBehavior: "guided" as const,
     sessionContinuationWindowMinutes:
       DEFAULT_SESSION_CONTINUATION_WINDOW_MINUTES,
-    overlayOpacity: 96,
+    overlayOpacity: 80,
     overlayClickThrough: false,
     storeMeetingChat: false,
     legalRiskAcknowledgements: {},

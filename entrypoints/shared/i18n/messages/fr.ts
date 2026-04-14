@@ -194,11 +194,6 @@ export const frMessages = {
                 description: "La synchronisation cloud est la principale voie de continuité. Utilisez l'archive chiffrée comme sauvegarde de secours ou supprimez l'archive enregistrée lorsque vous avez besoin d'une réinitialisation propre."
             }
         },
-        saveBadge: {
-            saving: "Enregistrer les modifications",
-            attention: "A besoin d'attention",
-            saved: "Enregistré automatiquement"
-        },
         workspace: {
             appearance: {
                 title: "Apparence",
@@ -240,7 +235,7 @@ export const frMessages = {
             },
             sessionContinuation: {
                 title: "Fenêtre de suite de session",
-                description: "Décidez combien de temps CaptionArc doit proposer de continuer la même session après avoir rejoint le groupe.",
+                description: "Décidez combien de temps CaptionArc doit proposer de continuer la même session après la dernière activité de session (y compris lorsque vous quittez la réunion).",
                 windowLabel: "Fenêtre",
                 off: "Désactivé",
                 oneHour: "1 heure",
@@ -875,13 +870,6 @@ export const frMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "Chargement des paramètres...",
-                saving: "Enregistrement automatique des modifications...",
-                saved: "Toutes les modifications sont enregistrées automatiquement.",
-                loadFailed: "Impossible de charger vos paramètres enregistrés.",
-                autosaveFailed: "L'enregistrement automatique a échoué. Votre dernière modification est toujours locale à cet onglet."
-            },
             connection: {
                 addApiKey: "Ajoutez votre clé API OpenAI, puis testez la connexion.",
                 runTest: "Exécutez Test Connection pour vérifier votre clé OpenAI et le modèle sélectionné.",
@@ -1305,6 +1293,8 @@ export const frMessages = {
             enablingCaptionsBody: "CaptionArc essaie maintenant d'activer les sous-titres pour cette réunion.",
             readyTitle: "La capture est prête",
             readyBody: "Commencez à parler et des lignes de légende apparaîtront ici au fur et à mesure que la réunion se poursuit.",
+            segmentEmptyTitle: "Aucun élément de transcription ou de chat",
+            segmentEmptyBody: "Cette session n'a capturé aucun sous-titre ni message de chat de la réunion.",
             close: "Fermer"
         },
         sessionSeparator: {

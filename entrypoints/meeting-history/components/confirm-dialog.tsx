@@ -16,6 +16,33 @@ type ConfirmDialogProps = {
   dismissible?: boolean;
 };
 
+const SCROLL_LOCK_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+  " ",
+  "Spacebar",
+]);
+
+function isTextInputTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  return (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
+
 export function ConfirmDialog({
   open,
   title,
@@ -48,19 +75,58 @@ export function ConfirmDialog({
   }, [busy, dismissible, onCancel, open]);
 
   useEffect(() => {
-    if (!open || typeof document === "undefined") {
+    if (!open || typeof window === "undefined") {
       return;
     }
 
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const lockedScrollX = window.scrollX;
+    const lockedScrollY = window.scrollY;
 
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
+    const preventWheel = (event: WheelEvent) => {
+      event.preventDefault();
+    };
+
+    const preventTouchMove = (event: TouchEvent) => {
+      event.preventDefault();
+    };
+
+    const preventScrollKeys = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || isTextInputTarget(event.target)) {
+        return;
+      }
+
+      if (SCROLL_LOCK_KEYS.has(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    const restoreScrollPosition = () => {
+      if (window.scrollX !== lockedScrollX || window.scrollY !== lockedScrollY) {
+        window.scrollTo(lockedScrollX, lockedScrollY);
+      }
+    };
+
+    window.addEventListener("wheel", preventWheel, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("touchmove", preventTouchMove, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("keydown", preventScrollKeys, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("scroll", restoreScrollPosition, {
+      passive: true,
+    });
 
     return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
+      window.removeEventListener("wheel", preventWheel, true);
+      window.removeEventListener("touchmove", preventTouchMove, true);
+      window.removeEventListener("keydown", preventScrollKeys, true);
+      window.removeEventListener("scroll", restoreScrollPosition);
     };
   }, [open]);
 

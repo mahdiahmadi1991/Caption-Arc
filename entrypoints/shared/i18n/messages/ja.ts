@@ -194,11 +194,6 @@ export const jaMessages = {
                 description: "クラウド同期は主要な継続パスです。暗号化されたアーカイブをフォールバック バックアップとして使用するか、クリーン リセットが必要な場合に保存されたアーカイブを削除します。"
             }
         },
-        saveBadge: {
-            saving: "変更の保存",
-            attention: "注意が必要です",
-            saved: "自動的に保存されました"
-        },
         workspace: {
             appearance: {
                 title: "外観",
@@ -240,7 +235,7 @@ export const jaMessages = {
             },
             sessionContinuation: {
                 title: "セッション継続ウィンドウ",
-                description: "再参加後に CaptionArc が同じセッションを継続することを提案する時間を決定します。",
+                description: "セッションの最新アクティビティ（会議から退出した時刻を含む）の後、CaptionArc が同じセッションの継続をどれくらい提案するかを決めます。",
                 windowLabel: "窓",
                 off: "オフ",
                 oneHour: "1時間",
@@ -875,13 +870,6 @@ export const jaMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "設定を読み込んでいます...",
-                saving: "変更を自動的に保存します...",
-                saved: "すべての変更は自動的に保存されます。",
-                loadFailed: "保存した設定をロードできませんでした。",
-                autosaveFailed: "自動保存に失敗しました。最後の変更はまだこのタブに対してローカルです。"
-            },
             connection: {
                 addApiKey: "OpenAI API キーを追加して、接続をテストします。",
                 runTest: "テスト接続を実行して、OpenAI キーと選択したモデルを確認します。",
@@ -1305,6 +1293,8 @@ export const jaMessages = {
             enablingCaptionsBody: "CaptionArc は現在、この会議のキャプションをオンにしようとしています。",
             readyTitle: "キャプチャの準備ができました",
             readyBody: "話し始めると、会議が継続するにつれてキャプションラインがここに表示されます。",
+            segmentEmptyTitle: "文字起こしやチャット項目はありません",
+            segmentEmptyBody: "このセッションではキャプションや会議チャットメッセージは記録されませんでした。",
             close: "閉じる"
         },
         sessionSeparator: {

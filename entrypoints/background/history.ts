@@ -19,6 +19,7 @@ import type {
 import {
   buildMeetingSessionDerivedData,
   buildMeetingSessionFingerprint,
+  getMeetingSessionLastActivityTimestamp,
   getMeetingIdentityTokens,
   normalizeMeetingSession,
   sanitizeMeetingSessionIdentifiers,
@@ -852,7 +853,7 @@ function getSessionContinuationWindowMs(
 function getContinuationReferenceTimestamp(
   session: Pick<MeetingSession, "lastSeenAt" | "endTime" | "startTime">
 ): number {
-  return session.lastSeenAt || session.endTime || session.startTime;
+  return getMeetingSessionLastActivityTimestamp(session);
 }
 
 function scoreContinuationCandidate(
@@ -2317,12 +2318,10 @@ export async function resolveMeetingSession(
         ? [
             ...(session.rejoinHistory || []),
             {
-              previousEndTime:
-                session.endTime || session.lastSeenAt || session.startTime,
+              previousEndTime: getContinuationReferenceTimestamp(session),
               resumedAt: reopenedAt,
               gapMs: Math.max(
-                reopenedAt -
-                  (session.endTime || session.lastSeenAt || session.startTime),
+                reopenedAt - getContinuationReferenceTimestamp(session),
                 0
               ),
             },
@@ -2469,7 +2468,7 @@ export async function findMeetingSessionContinuationCandidate(
     candidate: {
       sessionId: session.id,
       title: session.title,
-      endedAt: session.endTime || session.lastSeenAt || session.startTime,
+      endedAt: getContinuationReferenceTimestamp(session),
       providerLabel: session.providerLabel,
     },
   };

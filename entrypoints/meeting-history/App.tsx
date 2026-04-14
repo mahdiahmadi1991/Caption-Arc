@@ -27,6 +27,7 @@ import {
   AlertTriangleIcon,
   CloseIcon,
   GearIcon,
+  RefreshIcon,
   SearchIcon,
   StarIcon,
 } from "../shared/icons";
@@ -320,7 +321,11 @@ export default function App() {
     }
   };
 
-  if (loading) {
+  const showInitialLoadingScreen =
+    loading && sessions.length === 0 && !selectedSession;
+  const showRefreshLoadingIndicator = loading && !showInitialLoadingScreen;
+
+  if (showInitialLoadingScreen) {
     return (
       <div className="min-h-screen bg-[var(--app-bg)] p-6 text-[var(--app-text-muted)]">
         <AppLoadingScreen
@@ -349,6 +354,17 @@ export default function App() {
           },
         }}
       />
+
+      {showRefreshLoadingIndicator && (
+        <div className="pointer-events-none fixed inset-x-0 top-4 z-[120] flex justify-center px-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-2 text-sm font-medium text-[var(--app-text-muted)] shadow-[0_12px_24px_var(--app-shadow)] backdrop-blur-xl">
+            <span className="text-[var(--app-accent)] animate-spin">
+              <RefreshIcon className="h-4 w-4" />
+            </span>
+            <span>{t("history.page.loadingTitle")}</span>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={Boolean(pendingAction)}

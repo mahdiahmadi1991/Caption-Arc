@@ -194,11 +194,6 @@ export const deMessages = {
                 description: "Die Cloud-Synchronisierung ist der primäre Kontinuitätspfad. Verwenden Sie das verschlüsselte Archiv als Fallback-Backup oder löschen Sie das gespeicherte Archiv, wenn Sie einen sauberen Reset benötigen."
             }
         },
-        saveBadge: {
-            saving: "Änderungen speichern",
-            attention: "Braucht Aufmerksamkeit",
-            saved: "Automatisch gespeichert"
-        },
         workspace: {
             appearance: {
                 title: "Aussehen",
@@ -240,7 +235,7 @@ export const deMessages = {
             },
             sessionContinuation: {
                 title: "Fenster zur Sitzungsfortsetzung",
-                description: "Entscheiden Sie, wie lange CaptionArc nach dem erneuten Beitritt anbieten soll, dieselbe Sitzung fortzusetzen.",
+                description: "Entscheiden Sie, wie lange CaptionArc nach der letzten Sitzungsaktivität (einschließlich des Zeitpunkts, zu dem Sie das Meeting verlassen) anbieten soll, dieselbe Sitzung fortzusetzen.",
                 windowLabel: "Fenster",
                 off: "Aus",
                 oneHour: "1 Stunde",
@@ -875,13 +870,6 @@ export const deMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "Einstellungen werden geladen...",
-                saving: "Änderungen automatisch speichern...",
-                saved: "Alle Änderungen werden automatisch gespeichert.",
-                loadFailed: "Ihre gespeicherten Einstellungen konnten nicht geladen werden.",
-                autosaveFailed: "Die automatische Speicherung ist fehlgeschlagen. Ihre letzte Änderung ist immer noch lokal auf dieser Registerkarte."
-            },
             connection: {
                 addApiKey: "Fügen Sie Ihren API-Schlüssel OpenAI hinzu und testen Sie dann die Verbindung.",
                 runTest: "Führen Sie Test Connection aus, um Ihren OpenAI-Schlüssel und das ausgewählte Modell zu überprüfen.",
@@ -1305,6 +1293,8 @@ export const deMessages = {
             enablingCaptionsBody: "CaptionArc versucht gerade, Untertitel für dieses Meeting zu aktivieren.",
             readyTitle: "Die Aufnahme ist bereit",
             readyBody: "Beginnen Sie zu sprechen und im weiteren Verlauf der Besprechung werden hier Untertitelzeilen angezeigt.",
+            segmentEmptyTitle: "Keine Transkript- oder Chat-Elemente",
+            segmentEmptyBody: "Dieser Sitzungsabschnitt hat keine Untertitel oder Besprechungs-Chatnachrichten erfasst.",
             close: "Schließen"
         },
         sessionSeparator: {

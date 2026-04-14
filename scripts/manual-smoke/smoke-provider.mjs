@@ -121,6 +121,18 @@ async function listTargets(baseUrl) {
   return await response.json();
 }
 
+async function closeCdpTarget(baseUrl, targetId) {
+  if (!targetId) {
+    return false;
+  }
+
+  const response = await fetch(
+    `${baseUrl}/json/close/${encodeURIComponent(String(targetId))}`,
+    { method: "PUT" }
+  );
+  return response.ok;
+}
+
 function findPageTargetByUrl(targets, expectedUrl) {
   const wanted = canonicalUrl(expectedUrl);
   return (
@@ -343,6 +355,7 @@ async function settleBlockingOverlayPrompts(webSocketDebuggerUrl) {
   let handledPrompt = false;
   let lastResult = null;
   let lastPromptResult = null;
+  const kindsSeen = [];
 
   while (Date.now() - startedAt <= Math.max(1200, promptWaitMs)) {
     const result = await maybeResolveOverlayPrompt(webSocketDebuggerUrl);
@@ -354,11 +367,15 @@ async function settleBlockingOverlayPrompts(webSocketDebuggerUrl) {
         handledPrompt,
         lastResult,
         lastPromptResult,
+        kindsSeen,
       };
     }
 
     seenPrompt = true;
     lastPromptResult = result;
+    if (result?.kind) {
+      kindsSeen.push(result.kind);
+    }
     if (result?.clicked) {
       handledPrompt = true;
     }
@@ -372,6 +389,147 @@ async function settleBlockingOverlayPrompts(webSocketDebuggerUrl) {
     handledPrompt,
     lastResult,
     lastPromptResult,
+    kindsSeen,
+  };
+}
+
+async function waitForOverlayPromptsWithGrace(
+  webSocketDebuggerUrl,
+  {
+    timeoutMs = 30000,
+    pollMs = Math.max(120, promptPollMs),
+    settleQuietMs = 1200,
+  } = {}
+) {
+  const startedAt = Date.now();
+  let seenPrompt = false;
+  let handledPrompt = false;
+  let lastResult = null;
+  let lastPromptResult = null;
+  let lastPromptAt = 0;
+  const kindsSeen = [];
+
+  while (Date.now() - startedAt <= Math.max(2000, timeoutMs)) {
+    const result = await maybeResolveOverlayPrompt(webSocketDebuggerUrl);
+    lastResult = result;
+
+    if (result?.hasPrompt) {
+      seenPrompt = true;
+      lastPromptResult = result;
+      lastPromptAt = Date.now();
+      if (result?.kind) {
+        kindsSeen.push(result.kind);
+      }
+      if (result?.clicked) {
+        handledPrompt = true;
+      }
+    } else if (seenPrompt && Date.now() - lastPromptAt >= Math.max(200, settleQuietMs)) {
+      break;
+    }
+
+    await sleep(Math.max(80, pollMs));
+  }
+
+  return {
+    ok: true,
+    seenPrompt,
+    handledPrompt,
+    lastResult,
+    lastPromptResult,
+    kindsSeen: Array.from(new Set(kindsSeen)),
+  };
+}
+
+async function listZoomMeetingPageTargets(baseUrl) {
+  const targets = await listTargets(baseUrl);
+  return targets.filter((target) => {
+    if (
+      target?.type !== "page" ||
+      typeof target?.url !== "string" ||
+      typeof target?.webSocketDebuggerUrl !== "string"
+    ) {
+      return false;
+    }
+    return isZoomMeetingUrl(target.url);
+  });
+}
+
+async function waitForOverlayPromptsAcrossZoomMeetingTargets(
+  baseUrl,
+  {
+    preferredWebSocketDebuggerUrl = "",
+    timeoutMs = 30000,
+    pollMs = Math.max(120, promptPollMs),
+    settleQuietMs = 1200,
+  } = {}
+) {
+  const startedAt = Date.now();
+  let seenPrompt = false;
+  let handledPrompt = false;
+  let lastResult = null;
+  let lastPromptResult = null;
+  let lastPromptAt = 0;
+  let lastPromptWs = preferredWebSocketDebuggerUrl || "";
+  const kindsSeen = [];
+
+  while (Date.now() - startedAt <= Math.max(2000, timeoutMs)) {
+    const wsList = [];
+    if (preferredWebSocketDebuggerUrl) {
+      wsList.push(preferredWebSocketDebuggerUrl);
+    }
+
+    try {
+      const zoomTargets = await listZoomMeetingPageTargets(baseUrl);
+      for (const target of zoomTargets) {
+        if (!wsList.includes(target.webSocketDebuggerUrl)) {
+          wsList.push(target.webSocketDebuggerUrl);
+        }
+      }
+    } catch {
+      // Ignore transient list failures and keep using preferred target.
+    }
+
+    let promptSeenInThisPoll = false;
+    for (const ws of wsList) {
+      try {
+        const result = await maybeResolveOverlayPrompt(ws);
+        if (!result?.hasPrompt) {
+          continue;
+        }
+        promptSeenInThisPoll = true;
+        seenPrompt = true;
+        lastResult = result;
+        lastPromptResult = result;
+        lastPromptAt = Date.now();
+        lastPromptWs = ws;
+        if (result?.kind) {
+          kindsSeen.push(result.kind);
+        }
+        if (result?.clicked) {
+          handledPrompt = true;
+        }
+      } catch {
+        // Ignore per-target failures.
+      }
+    }
+
+    if (!promptSeenInThisPoll && seenPrompt) {
+      if (Date.now() - lastPromptAt >= Math.max(200, settleQuietMs)) {
+        break;
+      }
+    }
+
+    await sleep(Math.max(80, pollMs));
+  }
+
+  return {
+    ok: true,
+    seenPrompt,
+    handledPrompt,
+    lastResult,
+    lastPromptResult,
+    lastPromptWs,
+    kindsSeen: Array.from(new Set(kindsSeen)),
   };
 }
 
@@ -575,6 +733,522 @@ async function stabilizeTeamsTarget(webSocketDebuggerUrl) {
   };
 }
 
+function extractZoomMeetingId(urlValue) {
+  try {
+    const parsed = new URL(String(urlValue || ""));
+    const match = parsed.pathname.match(
+      /^\/(?:wc\/)?(?:join\/)?(\d+)(?:\/(?:start|join))?(?:\/|$)/i
+    );
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
+function isZoomMeetingUrl(urlValue) {
+  try {
+    const parsed = new URL(String(urlValue || ""));
+    return (
+      /(^|\.)zoom\.us$/i.test(parsed.hostname) &&
+      /^\/wc\/\d+\/(?:start|join)(?:\/|$)/i.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function clickInTarget(
+  webSocketDebuggerUrl,
+  { selectors = [], textIncludes = [], includeAnchors = true, delayMs = 700 } = {}
+) {
+  return Boolean(
+    await evaluateInTarget({
+      webSocketDebuggerUrl,
+      delayMs: Math.max(200, delayMs),
+      expression: `(() => {
+        const normalize = (value) =>
+          String(value || "")
+            .replace(/\\s+/g, " ")
+            .trim()
+            .toLowerCase();
+        const isVisible = (element) => {
+          if (!(element instanceof HTMLElement)) {
+            return false;
+          }
+          const style = window.getComputedStyle(element);
+          return style.display !== "none" && style.visibility !== "hidden";
+        };
+        const clickNode = (node) => {
+          node.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+          node.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+          node.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        };
+
+        const selectorList = ${JSON.stringify(selectors)};
+        const textTokens = ${JSON.stringify(
+          textIncludes.map((value) =>
+            String(value || "")
+              .trim()
+              .toLowerCase()
+          )
+        )};
+        const candidateSelector = ${
+          includeAnchors
+            ? JSON.stringify("button, [role='button'], a, [aria-label], [data-testid], [id]")
+            : JSON.stringify("button, [role='button'], [aria-label], [data-testid], [id]")
+        };
+
+        for (const selector of selectorList) {
+          const node = document.querySelector(selector);
+          if (!(node instanceof HTMLElement) || !isVisible(node)) {
+            continue;
+          }
+          clickNode(node);
+          return true;
+        }
+
+        const candidates = Array.from(document.querySelectorAll(candidateSelector));
+        for (const node of candidates) {
+          if (!(node instanceof HTMLElement) || !isVisible(node)) {
+            continue;
+          }
+          const text = normalize(
+            (node.textContent || "") + " " + (node.getAttribute("aria-label") || "")
+          );
+          if (!text) {
+            continue;
+          }
+          if (textTokens.some((token) => text.includes(token))) {
+            clickNode(node);
+            return true;
+          }
+        }
+
+        return false;
+      })()`,
+    })
+  );
+}
+
+async function waitForZoomUrlState(
+  webSocketDebuggerUrl,
+  {
+    timeoutMs = 45000,
+    pollMs = 1200,
+    expectMeeting = true,
+  } = {}
+) {
+  const startedAt = Date.now();
+  let lastState = null;
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    const state = await evaluateInTarget({
+      webSocketDebuggerUrl,
+      delayMs: Math.max(200, pollMs),
+      expression: `(() => ({
+        href: window.location.href,
+        title: document.title,
+        bodyText: (document.body?.innerText || "").toLowerCase(),
+      }))()`,
+    });
+
+    lastState = state;
+    const href = typeof state?.href === "string" ? state.href : "";
+    const meeting = isZoomMeetingUrl(href);
+    if (expectMeeting ? meeting : !meeting) {
+      return { ok: true, state };
+    }
+  }
+
+  return { ok: false, state: lastState };
+}
+
+async function seedZoomContinuationCandidate(
+  baseUrl,
+  { sourceUrl, title, meetingId, meetingNumber, expectedRuntimeId = null } = {}
+) {
+  let resolvedTarget = await resolveCaptionArcExtensionTarget({
+    baseUrl,
+    expectedId: expectedRuntimeId || undefined,
+    allowNameFallback: !expectedRuntimeId,
+  });
+  if (!resolvedTarget && expectedRuntimeId) {
+    resolvedTarget = await resolveCaptionArcExtensionTarget({
+      baseUrl,
+      expectedId: expectedRuntimeId,
+      allowNameFallback: true,
+    });
+  }
+  if (!resolvedTarget?.webSocketDebuggerUrl) {
+    throw new Error("Could not resolve CaptionArc extension target for Zoom continuation seed.");
+  }
+
+  if (resolvedTarget?.type !== "page" && resolvedTarget?.runtimeId) {
+    await openExtensionUiTarget(baseUrl, resolvedTarget.runtimeId);
+    const refreshedTargets = await listExtensionTargets(baseUrl);
+    const pageTarget = refreshedTargets.find((target) => {
+      if (target?.type !== "page" || typeof target?.url !== "string") {
+        return false;
+      }
+      const targetId = parseTargetExtensionId(target.url);
+      return targetId && targetId.toLowerCase() === resolvedTarget.runtimeId.toLowerCase();
+    });
+    if (pageTarget?.webSocketDebuggerUrl) {
+      resolvedTarget = {
+        ...pageTarget,
+        runtimeId: resolvedTarget.runtimeId,
+        manifestName: resolvedTarget.manifestName || null,
+      };
+    }
+  }
+
+  const result = await evaluateInExtensionTarget({
+    webSocketDebuggerUrl: resolvedTarget.webSocketDebuggerUrl,
+    awaitPromise: true,
+    expression: `(
+      async () => {
+        try {
+          const sourceUrl = ${JSON.stringify(sourceUrl)};
+          const providerLabel = "Zoom Web App";
+          const now = Date.now();
+          const identifiers = {
+            meetingId: ${JSON.stringify(meetingId || null)},
+            meetingNumber: ${JSON.stringify(meetingNumber || meetingId || null)},
+          };
+          const title = ${JSON.stringify(title || "Zoom")};
+
+          if (!chrome?.runtime?.sendMessage) {
+            return { ok: false, phase: "runtime", reason: "chrome.runtime.sendMessage unavailable" };
+          }
+
+          const settingsResponse = await chrome.runtime.sendMessage({
+            action: "getSettings",
+          });
+          const currentSettings =
+            settingsResponse && typeof settingsResponse === "object"
+              ? settingsResponse.settings || null
+              : null;
+          if (currentSettings && typeof currentSettings === "object") {
+            const currentWindowMinutes = Number(
+              currentSettings.sessionContinuationWindowMinutes || 0
+            );
+            const targetWindowMinutes = Number.isFinite(currentWindowMinutes)
+              ? Math.max(60, currentWindowMinutes)
+              : 120;
+            const desiredSettings = {
+              ...currentSettings,
+              captureStartupBehavior: "ask",
+              sessionContinuationWindowMinutes: targetWindowMinutes,
+            };
+            await chrome.runtime.sendMessage({
+              action: "saveSettings",
+              settings: desiredSettings,
+            });
+          }
+
+          const resolveResponse = await chrome.runtime.sendMessage({
+            action: "resolveMeetingSession",
+            platform: "zoom-web",
+            providerLabel,
+            sourceUrl,
+            title,
+            identifiers,
+            reusePolicy: "force-new",
+          });
+
+          if (!resolveResponse?.success || !resolveResponse?.session) {
+            return { ok: false, phase: "resolve", response: resolveResponse || null };
+          }
+
+          const session = resolveResponse.session;
+          const endedSession = {
+            ...session,
+            meetingUrl: sourceUrl,
+            providerLabel,
+            title: session.title || title,
+            identifiers: {
+              ...(session.identifiers || {}),
+              ...identifiers,
+            },
+            lifecycleState: "ended",
+            endTime: now - 1500,
+            lastSeenAt: now - 1500,
+            updatedAt: now - 1200,
+          };
+
+          const finalizeResponse = await chrome.runtime.sendMessage({
+            action: "finalizeMeetingSessionEnd",
+            session: endedSession,
+            enqueueAutomaticSummary: false,
+          });
+          if (!finalizeResponse?.success) {
+            return { ok: false, phase: "finalize", response: finalizeResponse || null };
+          }
+
+          const candidateResponse = await chrome.runtime.sendMessage({
+            action: "findMeetingSessionContinuationCandidate",
+            platform: "zoom-web",
+            providerLabel,
+            sourceUrl,
+            title: endedSession.title,
+            identifiers: endedSession.identifiers,
+          });
+
+          return {
+            ok: Boolean(candidateResponse?.success && candidateResponse?.candidate),
+            phase: "candidate",
+            candidate: candidateResponse?.candidate || null,
+            sessionId: endedSession.id,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            phase: "exception",
+            error: String(error),
+          };
+        }
+      }
+    )()`,
+  });
+
+  if (!result?.ok) {
+    throw new Error(`Zoom continuation seed failed: ${JSON.stringify(result || null)}`);
+  }
+
+  return result;
+}
+
+async function runZoomJourneyFlow({
+  baseUrl,
+  targetInput,
+  target,
+}) {
+  const ws = target.webSocketDebuggerUrl;
+  const initialProbe = await probeTarget(ws, Math.max(260, evalDelayMs), false);
+  const initialHref = String(initialProbe?.href || targetInput.url || "");
+  const meetingId = extractZoomMeetingId(initialHref);
+  if (!meetingId) {
+    throw new Error(`Zoom journey could not extract meeting id from URL: ${initialHref}`);
+  }
+  const expectedRuntimeId = parseRuntimeIdFromMarker(initialProbe?.markerContent);
+
+  await clickInTarget(ws, {
+    selectors: ["#btn_end_meeting"],
+    textIncludes: ["start this meeting", "end it and start", "leave and start"],
+    includeAnchors: false,
+    delayMs: 700,
+  });
+
+  let leaveClicked = false;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    leaveClicked = await clickInTarget(ws, {
+      selectors: [
+        "button[aria-label='Leave']",
+        "button[aria-label*='Leave']",
+        "#btn-leave-meeting",
+      ],
+      textIncludes: ["leave"],
+      includeAnchors: false,
+      delayMs: 850,
+    });
+    if (leaveClicked) {
+      break;
+    }
+  }
+  if (!leaveClicked) {
+    throw new Error("Zoom journey could not click Leave control.");
+  }
+
+  // Handle confirmation/busy dialog variants after pressing Leave.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await clickInTarget(ws, {
+      selectors: ["#btn_end_meeting"],
+      textIncludes: [
+        "start this meeting",
+        "end it and start",
+        "leave meeting",
+        "leave now",
+        "confirm",
+      ],
+      includeAnchors: false,
+      delayMs: 700,
+    });
+  }
+
+  const leftState = await waitForZoomUrlState(ws, {
+    timeoutMs: 25000,
+    pollMs: 1000,
+    expectMeeting: false,
+  });
+  let usedSyntheticEnd = false;
+  if (!leftState.ok) {
+    usedSyntheticEnd = true;
+    if (target?.id) {
+      try {
+        await closeCdpTarget(baseUrl, target.id);
+      } catch {
+        // Best-effort; a fresh rejoin tab is still created below.
+      }
+    }
+  }
+
+  const seeded = await seedZoomContinuationCandidate(baseUrl, {
+    sourceUrl: initialHref,
+    title: initialProbe?.title || "Zoom",
+    meetingId,
+    meetingNumber: meetingId,
+    expectedRuntimeId,
+  });
+
+  const rejoinTarget = await createTarget(baseUrl, initialHref);
+  const rejoinWs = rejoinTarget.webSocketDebuggerUrl;
+
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    await clickInTarget(rejoinWs, {
+      selectors: [
+        "#zoom-ui-frame > div.bhauZU7H > div > div.ifP196ZE.x2RD4pnS > div > button.zoom-button.zoom-button--lg.zoom-button--secondary.g7nkJFrV",
+      ],
+      textIncludes: ["join from browser"],
+      includeAnchors: false,
+      delayMs: 650,
+    });
+    await clickInTarget(rejoinWs, {
+      selectors: ["#btn_end_meeting"],
+      textIncludes: [
+        "start this meeting",
+        "end it and start",
+        "leave and start",
+      ],
+      includeAnchors: false,
+      delayMs: 650,
+    });
+  }
+
+  const rejoined = await waitForZoomUrlState(rejoinWs, {
+    timeoutMs: 45000,
+    pollMs: 1200,
+    expectMeeting: true,
+  });
+  if (!rejoined.ok) {
+    throw new Error(
+      `Zoom journey failed to rejoin meeting route. Last href=${rejoined.state?.href || "n/a"}`
+    );
+  }
+
+  let promptSettle = await waitForOverlayPromptsAcrossZoomMeetingTargets(baseUrl, {
+    preferredWebSocketDebuggerUrl: rejoinWs,
+    timeoutMs: Math.max(45000, promptWaitMs * 4),
+    pollMs: Math.max(140, promptPollMs),
+    settleQuietMs: 1200,
+  });
+  if (!promptSettle.ok && requirePromptResolution) {
+    throw new Error(
+      `Zoom journey rejoin prompt remained unresolved. Result=${JSON.stringify(
+        promptSettle.lastResult
+      )}`
+    );
+  }
+
+  let kindsSeen = Array.from(new Set(promptSettle.kindsSeen || []));
+  let finalProbeSocket = promptSettle.lastPromptWs || rejoinWs;
+  let finalSeededSessionId = seeded.sessionId || null;
+
+  if (!kindsSeen.includes("session-continuation")) {
+    // Hard-reset fallback: clear meeting tabs, seed again, and retry rejoin on a fresh tab.
+    const liveTargets = await listZoomMeetingPageTargets(baseUrl).catch(() => []);
+    for (const liveTarget of liveTargets) {
+      try {
+        await closeCdpTarget(baseUrl, liveTarget.id);
+      } catch {
+        // Best-effort close.
+      }
+    }
+
+    const reseeded = await seedZoomContinuationCandidate(baseUrl, {
+      sourceUrl: initialHref,
+      title: initialProbe?.title || "Zoom",
+      meetingId,
+      meetingNumber: meetingId,
+      expectedRuntimeId,
+    });
+    finalSeededSessionId = reseeded.sessionId || finalSeededSessionId;
+
+    const retryTarget = await createTarget(baseUrl, initialHref);
+    const retryWs = retryTarget.webSocketDebuggerUrl;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await clickInTarget(retryWs, {
+        selectors: [
+          "#zoom-ui-frame > div.bhauZU7H > div > div.ifP196ZE.x2RD4pnS > div > button.zoom-button.zoom-button--lg.zoom-button--secondary.g7nkJFrV",
+        ],
+        textIncludes: ["join from browser"],
+        includeAnchors: false,
+        delayMs: 650,
+      });
+      await clickInTarget(retryWs, {
+        selectors: ["#btn_end_meeting"],
+        textIncludes: [
+          "start this meeting",
+          "end it and start",
+          "leave and start",
+        ],
+        includeAnchors: false,
+        delayMs: 650,
+      });
+    }
+
+    const retryRejoined = await waitForZoomUrlState(retryWs, {
+      timeoutMs: 50000,
+      pollMs: 1200,
+      expectMeeting: true,
+    });
+    if (!retryRejoined.ok) {
+      throw new Error(
+        `Zoom journey retry failed to rejoin meeting route. Last href=${
+          retryRejoined.state?.href || "n/a"
+        }`
+      );
+    }
+
+    promptSettle = await waitForOverlayPromptsAcrossZoomMeetingTargets(baseUrl, {
+      preferredWebSocketDebuggerUrl: retryWs,
+      timeoutMs: Math.max(60000, promptWaitMs * 5),
+      pollMs: Math.max(140, promptPollMs),
+      settleQuietMs: 1200,
+    });
+    kindsSeen = Array.from(new Set(promptSettle.kindsSeen || []));
+    finalProbeSocket = promptSettle.lastPromptWs || retryWs;
+  }
+
+  if (!kindsSeen.includes("session-continuation")) {
+    throw new Error(
+      `Zoom journey expected 'session-continuation' prompt on rejoin, saw: ${
+        kindsSeen.length > 0 ? kindsSeen.join(", ") : "none"
+      }`
+    );
+  }
+
+  const finalProbe = await probeTarget(
+    finalProbeSocket,
+    Math.max(260, evalDelayMs),
+    false
+  );
+  const finalMeetingId = extractZoomMeetingId(finalProbe?.href || "");
+  if (!finalMeetingId || finalMeetingId !== meetingId) {
+    throw new Error(
+      `Zoom journey rejoined unexpected meeting. expected=${meetingId} actual=${finalMeetingId || "n/a"}`
+    );
+  }
+
+  return {
+    meetingId,
+    leaveClicked,
+    usedSyntheticEnd,
+    seededSessionId: finalSeededSessionId,
+    promptKindsSeen: kindsSeen,
+    finalProbe,
+  };
+}
+
 let smokeFailureMessage = null;
 
 try {
@@ -584,7 +1258,14 @@ try {
     minLevel: process.env.SMOKE_DIAGNOSTICS_MIN_LEVEL || "debug",
     clearExisting: true,
     operation: async () => {
-      const normalizedScenario = scenario === "continuation" ? "lobby" : scenario;
+      const runZoomJourney =
+        provider === "zoom-web" &&
+        (scenario === "journey" || scenario === "lifecycle");
+      const normalizedScenario = runZoomJourney
+        ? "journey"
+        : scenario === "continuation"
+          ? "lobby"
+          : scenario;
       const expectContinuationPrompt =
         provider === "google-meet" && scenario === "continuation";
       const targetInput = await resolveProviderScenarioUrl({
@@ -636,6 +1317,7 @@ try {
 
       let probe = null;
       let teamsMeta = null;
+      let zoomJourneyMeta = null;
 
       await waitStep("Preparing provider page probe");
       const promptSettleResult = await settleBlockingOverlayPrompts(
@@ -662,6 +1344,16 @@ try {
         probe = teamsMeta.probe;
       } else {
         probe = await probeTarget(target.webSocketDebuggerUrl, Math.max(300, evalDelayMs), false);
+      }
+
+      if (runZoomJourney) {
+        await waitStep("Running Zoom journey flow (leave and rejoin)");
+        zoomJourneyMeta = await runZoomJourneyFlow({
+          baseUrl: resolved.baseUrl,
+          targetInput,
+          target,
+        });
+        probe = zoomJourneyMeta.finalProbe;
       }
 
       if (expectContinuationPrompt) {
@@ -739,6 +1431,20 @@ try {
         console.log(`Teams auto-continue clicks: ${teamsMeta.continueClickCount}`);
         console.log(`Teams auto-refresh count: ${teamsMeta.reloadCount}`);
         console.log(`Teams warmup timed out: ${teamsMeta.timedOut ? "yes" : "no"}`);
+      }
+      if (provider === "zoom-web" && runZoomJourney && zoomJourneyMeta) {
+        console.log(`Zoom journey meeting id: ${zoomJourneyMeta.meetingId}`);
+        console.log(
+          `Zoom journey synthetic-end fallback: ${zoomJourneyMeta.usedSyntheticEnd ? "yes" : "no"}`
+        );
+        if (zoomJourneyMeta.seededSessionId) {
+          console.log(`Zoom journey seeded session: ${zoomJourneyMeta.seededSessionId}`);
+        }
+        console.log(
+          `Zoom journey continuation prompts: ${
+            zoomJourneyMeta.promptKindsSeen.join(", ") || "none"
+          }`
+        );
       }
 
       if (!onExpectedHost) {

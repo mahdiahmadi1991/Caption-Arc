@@ -444,6 +444,21 @@ export function getSessionOffsetMs(
   return Math.max(0, itemTimestamp - sessionStartTime);
 }
 
+export function getMeetingSessionLastActivityTimestamp(
+  session: Pick<MeetingSession, "lastSeenAt" | "endTime" | "startTime">
+): number {
+  const startTime =
+    typeof session.startTime === "number" ? session.startTime : 0;
+  const endTime =
+    typeof session.endTime === "number" ? session.endTime : Number.NEGATIVE_INFINITY;
+  const lastSeenAt =
+    typeof session.lastSeenAt === "number"
+      ? session.lastSeenAt
+      : Number.NEGATIVE_INFINITY;
+
+  return Math.max(startTime, endTime, lastSeenAt);
+}
+
 export function buildMeetingSessionTimelineSegments(
   sessionStartTime: number,
   rejoinHistory: MeetingSessionRejoin[] = [],
@@ -1165,10 +1180,15 @@ export function normalizeMeetingSession(
     normalized.sessionFingerprint || buildMeetingSessionFingerprint(normalized);
   normalized.lifecycleState =
     normalized.lifecycleState || (normalized.endTime ? "ended" : "live");
-  normalized.lastSeenAt =
-    normalized.lastSeenAt || normalized.endTime || normalized.startTime;
+  normalized.lastSeenAt = getMeetingSessionLastActivityTimestamp(normalized);
   normalized.updatedAt =
-    normalized.updatedAt || normalized.lastSeenAt || normalized.startTime;
+    Math.max(
+      typeof normalized.updatedAt === "number"
+        ? normalized.updatedAt
+        : Number.NEGATIVE_INFINITY,
+      normalized.lastSeenAt,
+      normalized.startTime
+    );
   normalized.syncContentHash =
     normalized.syncContentHash || buildSessionSyncContentHash(normalized);
   normalized.derived = buildMeetingSessionDerivedData(normalized);

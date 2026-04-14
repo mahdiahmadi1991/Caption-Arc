@@ -23,7 +23,11 @@ This matrix maps overlay behavior-contract rules to available validation surface
 | OVLAY-008 | C-OVLAY-001 | stored overlay frames are clamped before restore and compact-start mount | `tests/google-meet/overlay-lifecycle.contract.test.ts` | implemented |
 | OVLAY-009 | C-OVLAY-002 | overlay creation remains single-instance while wiring drag, resize, tooltip, and assistant subsystems | `tests/google-meet/overlay-lifecycle.contract.test.ts` | implemented |
 | OVLAY-010 | C-OVLAY-005 | overlay teardown clears observers and removes overlay-owned DOM | `tests/google-meet/overlay-lifecycle.contract.test.ts` | implemented |
+| OVLAY-011 | C-OVLAY-006 | assistant surface render state follows runtime assistant state without synthetic streaming fallback | `tests/google-meet/assistant-surface.contract.test.ts` | implemented |
+| OVLAY-012 | C-OVLAY-006 | assistant pending cards render only from live pending outputs | `tests/google-meet/assistant-surface.contract.test.ts` | implemented |
+| OVLAY-013 | C-OVLAY-006 | assistant toggle active state follows real session enablement only | `tests/google-meet/assistant-surface.contract.test.ts` | implemented |
 
 ## Notes
 
 1. Overlay lifecycle coverage now includes stored-frame clamping, singleton creation, and teardown contracts.
+2. Assistant-surface traceability now enforces runtime-driven rendering with no synthetic preview fallbacks.

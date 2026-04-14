@@ -20,6 +20,7 @@ import {
   getLanguageDirection,
 } from "../shared/language-metadata";
 import {
+  buildMeetingSessionTimelineSegments,
   formatSessionOffset,
   getSegmentedSessionOffsetMs,
   getMeetingSessionTimelineSegmentForTimestamp,
@@ -45,7 +46,12 @@ export const SESSION_ENDED_CLOSE_REQUEST_EVENT =
 
 type RenderableTimelineEntry =
   | { kind: "item"; item: Caption }
-  | { kind: "separator"; segment: MeetingSessionTimelineSegment };
+  | {
+      kind: "separator";
+      segment: MeetingSessionTimelineSegment;
+      pending?: boolean;
+    }
+  | { kind: "segment-empty"; segment: MeetingSessionTimelineSegment };
 
 function getOverlayContentElement(): HTMLElement | null {
   if (!overlay) {
@@ -293,11 +299,13 @@ function formatSegmentResumeTime(timestamp: number): string {
 
 function syncSessionSeparatorContent(
   element: HTMLElement,
-  segment: MeetingSessionTimelineSegment
+  segment: MeetingSessionTimelineSegment,
+  pending = false
 ): void {
   const t = getUiRuntimeTranslator();
 
   element.dataset.segmentIndex = String(segment.index);
+  element.dataset.pendingSegment = pending ? "true" : "false";
   const titleEl = element.querySelector(
     ".mc-session-separator-title"
   ) as HTMLElement | null;
@@ -312,20 +320,24 @@ function syncSessionSeparatorContent(
   }
 
   if (detailEl) {
-    detailEl.textContent = t("content.sessionSeparator.detail", {
-      time: formatSegmentResumeTime(segment.startTime),
-      gap: formatCompactGap(segment.gapMs),
-    });
+    detailEl.textContent = pending
+      ? t("content.empty.waitingToJoinTitle")
+      : t("content.sessionSeparator.detail", {
+          time: formatSegmentResumeTime(segment.startTime),
+          gap: formatCompactGap(segment.gapMs),
+        });
   }
 }
 
 function createSessionSeparatorElement(
-  segment: MeetingSessionTimelineSegment
+  segment: MeetingSessionTimelineSegment,
+  pending = false
 ): HTMLElement {
   const t = getUiRuntimeTranslator();
   const element = createElement("div", {
     className: "mc-session-separator",
     "data-segment-index": String(segment.index),
+    "data-pending-segment": pending ? "true" : "false",
     "aria-label": t("content.sessionSeparator.ariaLabel", {
       index: segment.index + 1,
     }),
@@ -340,7 +352,42 @@ function createSessionSeparatorElement(
   );
   element.appendChild(createElement("span", { className: "mc-session-separator-line" }));
 
-  syncSessionSeparatorContent(element, segment);
+  syncSessionSeparatorContent(element, segment, pending);
+  return element;
+}
+
+function syncSessionEmptySegmentContent(
+  element: HTMLElement,
+  segment: MeetingSessionTimelineSegment
+): void {
+  const t = getUiRuntimeTranslator();
+  element.dataset.segmentIndex = String(segment.index);
+  const titleEl = element.querySelector(
+    ".mc-session-empty-title"
+  ) as HTMLElement | null;
+  const bodyEl = element.querySelector(
+    ".mc-session-empty-body"
+  ) as HTMLElement | null;
+
+  if (titleEl) {
+    titleEl.textContent = t("content.empty.segmentEmptyTitle");
+  }
+
+  if (bodyEl) {
+    bodyEl.textContent = t("content.empty.segmentEmptyBody");
+  }
+}
+
+function createSessionEmptySegmentElement(
+  segment: MeetingSessionTimelineSegment
+): HTMLElement {
+  const element = createElement("div", {
+    className: "mc-session-empty",
+    "data-segment-index": String(segment.index),
+  });
+  element.appendChild(createElement("div", { className: "mc-session-empty-title" }));
+  element.appendChild(createElement("div", { className: "mc-session-empty-body" }));
+  syncSessionEmptySegmentContent(element, segment);
   return element;
 }
 
@@ -352,29 +399,100 @@ function getRenderableEntries(): RenderableTimelineEntry[] {
   const items = getRenderableItems();
   const session = getOverlayTimelineContext();
 
-  if (!session || !session.rejoinHistory || session.rejoinHistory.length === 0) {
+  if (!session) {
     return items.map((item) => ({ kind: "item", item }));
   }
 
-  const entries: RenderableTimelineEntry[] = [];
-  let previousSegmentIndex: number | null = null;
+  const timelineSegments = buildMeetingSessionTimelineSegments(
+    session.startTime,
+    session.rejoinHistory
+  );
+  if (timelineSegments.length === 0) {
+    return items.map((item) => ({ kind: "item", item }));
+  }
 
+  const itemsBySegmentIndex = new Map<number, Caption[]>();
   for (const item of items) {
     const segment = getMeetingSessionTimelineSegmentForTimestamp(
       item.historyTimestamp || item.timestamp,
       session.startTime,
       session.rejoinHistory
     );
+    const segmentItems = itemsBySegmentIndex.get(segment.index) || [];
+    segmentItems.push(item);
+    itemsBySegmentIndex.set(segment.index, segmentItems);
+  }
 
-    if (segment.index > 0 && segment.index !== previousSegmentIndex) {
+  const entries: RenderableTimelineEntry[] = [];
+  for (const segment of timelineSegments) {
+    const segmentItems = itemsBySegmentIndex.get(segment.index) || [];
+    const isCurrentActiveJoinedSegment =
+      meetingPresenceState === "joined" &&
+      segment.index === timelineSegments.length - 1 &&
+      segment.endTime === undefined;
+    const shouldRenderSeparator =
+      segment.index > 0 || (segment.index === 0 && segmentItems.length === 0);
+    if (shouldRenderSeparator) {
       entries.push({ kind: "separator", segment });
     }
 
-    entries.push({ kind: "item", item });
-    previousSegmentIndex = segment.index;
+    if (segmentItems.length === 0) {
+      if (shouldRenderSeparator && !isCurrentActiveJoinedSegment) {
+        entries.push({ kind: "segment-empty", segment });
+      }
+      continue;
+    }
+
+    for (const item of segmentItems) {
+      entries.push({ kind: "item", item });
+    }
+  }
+
+  const shouldRenderPendingCurrentSegmentSeparator =
+    meetingPresenceState !== "joined" && meetingPresenceState !== "ended";
+
+  if (shouldRenderPendingCurrentSegmentSeparator) {
+    const latestItemTimestamp = items.reduce(
+      (latest, item) => Math.max(latest, item.historyTimestamp || item.timestamp),
+      session.startTime
+    );
+    const pendingSegmentStartTime = Date.now();
+    const pendingSegmentGapMs = Math.max(
+      0,
+      pendingSegmentStartTime - latestItemTimestamp
+    );
+
+    entries.push({
+      kind: "separator",
+      pending: true,
+      segment: {
+        index: timelineSegments.length,
+        startTime: pendingSegmentStartTime,
+        endTime: undefined,
+        isContinuation: true,
+        resumedAt: pendingSegmentStartTime,
+        previousEndTime: latestItemTimestamp,
+        gapMs: pendingSegmentGapMs,
+      },
+    });
   }
 
   return entries;
+}
+
+function shouldShowInlineEmptyForJoinedActiveSegment(
+  entries: RenderableTimelineEntry[]
+): boolean {
+  if (meetingPresenceState !== "joined" || entries.length === 0) {
+    return false;
+  }
+
+  const lastEntry = entries[entries.length - 1];
+  return (
+    lastEntry?.kind === "separator" &&
+    !lastEntry.pending &&
+    lastEntry.segment.endTime === undefined
+  );
 }
 
 export function renderCaptions(updateOnly = false): void {
@@ -413,7 +531,7 @@ export function renderCaptions(updateOnly = false): void {
   captionList.querySelector(spacerSelector)?.remove();
 
   const existingEntries = Array.from(
-    captionList.querySelectorAll(".mc-caption, .mc-session-separator")
+    captionList.querySelectorAll(".mc-caption, .mc-session-separator, .mc-session-empty")
   );
 
   renderableEntries.forEach((entry, index) => {
@@ -421,13 +539,30 @@ export function renderCaptions(updateOnly = false): void {
 
     if (entry.kind === "separator") {
       if (existing?.classList.contains("mc-session-separator")) {
-        syncSessionSeparatorContent(existing, entry.segment);
+        syncSessionSeparatorContent(existing, entry.segment, Boolean(entry.pending));
       } else {
-        const separatorEl = createSessionSeparatorElement(entry.segment);
+        const separatorEl = createSessionSeparatorElement(
+          entry.segment,
+          Boolean(entry.pending)
+        );
         if (existing) {
           existing.replaceWith(separatorEl);
         } else {
           captionList?.appendChild(separatorEl);
+        }
+      }
+      return;
+    }
+
+    if (entry.kind === "segment-empty") {
+      if (existing?.classList.contains("mc-session-empty")) {
+        syncSessionEmptySegmentContent(existing, entry.segment);
+      } else {
+        const segmentEmptyEl = createSessionEmptySegmentElement(entry.segment);
+        if (existing) {
+          existing.replaceWith(segmentEmptyEl);
+        } else {
+          captionList?.appendChild(segmentEmptyEl);
         }
       }
       return;
@@ -472,7 +607,11 @@ export function renderCaptions(updateOnly = false): void {
 
   existingEntries.slice(renderableEntries.length).forEach((entry) => entry.remove());
 
-  if (meetingPresenceState !== "joined") {
+  const shouldShowInlineEmpty =
+    meetingPresenceState !== "joined" ||
+    shouldShowInlineEmptyForJoinedActiveSegment(renderableEntries);
+
+  if (shouldShowInlineEmpty) {
     const nextInlineEmpty = inlineEmptyEl || createEmptyStateCard(true);
     syncEmptyStateCard(nextInlineEmpty, true);
     captionList.appendChild(nextInlineEmpty);

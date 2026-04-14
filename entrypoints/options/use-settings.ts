@@ -17,12 +17,6 @@ const optionsSettingsDiagnostics = createDiagnosticsLogger({
   feature: "options-settings",
 });
 
-type SaveState =
-  | { status: "idle"; message: string }
-  | { status: "saving"; message: string }
-  | { status: "saved"; message: string }
-  | { status: "error"; message: string };
-
 type ConnectionState =
   | { status: "idle"; message: string }
   | { status: "verifying"; message: string }
@@ -168,10 +162,6 @@ export function useSettings() {
   const t = useT();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
-  const [saveState, setSaveState] = useState<SaveState>({
-    status: "idle",
-    message: t("options.runtime.save.loading"),
-  });
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     status: "idle",
     message: getOpenAiConnectionPrompt(DEFAULT_SETTINGS, t),
@@ -208,10 +198,6 @@ export function useSettings() {
         if (!merged.openaiApiKey.trim()) {
           autoVerifyPendingRef.current = true;
         }
-        setSaveState({
-          status: "saved",
-          message: t("options.runtime.save.saved"),
-        });
         await optionsSettingsDiagnostics.info("options_settings_load_completed", {
           hasApiKey: Boolean(merged.openaiApiKey.trim()),
           model: merged.model,
@@ -236,10 +222,6 @@ export function useSettings() {
     } catch (error) {
       await optionsSettingsDiagnostics.error("options_settings_load_failed", {
         error,
-      });
-      setSaveState({
-        status: "error",
-        message: t("options.runtime.save.loadFailed"),
       });
     } finally {
       setLoading(false);
@@ -302,11 +284,6 @@ export function useSettings() {
       return;
     }
 
-    setSaveState({
-      status: "saving",
-      message: t("options.runtime.save.saving"),
-    });
-
     const requestId = ++saveRequestIdRef.current;
     const timeoutId = window.setTimeout(async () => {
       try {
@@ -331,10 +308,6 @@ export function useSettings() {
         await optionsSettingsDiagnostics.info("options_settings_autosave_completed", {
           requestId,
         });
-        setSaveState({
-          status: "saved",
-          message: t("options.runtime.save.saved"),
-        });
       } catch (error) {
         if (saveRequestIdRef.current !== requestId) {
           await optionsSettingsDiagnostics.trace("options_settings_autosave_failure_ignored", {
@@ -346,11 +319,6 @@ export function useSettings() {
         await optionsSettingsDiagnostics.warn("options_settings_autosave_failed", {
           requestId,
           error,
-        });
-
-        setSaveState({
-          status: "error",
-          message: t("options.runtime.save.autosaveFailed"),
         });
       }
     }, AUTOSAVE_DELAY_MS);
@@ -413,11 +381,6 @@ export function useSettings() {
     const requestId = ++saveRequestIdRef.current;
     immediateSaveSerializedRef.current = serializedSettings;
 
-    setSaveState({
-      status: "saving",
-      message: t("options.runtime.save.saving"),
-    });
-
     try {
       await optionsSettingsDiagnostics.info("options_settings_immediate_save_started", {
         requestId,
@@ -441,10 +404,6 @@ export function useSettings() {
       await optionsSettingsDiagnostics.info("options_settings_immediate_save_completed", {
         requestId,
       });
-      setSaveState({
-        status: "saved",
-        message: t("options.runtime.save.saved"),
-      });
     } catch (error) {
       if (saveRequestIdRef.current !== requestId) {
         await optionsSettingsDiagnostics.trace("options_settings_immediate_save_failure_ignored", {
@@ -456,11 +415,6 @@ export function useSettings() {
       await optionsSettingsDiagnostics.error("options_settings_immediate_save_failed", {
         requestId,
         error,
-      });
-
-      setSaveState({
-        status: "error",
-        message: t("options.runtime.save.autosaveFailed"),
       });
       if (options?.uiLanguageChange) {
         emitUiLocaleSwitchAbort();
@@ -482,11 +436,6 @@ export function useSettings() {
     const serializedSettings = JSON.stringify(nextSettings);
     const requestId = ++saveRequestIdRef.current;
     immediateSaveSerializedRef.current = serializedSettings;
-
-    setSaveState({
-      status: "saving",
-      message: t("options.runtime.save.saving"),
-    });
 
     try {
       await optionsSettingsDiagnostics.info(
@@ -517,10 +466,6 @@ export function useSettings() {
       settingsRef.current = nextSettings;
       setSettings(nextSettings);
       lastSavedSettingsRef.current = serializedSettings;
-      setSaveState({
-        status: "saved",
-        message: t("options.runtime.save.saved"),
-      });
       await optionsSettingsDiagnostics.info(
         "options_settings_transactional_save_completed",
         {
@@ -548,10 +493,6 @@ export function useSettings() {
           error,
         }
       );
-      setSaveState({
-        status: "error",
-        message: t("options.runtime.save.autosaveFailed"),
-      });
       return false;
     } finally {
       if (immediateSaveSerializedRef.current === serializedSettings) {
@@ -835,7 +776,6 @@ export function useSettings() {
   return {
     settings,
     loading,
-    saveState,
     connectionState,
     dataTransferState,
     currentOpenAiApiKey,

@@ -15,6 +15,8 @@ Primary user outcomes:
 ## Continuation Window Contract
 
 Continuation eligibility is bounded by `sessionContinuationWindowMinutes` from settings.
+The continuation time anchor is the candidate session's most recent activity/end timestamp,
+not the original creation timestamp. Each successful resume updates that anchor.
 
 Range and defaults are defined in shared settings defaults:
 
@@ -33,9 +35,12 @@ Primary references:
 Continuation flow includes:
 
 1. detect recent ended session candidate
-2. evaluate continuation eligibility against identity and time window
+2. evaluate continuation eligibility against identity and time window anchored to latest session activity
 3. resolve user decision where required (`resume` or `restart`)
 4. route session resolution with explicit reuse policy (`force-reuse` or `force-new`)
+
+When a user leaves an active meeting session, runtime first enters session-ended review
+(`stay` in overlay or `exit`) before final teardown when provider reset-shell conditions apply.
 
 Primary references:
 
@@ -60,6 +65,7 @@ Primary reference:
 - continuation is identity and window constrained, not unlimited merge behavior
 - direct-call style contexts may not be continuation-eligible in the same way as stable meeting identities
 - when continuation is not valid, runtime falls back to a new session record
+- provider shell routes can stay active without meeting context; ended-session review must still execute on session exit paths
 
 ## User Impact
 

@@ -56,6 +56,7 @@ import {
   syncDiagnosticsEnvironmentConfig,
 } from "./diagnostics";
 import {
+  getMeetingHistoryPageUrl,
   getTermsOfServicePageUrl,
   hasAcceptedCurrentTerms,
 } from "../shared/legal";
@@ -101,6 +102,20 @@ function createTermsRequiredResponse(source: string) {
       source,
     }),
   };
+}
+
+function resolveMeetingSessionDetailUrl(sessionId: unknown): string | null {
+  if (typeof sessionId !== "string") {
+    return null;
+  }
+
+  const normalizedSessionId = sessionId.trim();
+  if (!normalizedSessionId) {
+    return null;
+  }
+
+  const query = new URLSearchParams({ session: normalizedSessionId }).toString();
+  return `${getMeetingHistoryPageUrl()}?${query}`;
 }
 
 function isSafeBlockedSettingsWrite(value: unknown): boolean {
@@ -414,6 +429,23 @@ async function handleMessage(
             }),
           });
         }
+      }
+      return { success: true };
+
+    case "openMeetingSessionDetails":
+      {
+        const sessionDetailsUrl = resolveMeetingSessionDetailUrl(message.sessionId);
+        if (!sessionDetailsUrl) {
+          await backgroundLogger.warn("open_meeting_session_details_invalid_session_id", {
+            senderOrigin: sender?.origin || sender?.url || null,
+          });
+          return { success: false, error: "A valid session id is required." };
+        }
+
+        await backgroundLogger.info("open_meeting_session_details_requested", {
+          senderOrigin: sender?.origin || sender?.url || null,
+        });
+        await chrome.tabs.create({ url: sessionDetailsUrl });
       }
       return { success: true };
 

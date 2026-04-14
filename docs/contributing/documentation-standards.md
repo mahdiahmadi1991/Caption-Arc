@@ -24,6 +24,13 @@
 - prefer concise, skimmable sections
 - use relative links
 
+## Localization Synchronization Rules
+
+- when changing user-facing copy in `entrypoints/shared/i18n/messages/*.ts`, sync the change across all shipped locale catalogs in the same change set
+- do not update only one or two locale files for shared keys; avoid locale drift over time
+- keep locale key shape parity with English and keep semantic meaning aligned across locales for changed text
+- if an exception is unavoidable, record it explicitly in an active Execution Plan and resolve it in the next follow-up change
+
 ## Business Documentation Sync Rules
 
 - for business-sensitive code changes, update the canonical business docs in `docs/product/` in the same change

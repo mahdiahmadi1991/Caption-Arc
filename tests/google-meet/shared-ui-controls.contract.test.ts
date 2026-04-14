@@ -178,7 +178,7 @@ describe("Shared UI controls", () => {
     await harness.cleanup();
   });
 
-  test("UI-CTRL-005: confirm dialogs lock page scrolling while the modal is open", async () => {
+  test("UI-CTRL-005: confirm dialogs lock scrolling without mutating root overflow styles", async () => {
     const harness = await mount(
       React.createElement(
         I18nProvider,
@@ -194,11 +194,27 @@ describe("Shared UI controls", () => {
       )
     );
 
-    expect(document.body.style.overflow).toBe("hidden");
-    expect(document.documentElement.style.overflow).toBe("hidden");
+    const lockedScrollKey = new KeyboardEvent("keydown", {
+      key: "PageDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(lockedScrollKey);
+
+    expect(lockedScrollKey.defaultPrevented).toBe(true);
+    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
 
     await harness.cleanup();
 
+    const unlockedScrollKey = new KeyboardEvent("keydown", {
+      key: "PageDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(unlockedScrollKey);
+
+    expect(unlockedScrollKey.defaultPrevented).toBe(false);
     expect(document.body.style.overflow).toBe("");
     expect(document.documentElement.style.overflow).toBe("");
   });

@@ -60,6 +60,7 @@
     "chrome:smoke:i18n": "bash ./scripts/manual-smoke/smoke-ui-i18n.sh",
     "chrome:smoke:i18n:fresh": "AUTO_BUILD_EXTENSION_ALWAYS=1 bash ./scripts/manual-smoke/smoke-ui-i18n.sh",
     "chrome:smoke:live": "DETERMINISTIC_TEST_MODE=1 SMOKE_LIVE_DIAGNOSTICS=1 bash ./scripts/manual-smoke/smoke-provider.sh",
+    "chrome:smoke:live:zoom:journey": "DETERMINISTIC_TEST_MODE=1 SMOKE_LIVE_DIAGNOSTICS=1 bash ./scripts/manual-smoke/smoke-provider.sh zoom-web journey",
     "chrome:smoke:live:fresh": "DETERMINISTIC_TEST_MODE=1 SMOKE_LIVE_DIAGNOSTICS=1 AUTO_BUILD_EXTENSION_ALWAYS=1 bash ./scripts/manual-smoke/smoke-provider.sh",
     "chrome:smoke:live:google:settings": "DETERMINISTIC_TEST_MODE=1 SMOKE_LIVE_DIAGNOSTICS=1 bash ./scripts/manual-smoke/smoke-google-overlay-settings.sh",
     "chrome:smoke:live:i18n": "DETERMINISTIC_TEST_MODE=1 SMOKE_LIVE_DIAGNOSTICS=1 SMOKE_LIVE_DIAGNOSTICS_MIN_LEVEL=trace SMOKE_DIAGNOSTICS_MIN_LEVEL=trace bash ./scripts/manual-smoke/smoke-ui-i18n.sh",

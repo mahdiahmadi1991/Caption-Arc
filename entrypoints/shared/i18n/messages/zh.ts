@@ -194,11 +194,6 @@ export const zhMessages = {
                 description: "云同步是主要的连续性路径。使用加密的存档作为后备备份，或者在需要干净重置时删除已保存的存档。"
             }
         },
-        saveBadge: {
-            saving: "保存更改",
-            attention: "需要注意",
-            saved: "自动保存"
-        },
         workspace: {
             appearance: {
                 title: "外观",
@@ -240,7 +235,7 @@ export const zhMessages = {
             },
             sessionContinuation: {
                 title: "会话继续窗口",
-                description: "决定 CaptionArc 应在重新加入后继续同一会话多长时间。",
+                description: "决定在会话最近一次活动之后（包括你离开会议的时间），CaptionArc 还应持续提供继续同一会话多长时间。",
                 windowLabel: "窗户",
                 off: "关闭",
                 oneHour: "1小时",
@@ -875,13 +870,6 @@ export const zhMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "正在加载设置...",
-                saving: "自动保存更改...",
-                saved: "所有更改都会自动保存。",
-                loadFailed: "无法加载您保存的设置。",
-                autosaveFailed: "自动保存失败。您的最后一次更改仍然是此选项卡的本地更改。"
-            },
             connection: {
                 addApiKey: "添加您的 OpenAI API 密钥，然后测试连接。",
                 runTest: "运行测试连接以验证您的 OpenAI 密钥和所选型号。",
@@ -1305,6 +1293,8 @@ export const zhMessages = {
             enablingCaptionsBody: "CaptionArc 现在正在尝试为本次会议打开字幕。",
             readyTitle: "捕捉已准备就绪",
             readyBody: "开始讲话，随着会议的继续，字幕行将出现在此处。",
+            segmentEmptyTitle: "没有转录或聊天条目",
+            segmentEmptyBody: "此会话未捕获任何字幕或会议聊天消息。",
             close: "关闭"
         },
         sessionSeparator: {

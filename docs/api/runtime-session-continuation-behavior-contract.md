@@ -89,19 +89,20 @@ Rules:
 6. Otherwise the runtime prompts for a session-continuation decision and returns either `{ reusePolicy: "force-reuse", resumeSessionId }` on `resume` or `{ reusePolicy: "force-new" }` on any other decision.
 7. When the continuation decision resolves to `resume`, the runtime also loads a stored preview before capture resumes.
 
-## C-RCONT-006: Background continuation candidates are ranked by stable identity first and fallback heuristics second
+## C-RCONT-006: Background continuation candidates are ranked by stable identity first and fallback heuristics second, using latest activity time
 
-Source: `scoreContinuationCandidate`, `findFallbackContinuationCandidate`, `evaluateContinuationResume`, `findMeetingSessionContinuationCandidate` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts)
+Source: `getContinuationReferenceTimestamp`, `scoreContinuationCandidate`, `findFallbackContinuationCandidate`, `evaluateContinuationResume`, `findMeetingSessionContinuationCandidate` in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts); `getMeetingSessionLastActivityTimestamp` in [../../entrypoints/shared/meeting-session.ts](../../entrypoints/shared/meeting-session.ts)
 
 Rules:
 
-1. Candidate scoring rejects sessions when the continuation window is disabled, the platform differs, the reference time is outside the continuation window, or the stored session is still live with no `endTime`.
-2. Shared stable identifiers score `100 + sharedIdentifierCount` and take precedence over URL or title fallback matching.
-3. Microsoft Teams requests without shared stable identifiers do not fall back to URL or title matching.
-4. Non-Teams fallback scoring uses normalized reusable URL equality first, then provider label plus normalized title equality.
-5. Fallback candidate ranking sorts by descending score and then by descending reference timestamp.
-6. `findMeetingSessionContinuationCandidate(request)` tries stored fingerprint lookup first and fallback ranking second.
-7. A candidate is returned only when the stored session is not still live and `evaluateContinuationResume(...)` returns `ok: true`.
+1. Candidate scoring rejects sessions when the continuation window is disabled, the platform differs, the latest activity reference time is outside the continuation window, or the stored session is still live with no `endTime`.
+2. Latest activity reference time is computed as `max(lastSeenAt, endTime, startTime)`, so stale `lastSeenAt` values do not prematurely expire continuation eligibility.
+3. Shared stable identifiers score `100 + sharedIdentifierCount` and take precedence over URL or title fallback matching.
+4. Microsoft Teams requests without shared stable identifiers do not fall back to URL or title matching.
+5. Non-Teams fallback scoring uses normalized reusable URL equality first, then provider label plus normalized title equality.
+6. Fallback candidate ranking sorts by descending score and then by descending reference timestamp.
+7. `findMeetingSessionContinuationCandidate(request)` tries stored fingerprint lookup first and fallback ranking second.
+8. A candidate is returned only when the stored session is not still live and `evaluateContinuationResume(...)` returns `ok: true`.
 
 ## C-RCONT-007: Session reuse appends rejoin history only for successful force-reuse resumes
 
@@ -113,7 +114,7 @@ Rules:
 2. Teams requests without stable identity create a fresh session unless they explicitly request `force-reuse` with a `resumeSessionId`.
 3. Stored-session lookup prefers an explicitly requested `resumeSessionId`; otherwise it uses the latest stored session with the same meeting fingerprint.
 4. If no stored session exists or the stored session is not eligible for reuse, `resolveMeetingSession(request)` creates a fresh session.
-5. When reuse succeeds with `reusePolicy === "force-reuse"`, the merged session appends a `rejoinHistory` item containing `previousEndTime`, `resumedAt`, and `gapMs`.
+5. When reuse succeeds with `reusePolicy === "force-reuse"`, the merged session appends a `rejoinHistory` item containing `previousEndTime`, `resumedAt`, and `gapMs`, where `previousEndTime` is anchored to the same latest-activity reference boundary.
 6. A reused ended session transitions to `lifecycleState: "reopened"`, clears `endTime`, and updates `lastSeenAt` and `updatedAt` to the reopen timestamp.
 
 ## Test Traceability

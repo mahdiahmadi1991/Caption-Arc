@@ -134,7 +134,7 @@ function getZoomWebClientFrameDocument(): Document | null {
 function isTopLevelZoomShellContext(
   url: URL = new URL(window.location.href)
 ): boolean {
-  return !isZoomIframeContext() && isZoomWebClientShellRoute(url);
+  return !isZoomIframeContext() && isZoomTopLevelShellRoute(url);
 }
 
 function getZoomMeetingSearchRoots(
@@ -1212,6 +1212,10 @@ function isZoomSupportedRoute(url: URL): boolean {
   );
 }
 
+function isZoomHomeShellRoute(url: URL): boolean {
+  return /^\/wc\/home(?:\/|$)/.test(url.pathname);
+}
+
 function isZoomWebClientShellRoute(url: URL): boolean {
   return (
     /^\/wc\/\d+\/(?:start|join)(?:\/|$)/.test(url.pathname) ||
@@ -1219,14 +1223,30 @@ function isZoomWebClientShellRoute(url: URL): boolean {
   );
 }
 
+function isZoomTopLevelShellRoute(url: URL): boolean {
+  return isZoomWebClientShellRoute(url) || isZoomHomeShellRoute(url);
+}
+
 function shouldActivateZoomProvider(url: URL): boolean {
-  const isMatchingPath = isZoomSupportedRoute(url);
+  const isMeetingRoute = isZoomSupportedRoute(url);
+  const isHomeShell = isZoomHomeShellRoute(url);
+  const isMatchingPath = isMeetingRoute || isHomeShell;
 
   if (!isMatchingPath) {
     return false;
   }
 
-  if (isZoomWebClientShellRoute(url)) {
+  if (isHomeShell) {
+    if (isZoomIframeContext()) {
+      return false;
+    }
+
+    // Zoom dashboard route (`/wc/home`) should only activate when the embedded
+    // webclient iframe is currently hosting an actual meeting route.
+    return isZoomSupportedRoute(getZoomEffectiveMeetingUrl(url));
+  }
+
+  if (isZoomTopLevelShellRoute(url)) {
     return !isZoomIframeContext();
   }
 
@@ -1249,7 +1269,8 @@ function isZoomMeetingContext(url: URL): boolean {
   }
 
   const title = normalizeZoomTitle(document.title || "");
-  const hasMeetingTitle = Boolean(title);
+  // In top-level Zoom shell routes, generic titles (for example "Home") are noisy.
+  const hasMeetingTitle = !isTopLevelZoomShellContext(url) && Boolean(title);
 
   const hasCaptionControls =
     queryZoomMeetingSelectorAllDeep('[aria-label*="caption" i]', url).length > 0 ||
@@ -1267,6 +1288,46 @@ function isZoomMeetingContext(url: URL): boolean {
   }
 
   return hasExplicitCaptions || hasCaptionControls || hasMeetingChrome || hasMeetingTitle;
+}
+
+function getZoomEffectiveMeetingUrl(
+  url: URL = new URL(window.location.href)
+): URL {
+  if (isZoomSupportedRoute(url)) {
+    return url;
+  }
+
+  if (!isTopLevelZoomShellContext(url)) {
+    return url;
+  }
+
+  const frame = getZoomWebClientFrameElement();
+  const frameSrc = frame?.getAttribute("src")?.trim() || "";
+  if (frameSrc) {
+    try {
+      const parsedFrameSrc = new URL(frameSrc, window.location.href);
+      if (isZoomSupportedRoute(parsedFrameSrc)) {
+        return parsedFrameSrc;
+      }
+    } catch {
+      // Ignore malformed frame src.
+    }
+  }
+
+  const frameDocument = getZoomWebClientFrameDocument();
+  const frameUrl = frameDocument?.URL || "";
+  if (frameUrl) {
+    try {
+      const parsedFrameUrl = new URL(frameUrl, window.location.href);
+      if (isZoomSupportedRoute(parsedFrameUrl)) {
+        return parsedFrameUrl;
+      }
+    } catch {
+      // Ignore malformed frame URL.
+    }
+  }
+
+  return url;
 }
 
 function getZoomMeetingPresence(url: URL): MeetingPresenceState {
@@ -1866,14 +1927,23 @@ export const zoomWebProvider: MeetingProvider = {
 
   getSessionMetadata() {
     const url = new URL(window.location.href);
-    const meetingNumber = extractZoomMeetingNumber(url);
-    const meetingId = extractZoomMeetingId(url) || extractZoomFallbackIdentifier();
+    const effectiveMeetingUrl = getZoomEffectiveMeetingUrl(url);
+    const meetingNumber =
+      extractZoomMeetingNumber(effectiveMeetingUrl) ||
+      extractZoomMeetingNumber(url);
+    const meetingId =
+      extractZoomMeetingId(effectiveMeetingUrl) ||
+      extractZoomMeetingId(url) ||
+      extractZoomFallbackIdentifier();
 
     return {
       platform: "zoom-web",
       providerLabel: getProviderLabel("zoom-web"),
       title: normalizeZoomTitle(document.title),
-      sourceUrl: window.location.href,
+      sourceUrl:
+        isZoomSupportedRoute(effectiveMeetingUrl)
+          ? effectiveMeetingUrl.toString()
+          : window.location.href,
       identifiers: {
         meetingId,
         meetingNumber,
@@ -1955,7 +2025,10 @@ export const zoomWebProviderInternals = {
   getZoomMeetingSearchRoots,
   getZoomWebClientFrameDocument,
   getZoomWebClientFrameElement,
+  getZoomEffectiveMeetingUrl,
   hasZoomWebClientFrame,
+  isZoomHomeShellRoute,
+  isZoomTopLevelShellRoute,
   isZoomWebClientShellRoute,
   isZoomIframeContext,
   hasZoomJoinedMeetingSurface,

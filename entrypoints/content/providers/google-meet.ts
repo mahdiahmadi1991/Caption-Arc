@@ -22,6 +22,8 @@ const googleMeetDiagnostics = createDiagnosticsLogger({
 
 let currentCaptionRegion: HTMLElement | null = null;
 let currentChatRegion: HTMLElement | null = null;
+let hasSeenGoogleMeetLeaveCallControl = false;
+let lastGoogleMeetLeaveMeetingCode: string | null = null;
 
 const elementToCaptionId = new WeakMap<Element, number>();
 const elementLastText = new WeakMap<Element, string>();
@@ -102,7 +104,7 @@ function hasGoogleMeetPrejoinSurface(): boolean {
     return true;
   }
 
-  return Boolean(getMeetingTitle());
+  return Boolean(getMeetingTitle()) && !hasSeenGoogleMeetLeaveCallControl;
 }
 
 function hasGoogleMeetMeetingShellHint(url: URL): boolean {
@@ -201,16 +203,45 @@ function delay(ms: number): Promise<void> {
 function getGoogleMeetPresence(): MeetingPresenceState {
   const currentUrl = new URL(window.location.href);
   const pageKind = getGoogleMeetPageKind(currentUrl);
-  if (!pageKind || !hasGoogleMeetPageContext(currentUrl)) {
+  if (!pageKind) {
     return "unknown";
   }
 
-  if (pageKind === "new") {
-    return "prejoin";
+  const meetingCode = getMeetingCodeFromUrl() || null;
+  if (
+    hasSeenGoogleMeetLeaveCallControl &&
+    lastGoogleMeetLeaveMeetingCode &&
+    meetingCode &&
+    meetingCode !== lastGoogleMeetLeaveMeetingCode
+  ) {
+    hasSeenGoogleMeetLeaveCallControl = false;
+    lastGoogleMeetLeaveMeetingCode = null;
   }
 
   if (hasGoogleMeetLeaveCallControl()) {
+    hasSeenGoogleMeetLeaveCallControl = true;
+    lastGoogleMeetLeaveMeetingCode = meetingCode;
     return "joined";
+  }
+
+  if (pageKind === "new") {
+    hasSeenGoogleMeetLeaveCallControl = false;
+    lastGoogleMeetLeaveMeetingCode = null;
+    return "prejoin";
+  }
+
+  if (hasGoogleMeetPrejoinSurface()) {
+    hasSeenGoogleMeetLeaveCallControl = false;
+    lastGoogleMeetLeaveMeetingCode = null;
+    return "prejoin";
+  }
+
+  if (hasSeenGoogleMeetLeaveCallControl) {
+    return "ended";
+  }
+
+  if (!hasGoogleMeetPageContext(currentUrl)) {
+    return "unknown";
   }
 
   return "prejoin";
@@ -774,6 +805,8 @@ function getGoogleMeetPageKind(
 function resetGoogleMeetProviderStateForTests(): void {
   currentCaptionRegion = null;
   currentChatRegion = null;
+  hasSeenGoogleMeetLeaveCallControl = false;
+  lastGoogleMeetLeaveMeetingCode = null;
   finalizationTimers.forEach((timer) => clearTimeout(timer));
   finalizationTimers.clear();
   capturedChatMessageIds.clear();

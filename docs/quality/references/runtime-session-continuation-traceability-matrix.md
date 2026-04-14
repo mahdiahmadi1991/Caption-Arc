@@ -18,9 +18,9 @@ This matrix maps runtime session-continuation behavior-contract rules to reposit
 | RCONT-003 | C-RCONT-003 | startup continuation `resume` sets pending force-reuse options and loads stored preview | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 | RCONT-004 | C-RCONT-004 | prejoin continuation prompt sets pending force-reuse or force-new options for recently ended sessions | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 | RCONT-005 | C-RCONT-005 | session-start option resolution consumes pending options before recent-session prompts | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
-| RCONT-006 | C-RCONT-006 | candidate lookup tries fingerprint matching before fallback ranking | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-006 | C-RCONT-006 | candidate lookup uses latest-activity reference time and still tries fingerprint matching before fallback ranking | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 | RCONT-007 | C-RCONT-006 | live stored sessions are rejected as continuation candidates | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
-| RCONT-008 | C-RCONT-007 | force-reuse appends `rejoinHistory` and reopens ended sessions | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
+| RCONT-008 | C-RCONT-007 | force-reuse appends `rejoinHistory` using the latest-activity boundary and reopens ended sessions | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 | RCONT-009 | C-RCONT-004 | continuation prompt appears during the canonical Google Meet continuation smoke scenario | `pnpm chrome:smoke:live google-meet continuation` | implemented |
 | RCONT-010 | C-RCONT-001 | Teams direct-call transitions force continuation flows into `force-new` without leaving prompts active | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
 | RCONT-011 | C-RCONT-003 | startup continuation falls back to capture consent when no continuation candidate exists | `tests/google-meet/runtime-session-continuation.contract.test.ts` | implemented |
