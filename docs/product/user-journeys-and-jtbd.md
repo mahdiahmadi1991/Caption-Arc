@@ -79,9 +79,10 @@ When I temporarily leave and rejoin a meeting, I want the session to continue in
 Current journey:
 
 1. Runtime detects a recently ended candidate session.
-2. Continuation eligibility is evaluated against configured continuation window and identity signals.
+2. Continuation eligibility is evaluated against configured continuation window and identity signals, anchored to the latest ended activity timestamp of the candidate session.
 3. User resumes existing session or starts a new session depending on policy and decision flow.
-4. Rejoin metadata is preserved for timeline and history continuity.
+4. Session-ended review prompts (`stay` or `exit`) are resolved before teardown on provider reset-shell routes.
+5. Rejoin metadata is preserved for timeline and history continuity.
 
 Primary surfaces:
 

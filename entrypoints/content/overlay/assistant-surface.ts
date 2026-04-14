@@ -88,17 +88,6 @@ const ASSISTANT_CLOSED_TRANSFORM =
 const ASSISTANT_OPEN_TRANSFORM = "translateY(0) scale(1)";
 const ASSISTANT_ENTER_TRANSITION =
   "transform 0.62s cubic-bezier(0.16, 0.88, 0.22, 1)";
-const ASSISTANT_PROCESSING_PREVIEW = true;
-const ASSISTANT_PROCESSING_PREVIEW_PENDING: (typeof assistantLivePendingOutputs)[number] =
-  {
-    triggerEventId: "mock-processing-preview",
-    source: "caption",
-    speaker: "Meeting participant",
-    triggerText: "Can you give me the clearest answer for this point?",
-    queuedAt: 0,
-    partialContent:
-      "Drafting a short reply with the main point, risk, and recommended next step...",
-  };
 
 function createSvgElement<K extends keyof SVGElementTagNameMap>(
   tagName: K
@@ -286,7 +275,7 @@ function getRenderableAssistantState():
     return assistantLiveState;
   }
 
-  return ASSISTANT_PROCESSING_PREVIEW ? "streaming" : assistantLiveState;
+  return assistantLiveState;
 }
 
 function getRenderablePendingOutputs(): (typeof assistantLivePendingOutputs) {
@@ -301,9 +290,7 @@ function getRenderablePendingOutputs(): (typeof assistantLivePendingOutputs) {
     return assistantLivePendingOutputs;
   }
 
-  return ASSISTANT_PROCESSING_PREVIEW
-    ? [ASSISTANT_PROCESSING_PREVIEW_PENDING]
-    : assistantLivePendingOutputs;
+  return assistantLivePendingOutputs;
 }
 
 function getStatusLabel(): string {
@@ -945,8 +932,7 @@ function syncAssistantSurfaceState(): void {
     assistantDockUnread.style.display = "none";
   }
 
-  const toggleShouldAppearActive =
-    assistantSessionEnabled || ASSISTANT_PROCESSING_PREVIEW;
+  const toggleShouldAppearActive = assistantSessionEnabled;
   assistantToggleButton.classList.toggle("mc-active", toggleShouldAppearActive);
   assistantToggleButton.dataset.enabled = assistantSessionEnabled ? "true" : "false";
   assistantToggleButton.dataset.processing =

@@ -5,6 +5,7 @@ import type {
 } from "./types";
 import {
   buildMeetingSessionDerivedData,
+  getMeetingSessionLastActivityTimestamp,
   normalizeMeetingSession,
 } from "../shared/meeting-session";
 
@@ -244,7 +245,7 @@ function extractCanonicalEvents(session: StoredMeetingSession): SavedMeetingEven
 function getSessionReferenceTimestamp(
   session: Pick<MeetingSession, "lastSeenAt" | "endTime" | "startTime">
 ): number {
-  return session.lastSeenAt || session.endTime || session.startTime;
+  return getMeetingSessionLastActivityTimestamp(session);
 }
 
 function canPruneSession(

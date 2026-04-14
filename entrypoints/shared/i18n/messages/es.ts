@@ -194,11 +194,6 @@ export const esMessages = {
                 description: "La sincronización en la nube es el camino principal de continuidad. Utilice el archivo cifrado como copia de seguridad alternativa o elimine el archivo guardado cuando necesite un reinicio limpio."
             }
         },
-        saveBadge: {
-            saving: "Guardando cambios",
-            attention: "necesita atencion",
-            saved: "Guardado automáticamente"
-        },
         workspace: {
             appearance: {
                 title: "Apariencia",
@@ -240,7 +235,7 @@ export const esMessages = {
             },
             sessionContinuation: {
                 title: "Ventana de continuación de sesión",
-                description: "Decida cuánto tiempo debe ofrecerse CaptionArc para continuar la misma sesión después de volver a unirse.",
+                description: "Decida durante cuánto tiempo CaptionArc debe ofrecer continuar la misma sesión después de la última actividad de la sesión (incluido cuando salga de la reunión).",
                 windowLabel: "ventana",
                 off: "Apagado",
                 oneHour: "1 hora",
@@ -875,13 +870,6 @@ export const esMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "Cargando configuración...",
-                saving: "Guardando cambios automáticamente...",
-                saved: "Todos los cambios se guardan automáticamente.",
-                loadFailed: "No se pudo cargar la configuración guardada.",
-                autosaveFailed: "Error al guardar automáticamente. Su último cambio aún es local en esta pestaña."
-            },
             connection: {
                 addApiKey: "Agregue su clave API OpenAI y luego pruebe la conexión.",
                 runTest: "Ejecute Probar conexión para verificar su clave OpenAI y el modelo seleccionado.",
@@ -1305,6 +1293,8 @@ export const esMessages = {
             enablingCaptionsBody: "CaptionArc está intentando activar los subtítulos para esta reunión ahora.",
             readyTitle: "La captura está lista",
             readyBody: "Comience a hablar y las líneas de subtítulos aparecerán aquí a medida que continúe la reunión.",
+            segmentEmptyTitle: "No hay elementos de transcripción ni chat",
+            segmentEmptyBody: "Esta sesión no capturó subtítulos ni mensajes de chat de la reunión.",
             close: "Cerrar"
         },
         sessionSeparator: {

@@ -27,7 +27,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 2px 0;
+  margin: 0 0 10px 0;
   color: var(--mc-text-faint);
 }
 
@@ -66,6 +66,7 @@
 }
 
 .mc-caption {
+  margin-bottom: 10px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -285,6 +286,29 @@
   flex: 0 0 auto;
 }
 
+.mc-session-empty {
+  margin: 0 0 10px 0;
+  padding: 11px 14px;
+  border: 1px dashed color-mix(in srgb, var(--mc-border-strong) 82%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--mc-surface) 52%, transparent);
+  text-align: center;
+}
+
+.mc-session-empty-title {
+  color: var(--mc-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.mc-session-empty-body {
+  margin-top: 4px;
+  color: var(--mc-text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .mc-empty-visual {
   min-height: clamp(18px, 3.4cqb, 20px);
   display: inline-flex;
@@ -362,6 +386,49 @@
 
 .mc-empty-action:active {
   transform: translateY(1px);
+}
+
+.mc-empty-ended .mc-empty-actions {
+  margin-top: 8px;
+}
+
+.mc-empty-ended .mc-empty-action-secondary {
+  min-height: 38px;
+  padding: 0 20px;
+  border-color: color-mix(in srgb, var(--mc-accent) 34%, var(--mc-border-strong));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--mc-accent) 18%, var(--mc-surface-strong)) 0%,
+      color-mix(in srgb, var(--mc-accent) 10%, var(--mc-surface)) 100%
+    );
+  color: color-mix(in srgb, var(--mc-text) 92%, white 8%);
+  box-shadow:
+    0 10px 24px -16px color-mix(in srgb, var(--mc-accent) 52%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 44%, transparent);
+}
+
+.mc-empty-ended .mc-empty-action-secondary:hover {
+  border-color: color-mix(in srgb, var(--mc-accent) 52%, var(--mc-border-strong));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--mc-accent) 24%, var(--mc-surface-strong)) 0%,
+      color-mix(in srgb, var(--mc-accent) 14%, var(--mc-surface-hover)) 100%
+    );
+  box-shadow:
+    0 14px 30px -16px color-mix(in srgb, var(--mc-accent) 58%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.mc-empty-ended .mc-empty-action-secondary:active {
+  transform: translateY(0);
+}
+
+.mc-empty-ended .mc-empty-action-secondary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--mc-accent) 42%, white);
+  outline-offset: 2px;
 }
 
 .mc-empty-ready .mc-empty-visual {

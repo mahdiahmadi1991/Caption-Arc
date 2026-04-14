@@ -194,11 +194,6 @@ export const koMessages = {
                 description: "클라우드 동기화는 기본 연속성 경로입니다. 암호화된 아카이브를 대체 백업으로 사용하거나, 완전히 재설정이 필요한 경우 저장된 아카이브를 삭제하세요."
             }
         },
-        saveBadge: {
-            saving: "변경사항 저장",
-            attention: "주의가 필요함",
-            saved: "자동으로 저장됨"
-        },
         workspace: {
             appearance: {
                 title: "외관",
@@ -240,7 +235,7 @@ export const koMessages = {
             },
             sessionContinuation: {
                 title: "세션 계속 창",
-                description: "CaptionArc이(가) 다시 참여한 후 동일한 세션을 계속하도록 제공해야 하는 기간을 결정합니다.",
+                description: "세션의 마지막 활동(회의에서 나간 시점 포함) 이후, CaptionArc이 동일한 세션을 계속 제안할 기간을 결정합니다.",
                 windowLabel: "창",
                 off: "끄기",
                 oneHour: "1시간",
@@ -875,13 +870,6 @@ export const koMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "설정 로드 중...",
-                saving: "변경사항을 자동으로 저장하는 중...",
-                saved: "모든 변경 사항이 자동으로 저장되었습니다.",
-                loadFailed: "저장된 설정을 로드할 수 없습니다.",
-                autosaveFailed: "자동 저장에 실패했습니다. 마지막 변경 사항은 여전히 ​​이 탭에만 적용됩니다."
-            },
             connection: {
                 addApiKey: "OpenAI API 키를 추가한 다음 연결을 테스트하세요.",
                 runTest: "연결 테스트를 실행하여 OpenAI 키와 선택한 모델을 확인하세요.",
@@ -1305,6 +1293,8 @@ export const koMessages = {
             enablingCaptionsBody: "CaptionArc이(가) 지금 이 회의에 캡션을 켜려고 합니다.",
             readyTitle: "캡처가 준비되었습니다",
             readyBody: "말하기 시작하면 회의가 계속되는 동안 캡션 줄이 여기에 표시됩니다.",
+            segmentEmptyTitle: "대본 또는 채팅 항목이 없습니다",
+            segmentEmptyBody: "이 세션에서는 캡션이나 회의 채팅 메시지가 캡처되지 않았습니다.",
             close: "닫기"
         },
         sessionSeparator: {

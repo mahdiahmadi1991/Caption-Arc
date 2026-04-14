@@ -21,8 +21,14 @@ import {
 } from "../history-service";
 import { getPrimaryMeetingIdentifier } from "../../shared/meeting-session";
 import { getUiRuntimeTranslator } from "../../shared/i18n";
+import { getMeetingHistoryPageUrl } from "../../shared/legal";
 
 const FOOTER_TICK_INTERVAL_MS = 1000;
+const OPEN_MEETING_SESSION_DETAILS_ACTION = "openMeetingSessionDetails";
+const FOOTER_SUBTITLE_SESSION_ID_ATTR = "data-session-id";
+const FOOTER_SUBTITLE_BASE_CLASS = "mc-footer-session-anchor";
+const FOOTER_SUBTITLE_INTERACTIVE_CLASS = "mc-footer-session-anchor--interactive";
+const FOOTER_SUBTITLE_INACTIVE_CLASS = "mc-footer-session-anchor--inactive";
 
 let footerTicker: number | null = null;
 
@@ -76,6 +82,45 @@ function setIndicatorVisibility(el: HTMLElement | null, visible: boolean): void 
   el.hidden = !visible;
   el.setAttribute("aria-hidden", nextAriaHidden);
   el.style.display = nextDisplay;
+}
+
+function buildMeetingSessionDetailUrl(sessionId: string): string {
+  const url = new URL(getMeetingHistoryPageUrl());
+  url.searchParams.set("session", sessionId);
+  return url.toString();
+}
+
+function openMeetingSessionDetails(
+  sessionId: string,
+  fallbackUrl: string
+): void {
+  void chrome.runtime
+    .sendMessage({
+      action: OPEN_MEETING_SESSION_DETAILS_ACTION,
+      sessionId,
+    })
+    .then((response) => {
+      const openedByBackground =
+        typeof response === "object" &&
+        response !== null &&
+        "success" in response &&
+        Boolean((response as { success?: boolean }).success);
+      const blockedByTerms =
+        typeof response === "object" &&
+        response !== null &&
+        "code" in response &&
+        (response as { code?: string }).code === "terms_not_accepted";
+      if (openedByBackground) {
+        return;
+      }
+
+      if (!blockedByTerms) {
+        window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      }
+    })
+    .catch(() => {
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    });
 }
 
 function formatElapsedDuration(startTime: number): string {
@@ -170,7 +215,6 @@ function getFooterLiveState(): {
 
 export function syncOverlayFooter(): void {
   const t = getUiRuntimeTranslator();
-  const titleEl = document.getElementById("mc-footer-title");
   const subtitleEl = document.getElementById("mc-footer-subtitle");
   const durationEl = document.getElementById("mc-footer-duration");
   const turnsEl = document.getElementById("mc-footer-turns");
@@ -208,18 +252,44 @@ export function syncOverlayFooter(): void {
           pendingMetadata.identifiers
         )
       : "";
+  const sessionSummaryLabel = sessionIdentifier || title;
   const liveState = getFooterLiveState();
   const totalTurns = captions.length + liveChatMessages.length;
 
-  if (titleEl) {
-    setTextIfChanged(titleEl, title);
-  }
-
   if (subtitleEl) {
-    setTextIfChanged(subtitleEl, sessionIdentifier);
-    const nextDisplay = sessionIdentifier ? "" : "none";
+    setTextIfChanged(subtitleEl, sessionSummaryLabel);
+    const nextDisplay = sessionSummaryLabel ? "" : "none";
     if (subtitleEl.style.display !== nextDisplay) {
       subtitleEl.style.display = nextDisplay;
+    }
+
+    if (subtitleEl instanceof HTMLAnchorElement) {
+      subtitleEl.classList.add(FOOTER_SUBTITLE_BASE_CLASS);
+      const sessionId = session?.id?.trim() || "";
+      if (sessionId) {
+        const detailUrl = buildMeetingSessionDetailUrl(sessionId);
+        setAttributeIfChanged(subtitleEl, "href", detailUrl);
+        setAttributeIfChanged(subtitleEl, "target", "_blank");
+        setAttributeIfChanged(subtitleEl, "rel", "noopener noreferrer");
+        setAttributeIfChanged(subtitleEl, FOOTER_SUBTITLE_SESSION_ID_ATTR, sessionId);
+        setAttributeIfChanged(
+          subtitleEl,
+          "aria-label",
+          t("popup.header.openMeetingHistory")
+        );
+        subtitleEl.classList.add(FOOTER_SUBTITLE_INTERACTIVE_CLASS);
+        subtitleEl.classList.remove(FOOTER_SUBTITLE_INACTIVE_CLASS);
+        subtitleEl.removeAttribute("aria-disabled");
+      } else {
+        subtitleEl.removeAttribute("href");
+        subtitleEl.removeAttribute("target");
+        subtitleEl.removeAttribute("rel");
+        subtitleEl.removeAttribute(FOOTER_SUBTITLE_SESSION_ID_ATTR);
+        subtitleEl.removeAttribute("aria-label");
+        subtitleEl.classList.remove(FOOTER_SUBTITLE_INTERACTIVE_CLASS);
+        subtitleEl.classList.add(FOOTER_SUBTITLE_INACTIVE_CLASS);
+        subtitleEl.setAttribute("aria-disabled", "true");
+      }
     }
   }
 
@@ -312,11 +382,7 @@ export function stopOverlayFooterTicker(): void {
 export function createOverlayFooter(): HTMLElement {
   const footer = createElement("div", { className: "mc-footer" }, [
     createElement("div", { className: "mc-footer-session" }, [
-      createElement("div", {
-        id: "mc-footer-title",
-        className: "mc-footer-title",
-      }),
-      createElement("div", {
+      createElement("a", {
         id: "mc-footer-subtitle",
         className: "mc-footer-subtitle",
       }),
@@ -420,6 +486,25 @@ export function createOverlayFooter(): HTMLElement {
       ),
     ]),
   ]);
+
+  const subtitleEl = footer.querySelector<HTMLAnchorElement>("#mc-footer-subtitle");
+  subtitleEl?.addEventListener("click", (event) => {
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const sessionId = target.getAttribute(FOOTER_SUBTITLE_SESSION_ID_ATTR)?.trim() || "";
+    const href = target.getAttribute("href")?.trim() || "";
+    if (!sessionId || !href) {
+      event.preventDefault();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    openMeetingSessionDetails(sessionId, href);
+  });
 
   syncOverlayFooter();
 

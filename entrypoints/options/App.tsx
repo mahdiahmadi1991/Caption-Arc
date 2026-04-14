@@ -1903,7 +1903,6 @@ export default function App() {
   const {
     settings,
     loading,
-    saveState,
     connectionState,
     dataTransferState,
     currentOpenAiApiKey,
@@ -2394,34 +2393,6 @@ export default function App() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:self-start xl:self-auto">
-              <span
-                className={[
-                  "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium",
-                  saveState.status === "error"
-                    ? "border-[var(--app-danger-border)] bg-[var(--app-danger-soft)] text-[var(--app-danger)]"
-                    : saveState.status === "saving"
-                      ? "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]"
-                      : "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]",
-                ].join(" ")}
-              >
-                <span
-                  className={[
-                    "inline-flex h-2 w-2 rounded-full",
-                    saveState.status === "error"
-                      ? "bg-[var(--app-danger)]"
-                      : saveState.status === "saving"
-                        ? "bg-[var(--app-accent)]"
-                        : "bg-[var(--app-text-faint)]",
-                  ].join(" ")}
-                />
-                <span>
-                  {saveState.status === "saving"
-                    ? t("options.saveBadge.saving")
-                    : saveState.status === "error"
-                      ? t("options.saveBadge.attention")
-                      : t("options.saveBadge.saved")}
-                  </span>
-                </span>
               <GitHubHeaderLink />
               <button
                 type="button"

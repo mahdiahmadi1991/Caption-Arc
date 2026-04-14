@@ -220,11 +220,6 @@ export const enMessages = {
           "Cloud sync is the primary continuity path. Use the encrypted archive as a fallback backup, or delete the saved archive when you need a clean reset.",
       },
     },
-    saveBadge: {
-      saving: "Saving changes",
-      attention: "Needs attention",
-      saved: "Saved automatically",
-    },
     workspace: {
       appearance: {
         title: "Appearance",
@@ -275,7 +270,7 @@ export const enMessages = {
       sessionContinuation: {
         title: "Session continuation window",
         description:
-          "Decide how long CaptionArc should offer to continue the same session after rejoining.",
+          "Decide how long CaptionArc should offer to continue the same session after the latest session activity (including when you leave the meeting).",
         windowLabel: "Window",
         off: "Off",
         oneHour: "1 hour",
@@ -1015,14 +1010,6 @@ export const enMessages = {
       },
     },
     runtime: {
-      save: {
-        loading: "Loading settings...",
-        saving: "Saving changes automatically...",
-        saved: "All changes saved automatically.",
-        loadFailed: "Could not load your saved settings.",
-        autosaveFailed:
-          "Autosave failed. Your last change is still local to this tab.",
-      },
       connection: {
         addApiKey: "Add your OpenAI API key, then test the connection.",
         runTest:
@@ -1510,6 +1497,9 @@ export const enMessages = {
       readyTitle: "Capture is ready",
       readyBody:
         "Start speaking and caption lines will appear here as the meeting continues.",
+      segmentEmptyTitle: "No transcript or chat items",
+      segmentEmptyBody:
+        "This session did not capture any captions or meeting chat messages.",
       close: "Close",
     },
     sessionSeparator: {

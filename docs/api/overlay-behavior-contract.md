@@ -12,6 +12,7 @@ It is a characterization artifact derived from implementation code, not a requir
 - [../../entrypoints/content/overlay/settings.ts](../../entrypoints/content/overlay/settings.ts)
 - [../../entrypoints/content/overlay/visibility.ts](../../entrypoints/content/overlay/visibility.ts)
 - [../../entrypoints/content/overlay/interactions.ts](../../entrypoints/content/overlay/interactions.ts)
+- [../../entrypoints/content/overlay/assistant-surface.ts](../../entrypoints/content/overlay/assistant-surface.ts)
 
 ## Rule ID Convention
 
@@ -81,6 +82,17 @@ Rules:
 4. Overlay teardown removes the overlay root from the document when it is still attached.
 5. Overlay teardown destroys the assistant surface and clears overlay-owned state references.
 
+## C-OVLAY-006: Assistant surface state and pending cards reflect runtime assistant data without synthetic preview fallbacks
+
+Source: `getRenderableAssistantState`, `getRenderablePendingOutputs`, `syncAssistantSurfaceState`, `renderAssistantOutputs` in [../../entrypoints/content/overlay/assistant-surface.ts](../../entrypoints/content/overlay/assistant-surface.ts)
+
+Rules:
+
+1. Assistant surface render state follows runtime `assistantLiveState`, except that OpenAI-unavailable + enabled sessions are forced to `error`.
+2. Pending cards render only from real `assistantLivePendingOutputs`; no synthetic preview pending item is injected.
+3. When runtime pending outputs are empty, no pending assistant card is rendered.
+4. The assistant toggle active visual state reflects only `assistantSessionEnabled`.
+
 ## Test Traceability
 
 - [../quality/references/overlay-traceability-matrix.md](../quality/references/overlay-traceability-matrix.md)
@@ -89,4 +101,4 @@ Each rule maps to one or more traceability cases with explicit `implemented` or 
 
 ## Change Control
 
-If overlay frame restoration, live settings sync, visibility rules, or teardown semantics change in code, update this contract and its traceability matrix in the same change set.
+If overlay frame restoration, live settings sync, visibility rules, teardown semantics, or assistant-surface rendering behavior changes in code, update this contract and its traceability matrix in the same change set.

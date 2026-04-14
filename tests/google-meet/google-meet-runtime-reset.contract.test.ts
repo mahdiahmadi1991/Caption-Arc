@@ -32,7 +32,7 @@ function createProviderStub(
   };
 }
 
-describe("Google Meet runtime reset-page guard contract", () => {
+describe("Provider runtime reset-page guard contract", () => {
   test("GM-RT-001: reset candidate is true when URL matches provider and page-context is false", () => {
     const provider = createProviderStub({
       platform: "google-meet",
@@ -58,6 +58,48 @@ describe("Google Meet runtime reset-page guard contract", () => {
     const candidate = platformRuntimeInternals.shouldResetRuntimeOnCurrentPage(
       provider,
       new URL("https://meet.google.com/abc-defg-hij")
+    );
+
+    expect(candidate).toBe(false);
+  });
+
+  test("ZOOM-RT-001: reset candidate is true on zoom wc/home shell route", () => {
+    const provider = createProviderStub({
+      platform: "zoom-web",
+      matchesUrl: () => false,
+      matchesPageContext: () => false,
+      getSessionMetadata: () => ({
+        platform: "zoom-web",
+        providerLabel: "Zoom Web App",
+        sourceUrl: "https://us05web.zoom.us/wc/home",
+        identifiers: {},
+      }),
+    });
+
+    const candidate = platformRuntimeInternals.shouldResetRuntimeOnCurrentPage(
+      provider,
+      new URL("https://app.zoom.us/wc/home")
+    );
+
+    expect(candidate).toBe(true);
+  });
+
+  test("ZOOM-RT-001: reset candidate is false on non-home zoom route", () => {
+    const provider = createProviderStub({
+      platform: "zoom-web",
+      matchesUrl: () => true,
+      matchesPageContext: () => true,
+      getSessionMetadata: () => ({
+        platform: "zoom-web",
+        providerLabel: "Zoom Web App",
+        sourceUrl: "https://us05web.zoom.us/j/123456789",
+        identifiers: { meetingId: "123456789" },
+      }),
+    });
+
+    const candidate = platformRuntimeInternals.shouldResetRuntimeOnCurrentPage(
+      provider,
+      new URL("https://us05web.zoom.us/j/123456789")
     );
 
     expect(candidate).toBe(false);

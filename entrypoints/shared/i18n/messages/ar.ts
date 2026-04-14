@@ -194,11 +194,6 @@ export const arMessages = {
                 description: "المزامنة السحابية هي مسار الاستمرارية الأساسي. استخدم الأرشيف المشفر كنسخة احتياطية احتياطية، أو احذف الأرشيف المحفوظ عندما تحتاج إلى إعادة تعيين نظيفة."
             }
         },
-        saveBadge: {
-            saving: "حفظ التغييرات",
-            attention: "يحتاج إلى اهتمام",
-            saved: "تم الحفظ تلقائيًا"
-        },
         workspace: {
             appearance: {
                 title: "المظهر",
@@ -240,7 +235,7 @@ export const arMessages = {
             },
             sessionContinuation: {
                 title: "نافذة استمرار الجلسة",
-                description: "قرر المدة التي يجب أن يعرضها CaptionArc لمواصلة نفس الجلسة بعد إعادة الانضمام.",
+                description: "قرر المدة التي يجب أن يعرضها CaptionArc لمواصلة نفس الجلسة بعد آخر نشاط في الجلسة (بما في ذلك وقت مغادرتك الاجتماع).",
                 windowLabel: "نافذة",
                 off: "إيقاف",
                 oneHour: "1 ساعة",
@@ -875,13 +870,6 @@ export const arMessages = {
             }
         },
         runtime: {
-            save: {
-                loading: "جارٍ تحميل الإعدادات...",
-                saving: "جارٍ حفظ التغييرات تلقائيًا...",
-                saved: "تم حفظ جميع التغييرات تلقائيًا.",
-                loadFailed: "تعذر تحميل إعداداتك المحفوظة.",
-                autosaveFailed: "فشل الحفظ التلقائي. لا يزال التغيير الأخير محليًا في علامة التبويب هذه."
-            },
             connection: {
                 addApiKey: "أضف مفتاح OpenAI API الخاص بك، ثم اختبر الاتصال.",
                 runTest: "قم بتشغيل اختبار الاتصال للتحقق من مفتاح OpenAI والطراز المحدد.",
@@ -1305,6 +1293,8 @@ export const arMessages = {
             enablingCaptionsBody: "يحاول CaptionArc تشغيل التسميات التوضيحية لهذا الاجتماع الآن.",
             readyTitle: "الالتقاط جاهز",
             readyBody: "ابدأ التحدث وستظهر سطور التسمية التوضيحية هنا مع استمرار الاجتماع.",
+            segmentEmptyTitle: "لا يوجد نص أو عناصر الدردشة",
+            segmentEmptyBody: "لم يلتقط هذا الجزء من الجلسة أي تسميات توضيحية أو رسائل دردشة اجتماع.",
             close: "إغلاق"
         },
         sessionSeparator: {

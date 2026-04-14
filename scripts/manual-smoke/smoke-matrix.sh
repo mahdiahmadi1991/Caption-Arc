@@ -50,6 +50,18 @@ if [[ "${#CASES[@]}" -eq 0 ]]; then
     "zoom-web lobby"
     "zoom-web meeting"
   )
+
+  if [[ "${ZOOM_INCLUDE_JOURNEY_SCENARIO:-1}" == "1" ]]; then
+    CASES+=("zoom-web journey")
+  fi
+
+  if [[ -n "${ZOOM_SHARED_URL:-}" || -n "${ZOOM_GUEST_URL:-}" || -n "${ZOOM_INVITE_URL:-}" ]]; then
+    CASES+=("zoom-web meeting-shared")
+  fi
+
+  if [[ "${ZOOM_INCLUDE_SCHEDULED_SCENARIO:-0}" == "1" ]]; then
+    CASES+=("zoom-web meeting-scheduled")
+  fi
 fi
 
 TOTAL="${#CASES[@]}"

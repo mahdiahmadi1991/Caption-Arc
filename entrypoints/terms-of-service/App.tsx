@@ -154,6 +154,8 @@ export default function App() {
       : source === "popup-gate" || source === "install"
         ? "close"
         : "options");
+  const acceptReturnTarget =
+    resolvedReturnTarget === "close" ? "options" : resolvedReturnTarget;
 
   useEffect(() => {
     if (!acceptMode) {
@@ -181,8 +183,10 @@ export default function App() {
     };
   }, [acceptMode]);
 
-  const completeTermsFlow = async () => {
-    const returnUrl = getTermsReturnTargetUrl(resolvedReturnTarget);
+  const completeTermsFlow = async (
+    target = resolvedReturnTarget
+  ) => {
+    const returnUrl = getTermsReturnTargetUrl(target);
 
     if (returnUrl) {
       window.location.replace(returnUrl);
@@ -219,7 +223,7 @@ export default function App() {
           return;
         }
       }
-      await completeTermsFlow();
+      await completeTermsFlow(acceptReturnTarget);
     } finally {
       setBusy(false);
     }
@@ -350,7 +354,7 @@ export default function App() {
                     {busy
                       ? t("common.actions.working")
                       : alreadyAccepted
-                        ? resolvedReturnTarget !== "close"
+                        ? acceptReturnTarget !== "close"
                           ? t("common.actions.continue")
                           : t("common.actions.close")
                         : t("common.legalPages.termsOfService.accept")}

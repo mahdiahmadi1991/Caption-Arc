@@ -795,6 +795,10 @@ export function syncTranslationDock(): void {
 }
 
 function createLanguageSelect(): HTMLElement {
+  const sortedLanguages = [...LANGUAGES].sort((left, right) =>
+    left.name.localeCompare(right.name, "en", { sensitivity: "base" })
+  );
+
   const selectLanguage = async (targetLanguage: string) => {
     const previousLanguage = settings.targetLanguage;
 
@@ -830,7 +834,7 @@ function createLanguageSelect(): HTMLElement {
   return createOverlayDropdownSelect({
     id: "mc-lang-select",
     value: settings.targetLanguage,
-    options: LANGUAGES.map((language) => ({
+    options: sortedLanguages.map((language) => ({
       id: language.code,
       name: language.name,
     })),

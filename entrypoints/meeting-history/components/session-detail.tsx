@@ -9,6 +9,7 @@ import type {
   SummaryProfile,
 } from "../../background/types";
 import {
+  buildMeetingSessionTimelineSegments,
   formatSessionOffset,
   getMeetingDisplayTitle,
   getMeetingSessionTimelineSegmentForTimestamp,
@@ -182,6 +183,7 @@ type TimelineContentItem =
 
 type TimelineEntry =
   | { kind: "separator"; segment: MeetingSessionTimelineSegment }
+  | { kind: "segment-empty"; segment: MeetingSessionTimelineSegment }
   | { kind: "item"; item: TimelineContentItem };
 
 function getTimelineItemKey(item: TimelineContentItem): string {
@@ -1059,17 +1061,16 @@ export function SessionDetail({
     [session.captions, session.chatMessages]
   );
   const timelineEntries = useMemo<TimelineEntry[]>(() => {
-    if (timelineItems.length === 0) {
-      return [];
-    }
-
-    if (!session.rejoinHistory || session.rejoinHistory.length === 0) {
+    const segments = buildMeetingSessionTimelineSegments(
+      session.startTime,
+      session.rejoinHistory,
+      session.endTime
+    );
+    if (segments.length === 0) {
       return timelineItems.map((item) => ({ kind: "item", item }));
     }
 
-    const entries: TimelineEntry[] = [];
-    let previousSegmentIndex: number | null = null;
-
+    const itemsBySegmentIndex = new Map<number, TimelineContentItem[]>();
     for (const item of timelineItems) {
       const segment = getMeetingSessionTimelineSegmentForTimestamp(
         item.timestamp,
@@ -1077,13 +1078,30 @@ export function SessionDetail({
         session.rejoinHistory,
         session.endTime
       );
+      const segmentItems = itemsBySegmentIndex.get(segment.index) || [];
+      segmentItems.push(item);
+      itemsBySegmentIndex.set(segment.index, segmentItems);
+    }
 
-      if (segment.index > 0 && segment.index !== previousSegmentIndex) {
+    const entries: TimelineEntry[] = [];
+    for (const segment of segments) {
+      const segmentItems = itemsBySegmentIndex.get(segment.index) || [];
+      const shouldRenderSeparator =
+        segment.index > 0 || (segment.index === 0 && segmentItems.length === 0);
+      if (shouldRenderSeparator) {
         entries.push({ kind: "separator", segment });
       }
 
-      entries.push({ kind: "item", item });
-      previousSegmentIndex = segment.index;
+      if (segmentItems.length === 0) {
+        if (shouldRenderSeparator) {
+          entries.push({ kind: "segment-empty", segment });
+        }
+        continue;
+      }
+
+      for (const item of segmentItems) {
+        entries.push({ kind: "item", item });
+      }
     }
 
     return entries;
@@ -1971,7 +1989,7 @@ export function SessionDetail({
           />
         )}
 
-        {timelineItems.length === 0 ? (
+        {timelineEntries.length === 0 ? (
           <div className="rounded-[1.75rem] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-soft)] px-6 py-14 text-center">
             <p className="text-base font-medium text-[var(--app-text)]">
               {t("history.detail.transcript.emptyTitle")}
@@ -2004,6 +2022,22 @@ export function SessionDetail({
                       </div>
                     </div>
                     <div className="h-px flex-1 bg-[var(--app-border)]" />
+                  </div>
+                );
+              }
+
+              if (entry.kind === "segment-empty") {
+                return (
+                  <div
+                    key={`segment-empty-${entry.segment.index}-${entry.segment.startTime}`}
+                    className="rounded-[1.75rem] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-soft)] px-6 py-8 text-center"
+                  >
+                    <p className="text-base font-medium text-[var(--app-text)]">
+                      {t("history.detail.transcript.emptyTitle")}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--app-text-muted)]">
+                      {t("history.detail.transcript.emptyDescription")}
+                    </p>
                   </div>
                 );
               }
