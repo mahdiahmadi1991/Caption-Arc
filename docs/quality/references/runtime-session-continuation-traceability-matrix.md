@@ -27,5 +27,4 @@ This matrix maps runtime session-continuation behavior-contract rules to reposit
 
 ## Notes
 
-1. Generic prompt behavior moved to [runtime-prompts-traceability-matrix.md](./runtime-prompts-traceability-matrix.md) to keep this matrix continuation-specific.
-2. Deterministic runtime continuation tests now cover startup retries, option precedence, direct-call force-new paths, and startup fallback-to-consent behavior.
+1. Session-continuation coverage assumes continuation eligibility is resolved against the canonical meeting-session model after legacy profile aliases are normalized.

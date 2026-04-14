@@ -4,6 +4,13 @@ import type {
   StoredMeetingSession,
 } from "./types";
 import {
+  getMeetingArchiveRetentionAgeMs,
+  isMeetingArchiveRetentionDisabled,
+  MAX_ARCHIVED_SESSION_COUNT,
+  STORAGE_PRESSURE_HIGH_RATIO,
+  STORAGE_PRESSURE_TARGET_RATIO,
+} from "../shared/meeting-archive-retention";
+import {
   buildMeetingSessionDerivedData,
   getMeetingSessionLastActivityTimestamp,
   normalizeMeetingSession,
@@ -14,10 +21,6 @@ const HISTORY_DB_VERSION = 4;
 const SESSION_INDEX_STORE = "session-index";
 const SESSION_EVENT_CHUNK_STORE = "session-event-chunks";
 const EVENT_CHUNK_SIZE = 250;
-const MAX_ARCHIVED_SESSION_COUNT = 250;
-const MAX_ARCHIVED_SESSION_AGE_MS = 180 * 24 * 60 * 60 * 1000;
-const STORAGE_PRESSURE_HIGH_RATIO = 0.7;
-const STORAGE_PRESSURE_TARGET_RATIO = 0.55;
 
 type StoredMeetingSessionIndex = Omit<
   MeetingSession,
@@ -306,19 +309,30 @@ async function estimateStoragePressureRatio(): Promise<number | null> {
   return bytesUsed / estimate.quota;
 }
 
-export async function enforceMeetingHistoryRetentionPolicy(): Promise<
+export async function enforceMeetingHistoryRetentionPolicy(
+  meetingArchiveRetentionDays: number
+): Promise<
   MeetingHistoryRetentionResult
 > {
+  if (isMeetingArchiveRetentionDisabled(meetingArchiveRetentionDays)) {
+    return {
+      deletedSessionIds: [],
+    };
+  }
+
   const indexes = (await listStoredMeetingSessionIndexes()).sort(
     (left, right) => getSessionReferenceTimestamp(left) - getSessionReferenceTimestamp(right)
   );
   const now = Date.now();
   const deletedSessionIds = new Set<string>();
+  const maxArchivedSessionAgeMs = getMeetingArchiveRetentionAgeMs(
+    meetingArchiveRetentionDays
+  );
 
   const agePrunedIds = indexes
     .filter((session) => canPruneSession(session))
     .filter(
-      (session) => now - getSessionReferenceTimestamp(session) > MAX_ARCHIVED_SESSION_AGE_MS
+      (session) => now - getSessionReferenceTimestamp(session) > maxArchivedSessionAgeMs
     )
     .map((session) => session.id);
 

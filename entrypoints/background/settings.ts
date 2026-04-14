@@ -10,12 +10,13 @@ import type {
 } from "./types";
 import { DEFAULT_SETTINGS } from "./constants";
 import {
-  normalizeSummaryProfiles,
-  PROTECTED_SUMMARY_PROFILE_ID,
-  isProtectedSummaryProfile,
-} from "../shared/summary-profiles";
+  normalizeMeetingProfiles,
+  PROTECTED_MEETING_PROFILE_ID,
+  isProtectedMeetingProfile,
+} from "../shared/meeting-profiles";
 import { MODELS } from "./constants";
 import { createDefaultDeviceLabel, createDeviceId } from "../shared/device-identity";
+import { normalizeMeetingArchiveRetentionDays } from "../shared/meeting-archive-retention";
 import { normalizeSessionContinuationWindowMinutes } from "../shared/settings-defaults";
 import { normalizeLanguageCode } from "../shared/language-metadata";
 import {
@@ -35,6 +36,14 @@ const settingsDiagnostics = createBackgroundDiagnosticsLogger({
 
 const SETTINGS_STORAGE_KEY = "settings";
 const SETTINGS_STATE_STORAGE_KEY = "settingsState";
+
+type LegacySettingsAliases = {
+  summaryLanguage?: unknown;
+  summaryProfiles?: unknown;
+  defaultSummaryProfileId?: unknown;
+};
+
+type RawSettingsInput = Partial<Settings> & LegacySettingsAliases;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -105,22 +114,22 @@ function normalizeModel(value: unknown, fallback: string): string {
   return MODELS.includes(value as (typeof MODELS)[number]) ? value : fallback;
 }
 
-function getSelectableDefaultSummaryProfileId(settings: Settings): string {
-  const customProfiles = settings.summaryProfiles.filter(
-    (profile) => !isProtectedSummaryProfile(profile.id)
+function getSelectableDefaultMeetingProfileId(settings: Settings): string {
+  const customProfiles = settings.meetingProfiles.filter(
+    (profile) => !isProtectedMeetingProfile(profile.id)
   );
 
   if (customProfiles.length > 0) {
     const matchingCustomProfile = customProfiles.find(
-      (profile) => profile.id === settings.defaultSummaryProfileId
+      (profile) => profile.id === settings.defaultMeetingProfileId
     );
 
     return matchingCustomProfile?.id || customProfiles[0].id;
   }
 
-  return settings.summaryProfiles.find((profile) =>
-    isProtectedSummaryProfile(profile.id)
-  )?.id || PROTECTED_SUMMARY_PROFILE_ID;
+  return settings.meetingProfiles.find((profile) =>
+    isProtectedMeetingProfile(profile.id)
+  )?.id || PROTECTED_MEETING_PROFILE_ID;
 }
 
 function normalizeCustomPrompt(value: string | undefined): string {
@@ -281,12 +290,13 @@ function splitSettings(settings: Settings): SettingsState {
     targetLanguage: settings.targetLanguage,
     translationEnabled: settings.translationEnabled,
     customPrompt: settings.customPrompt,
-    summaryLanguage: settings.summaryLanguage,
-    summaryProfiles: settings.summaryProfiles.map((profile) => ({
+    meetingOutputLanguage: settings.meetingOutputLanguage,
+    meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
+    meetingProfiles: settings.meetingProfiles.map((profile) => ({
       ...profile,
       assistant: { ...profile.assistant },
     })),
-    defaultSummaryProfileId: settings.defaultSummaryProfileId,
+    defaultMeetingProfileId: settings.defaultMeetingProfileId,
     appearance: settings.appearance,
     overlayVisible: settings.overlayVisible,
     captureStartupBehavior: settings.captureStartupBehavior,
@@ -324,7 +334,7 @@ function splitSettings(settings: Settings): SettingsState {
 }
 
 function sanitizeSettingsShape(
-  input: Partial<Settings>,
+  input: RawSettingsInput,
   fallback: Settings = DEFAULT_SETTINGS
 ): Settings {
   const legacyAutoSummarizeOnMeetingEnd =
@@ -336,30 +346,34 @@ function sanitizeSettingsShape(
         )
       : false;
 
-  let summaryProfiles = normalizeSummaryProfiles(
-    Array.isArray(input.summaryProfiles)
-      ? input.summaryProfiles
-      : fallback.summaryProfiles
+  let meetingProfiles = normalizeMeetingProfiles(
+    Array.isArray(input.meetingProfiles)
+      ? input.meetingProfiles
+      : Array.isArray(input.summaryProfiles)
+        ? input.summaryProfiles
+      : fallback.meetingProfiles
   );
 
-  const requestedDefaultSummaryProfileId =
-    typeof input.defaultSummaryProfileId === "string"
-      ? input.defaultSummaryProfileId
-      : fallback.defaultSummaryProfileId;
+  const requestedDefaultMeetingProfileId =
+    typeof input.defaultMeetingProfileId === "string"
+      ? input.defaultMeetingProfileId
+      : typeof input.defaultSummaryProfileId === "string"
+        ? input.defaultSummaryProfileId
+      : fallback.defaultMeetingProfileId;
 
-  const resolvedDefaultSummaryProfileId =
-    summaryProfiles.find((profile) => profile.id === requestedDefaultSummaryProfileId)
+  const resolvedDefaultMeetingProfileId =
+    meetingProfiles.find((profile) => profile.id === requestedDefaultMeetingProfileId)
       ?.id ||
-    summaryProfiles.find((profile) => !isProtectedSummaryProfile(profile.id))?.id ||
-    summaryProfiles[0]?.id ||
-    PROTECTED_SUMMARY_PROFILE_ID;
+    meetingProfiles.find((profile) => !isProtectedMeetingProfile(profile.id))?.id ||
+    meetingProfiles[0]?.id ||
+    PROTECTED_MEETING_PROFILE_ID;
 
   if (
     legacyAutoSummarizeOnMeetingEnd &&
-    !summaryProfiles.some((profile) => profile.autoSummarizeOnMeetingEnd)
+    !meetingProfiles.some((profile) => profile.autoSummarizeOnMeetingEnd)
   ) {
-    summaryProfiles = summaryProfiles.map((profile) =>
-      profile.id === resolvedDefaultSummaryProfileId
+    meetingProfiles = meetingProfiles.map((profile) =>
+      profile.id === resolvedDefaultMeetingProfileId
         ? { ...profile, autoSummarizeOnMeetingEnd: true }
         : profile
     );
@@ -384,15 +398,17 @@ function sanitizeSettingsShape(
         ? input.customPrompt
         : fallback.customPrompt
     ),
-    summaryLanguage: normalizeLanguageCode(
-      input.summaryLanguage,
-      fallback.summaryLanguage
+    meetingOutputLanguage: normalizeLanguageCode(
+      input.meetingOutputLanguage ?? input.summaryLanguage,
+      fallback.meetingOutputLanguage
     ),
-    summaryProfiles,
-    defaultSummaryProfileId:
-      typeof input.defaultSummaryProfileId === "string"
-        ? input.defaultSummaryProfileId
-        : fallback.defaultSummaryProfileId,
+    meetingArchiveRetentionDays: normalizeMeetingArchiveRetentionDays(
+      typeof input.meetingArchiveRetentionDays === "number"
+        ? input.meetingArchiveRetentionDays
+        : fallback.meetingArchiveRetentionDays
+    ),
+    meetingProfiles,
+    defaultMeetingProfileId: requestedDefaultMeetingProfileId,
     appearance:
       input.appearance === "light" ||
       input.appearance === "dark" ||
@@ -463,8 +479,8 @@ function sanitizeSettingsShape(
     }
   }
 
-  normalized.defaultSummaryProfileId =
-    getSelectableDefaultSummaryProfileId(normalized);
+  normalized.defaultMeetingProfileId =
+    getSelectableDefaultMeetingProfileId(normalized);
 
   return normalized;
 }
@@ -481,7 +497,7 @@ async function loadSettingsState(): Promise<{
   ]);
 
   const storedState = result[SETTINGS_STATE_STORAGE_KEY];
-  const storedLegacy = result[SETTINGS_STORAGE_KEY] as Partial<Settings> | undefined;
+  const storedLegacy = result[SETTINGS_STORAGE_KEY] as RawSettingsInput | undefined;
 
   const mergedInput = {
     ...storedLegacy,

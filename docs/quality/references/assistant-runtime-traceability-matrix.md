@@ -22,3 +22,4 @@ This matrix maps assistant-runtime behavior-contract rules to available validati
 ## Notes
 
 1. Assistant runtime planned coverage is now closed with deterministic contract tests.
+2. Assistant resolution coverage follows the canonical meeting-profile naming and default-profile fallback path used by active session state and shared settings.

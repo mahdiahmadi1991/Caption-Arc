@@ -9,6 +9,15 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-14-environment-specific-chrome-extension-identity.md](./2026-04-14-environment-specific-chrome-extension-identity.md)
+- [2026-04-14-chrome-keypair-governance-and-secrets-alignment.md](./2026-04-14-chrome-keypair-governance-and-secrets-alignment.md)
+- [2026-04-14-chrome-extension-id-rotation.md](./2026-04-14-chrome-extension-id-rotation.md)
+- [2026-04-14-cross-browser-naming-and-firefox-audit.md](./2026-04-14-cross-browser-naming-and-firefox-audit.md)
+- [2026-04-14-settings-help-expansion.md](./2026-04-14-settings-help-expansion.md)
+- [2026-04-14-settings-help-popovers.md](./2026-04-14-settings-help-popovers.md)
+- [2026-04-14-archive-retention-off-mode.md](./2026-04-14-archive-retention-off-mode.md)
+- [2026-04-14-meeting-profile-and-output-language-alignment.md](./2026-04-14-meeting-profile-and-output-language-alignment.md)
+- [2026-04-13-session-continuation-last-activity-window-fix.md](./2026-04-13-session-continuation-last-activity-window-fix.md)
 - [2026-04-10-summary-completion-notifications.md](./2026-04-10-summary-completion-notifications.md)
 - [2026-04-10-legal-compliance-hardening-wave-one.md](./2026-04-10-legal-compliance-hardening-wave-one.md)
 - [2026-04-10-terms-gate-review-fixes.md](./2026-04-10-terms-gate-review-fixes.md)
@@ -56,3 +65,4 @@ Default behavior:
 - [2026-04-09-ui-language-switch-loader-and-smart-direction.md](./2026-04-09-ui-language-switch-loader-and-smart-direction.md)
 - [2026-04-09-bootstrap-version-renumbering.md](./2026-04-09-bootstrap-version-renumbering.md)
 - [2026-04-09-public-repository-bootstrap-and-branch-reset.md](./2026-04-09-public-repository-bootstrap-and-branch-reset.md)
+- [2026-04-14-configurable-meeting-archive-retention.md](./2026-04-14-configurable-meeting-archive-retention.md)

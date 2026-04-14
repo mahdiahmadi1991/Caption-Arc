@@ -1,5 +1,6 @@
-import { DEFAULT_SUMMARY_PROFILES } from "./summary-profiles";
+import { DEFAULT_MEETING_PROFILES } from "./meeting-profiles";
 import { createDefaultDeviceLabel, createDeviceId } from "./device-identity";
+import { DEFAULT_MEETING_ARCHIVE_RETENTION_DAYS } from "./meeting-archive-retention";
 
 export const DEFAULT_SESSION_CONTINUATION_WINDOW_MINUTES = 120;
 export const MIN_SESSION_CONTINUATION_WINDOW_MINUTES = 0;
@@ -9,14 +10,16 @@ export const SESSION_CONTINUATION_WINDOW_MINUTE_STOPS = [
 ] as const;
 
 export const DEFAULT_CUSTOM_PROMPT =
-  `Translate live captions into the target language so they stay clear, natural, and fast to read.
+  `Translate browser-captured live meeting captions into the target language so they stay clear, natural, and fast to read.
 
 Rules:
 - Preserve the speaker's meaning, intent, and perspective.
-- Correct obvious speech-recognition mistakes only when the intended meaning is clear from the current line or nearby context.
-- Keep names, product names, APIs, acronyms, and technical terms in their original form unless a standard translated form is clearly better.
+- Treat provider captions as imperfect ASR: they may contain homophone mistakes, dropped words, broken sentence boundaries, partial rewrites, or punctuation noise.
+- Correct obvious captioning mistakes only when the intended meaning is reasonably clear from the current line or nearby context. If it is not clear, stay conservative and do not invent meaning.
+- Preserve pronouns and who-is-speaking-to-whom. Never flip I/you/we/they unless the source and nearby context clearly require it.
+- Keep names, product names, APIs, acronyms, codes, numbers, and technical terms in their original form unless a standard translated form is clearly better.
 - Prefer short, readable subtitle-style phrasing over long or literal wording.
-- If a line is noisy, fragmented, or slightly ungrammatical, produce the most likely readable translation without inventing new meaning.
+- If a line is noisy, fragmented, or slightly ungrammatical, produce the most likely readable translation without adding facts, explanations, or guesses.
 - Do not add explanations, labels, or extra commentary.`;
 
 export function normalizeSessionContinuationWindowMinutes(
@@ -43,9 +46,10 @@ export function createDefaultSettings() {
     targetLanguage: "en",
     translationEnabled: false,
     customPrompt: DEFAULT_CUSTOM_PROMPT,
-    summaryLanguage: "en",
-    summaryProfiles: DEFAULT_SUMMARY_PROFILES.map((profile) => ({ ...profile })),
-    defaultSummaryProfileId: DEFAULT_SUMMARY_PROFILES[0].id,
+    meetingOutputLanguage: "en",
+    meetingArchiveRetentionDays: DEFAULT_MEETING_ARCHIVE_RETENTION_DAYS,
+    meetingProfiles: DEFAULT_MEETING_PROFILES.map((profile) => ({ ...profile })),
+    defaultMeetingProfileId: DEFAULT_MEETING_PROFILES[0].id,
     appearance: "system" as const,
     overlayVisible: true,
     captureStartupBehavior: "ask" as const,

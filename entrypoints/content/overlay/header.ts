@@ -378,7 +378,7 @@ function getHeaderCopy(): { title: string; subtitle: string } {
 function shouldShowSessionProfileHeaderControl(): boolean {
   const activeSession = getCurrentSessionSnapshot() || getPendingSessionPreviewSnapshot();
   return (
-    settings.summaryProfiles.length > 1 &&
+    settings.meetingProfiles.length > 1 &&
     (meetingPresenceState === "prejoin" ||
       meetingPresenceState === "joined" ||
       !!activeSession)
@@ -462,24 +462,24 @@ function syncSessionProfileRail(): void {
   const pendingSelection = getPendingSessionProfileSelection();
   const activeValue =
     pendingSelection.profileId ||
-    settings.defaultSummaryProfileId ||
-    settings.summaryProfiles[0]?.id ||
+    settings.defaultMeetingProfileId ||
+    settings.meetingProfiles[0]?.id ||
     "";
 
   if (!sessionProfileSelectHandle) {
     sessionProfileSelectHandle = createOverlayDropdownSelect({
       id: "mc-session-profile-select",
       value: activeValue,
-      options: settings.summaryProfiles.map((profile) => ({
+      options: settings.meetingProfiles.map((profile) => ({
         id: profile.id,
         name: profile.name,
         description: profile.description,
         badgeLabel:
-          profile.id === settings.defaultSummaryProfileId
+          profile.id === settings.defaultMeetingProfileId
             ? t("content.header.profileControl.defaultBadge")
             : undefined,
         badgeTone:
-          profile.id === settings.defaultSummaryProfileId ? "accent" : undefined,
+          profile.id === settings.defaultMeetingProfileId ? "accent" : undefined,
       })),
       className: "mc-header-profile-panel-select",
       triggerClassName: "mc-header-profile-panel-select-trigger",

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AppLoadingScreen } from "./loading-screen";
 import { BrandLockup } from "./brand";
-import { LegalFooter } from "./extension-page-chrome";
+import { LegalFooter } from "./extension-page-frame";
 import { ThemeToggle } from "./theme-toggle";
 import { useExtensionPageSettings } from "./use-extension-page-settings";
 import { useResolvedTheme } from "./use-resolved-theme";

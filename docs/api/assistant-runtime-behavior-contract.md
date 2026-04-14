@@ -23,8 +23,8 @@ Source: `getResolvedMeetingProfile`, `getResolvedAssistantEnabled` in [../../ent
 
 Rules:
 
-1. Session-specific `summaryProfileId` overrides the global default summary profile when it exists.
-2. When no matching session or default profile exists, the first configured summary profile becomes the fallback.
+1. Session-specific `meetingProfileId` overrides the global default meeting profile when it exists.
+2. When no matching session or default profile exists, the first configured meeting profile becomes the fallback.
 3. Session artifact state overrides profile default assistant enablement when `artifacts.assistantState.enabled` is explicitly boolean.
 4. When no session override exists, assistant enablement falls back to the resolved profile's `assistant.enabledByDefault` setting.
 
@@ -77,7 +77,7 @@ Rules:
 3. Successful toggles persist through `setCurrentSessionAssistantEnabled(enabled)` before local state settles.
 4. Disabling the assistant clears pending outputs, unread state, and unread count.
 5. Settings-only sync defers to session polling when a current session exists.
-6. Without a current session, settings-only sync derives visibility and default live state solely from the default summary profile and current OpenAI availability.
+6. Without a current session, settings-only sync derives visibility and default live state solely from the default meeting profile and current OpenAI availability.
 
 ## Test Traceability
 

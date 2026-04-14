@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   LegalRiskAcknowledgementKey,
-  SummaryProfile,
+  MeetingProfile,
 } from "../background/types";
 import type { CloudSyncProvider } from "../background/types";
 import type {
@@ -10,6 +10,7 @@ import type {
 } from "../background/cloud-sync/types";
 import {
   ApiKeyInput,
+  getMeetingArchiveRetentionOptions,
   getLanguageOptions,
   getOpenAiModels,
   Select,
@@ -25,7 +26,7 @@ import { BrandLockup } from "../shared/brand";
 import {
   GitHubHeaderLink,
   LegalFooter,
-} from "../shared/extension-page-chrome";
+} from "../shared/extension-page-frame";
 import { ConfirmDialog } from "../meeting-history/components/confirm-dialog";
 import {
   ArchiveIcon,
@@ -33,6 +34,7 @@ import {
   BeakerIcon,
   CheckIcon,
   ChevronDownIcon,
+  EditIcon,
   EyeIcon,
   EyeOffIcon,
   ExportIcon,
@@ -44,8 +46,8 @@ import {
 } from "../shared/icons";
 import {
   createDefaultAssistantConfig,
-  isProtectedSummaryProfile,
-} from "../shared/summary-profiles";
+  isProtectedMeetingProfile,
+} from "../shared/meeting-profiles";
 import { useCloudSync } from "./use-cloud-sync";
 import {
   MAX_SESSION_CONTINUATION_WINDOW_MINUTES,
@@ -54,6 +56,7 @@ import {
 } from "../shared/settings-defaults";
 import { DiagnosticsConsole } from "./diagnostics-console";
 import { AppLoadingScreen } from "../shared/loading-screen";
+import { HelpPopover } from "../shared/help-popover";
 import {
   SUPPORTED_UI_LOCALES,
   useI18n,
@@ -87,6 +90,55 @@ const OPENAI_SERVICE_HIGHLIGHT_KEYS = [
 ] as const;
 
 type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
+
+function getSettingsSectionIcon(sectionId: SettingsSectionId) {
+  switch (sectionId) {
+    case "workspace":
+      return GearIcon;
+    case "openai-service":
+      return SparklesIcon;
+    case "translation":
+      return BeakerIcon;
+    case "profiles":
+      return EditIcon;
+    case "cloud-sync":
+      return RefreshIcon;
+    case "data-recovery":
+      return ArchiveIcon;
+    default:
+      return GearIcon;
+  }
+}
+
+function SettingsSectionIcon({
+  sectionId,
+  size = "md",
+  active = false,
+}: {
+  sectionId: SettingsSectionId;
+  size?: "sm" | "md";
+  active?: boolean;
+}) {
+  const Icon = getSettingsSectionIcon(sectionId);
+  const sizeClassName =
+    size === "sm"
+      ? "h-8 w-8 rounded-[0.95rem]"
+      : "h-11 w-11 rounded-[1.25rem]";
+
+  return (
+    <span
+      className={[
+        "inline-flex shrink-0 items-center justify-center border shadow-[0_12px_24px_var(--app-shadow)] transition-colors",
+        sizeClassName,
+        active
+          ? "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_84%,var(--app-surface))] text-[var(--app-accent)]"
+          : "border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface)_78%,var(--app-accent-soft))] text-[var(--app-text-muted)]",
+      ].join(" ")}
+    >
+      <Icon className={size === "sm" ? "h-4 w-4" : "h-5 w-5"} />
+    </span>
+  );
+}
 
 function getSettingsSections(t: UiTranslator) {
   return [
@@ -583,7 +635,7 @@ function getCloudSyncScopeShared(t: UiTranslator) {
     t("options.cloudSync.scope.shared.meetingSessions"),
     t("options.cloudSync.scope.shared.translations"),
     t("options.cloudSync.scope.shared.summaries"),
-    t("options.cloudSync.scope.shared.summaryProfiles"),
+    t("options.cloudSync.scope.shared.meetingProfiles"),
     t("options.cloudSync.scope.shared.sharedSettings"),
   ];
 }
@@ -639,21 +691,24 @@ function SettingsSection({
     <section
       id={id}
       data-settings-section={id}
-      className="scroll-mt-6 grid gap-4 rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-soft)] p-4 shadow-[0_20px_40px_var(--app-shadow)] sm:p-5 lg:grid-cols-[152px_minmax(0,1fr)] xl:grid-cols-[164px_minmax(0,1fr)] xl:gap-5 xl:p-5"
+      className="scroll-mt-6 grid gap-4 rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-soft)] p-4 shadow-[0_20px_40px_var(--app-shadow)] sm:p-5 xl:gap-5 xl:p-5"
     >
-      <div>
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--app-accent)]">
-          {eyebrow}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-[1.08rem] font-semibold text-[var(--app-text)]">
-            {title}
-          </h2>
-          {headerMeta}
+      <div className="flex items-start gap-3.5">
+        <SettingsSectionIcon sectionId={id} />
+        <div className="min-w-0">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--app-accent)]">
+            {eyebrow}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[1.08rem] font-semibold text-[var(--app-text)]">
+              {title}
+            </h2>
+            {headerMeta}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]">
+            {description}
+          </p>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]">
-          {description}
-        </p>
       </div>
       <div className="space-y-3.5">{children}</div>
     </section>
@@ -683,7 +738,7 @@ function SectionNavigator({
         </p>
       </div>
       <div className="space-y-1.5">
-        {sections.map((section, index) => {
+        {sections.map((section) => {
           const isActive = activeSection === section.id;
           return (
             <button
@@ -697,16 +752,7 @@ function SectionNavigator({
                   : "border-transparent bg-transparent hover:border-[var(--app-border)] hover:bg-[var(--app-surface-soft)]",
               ].join(" ")}
             >
-              <span
-                className={[
-                  "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                  isActive
-                    ? "bg-[var(--app-accent)] text-white"
-                    : "bg-[var(--app-surface-soft)] text-[var(--app-text-faint)]",
-                ].join(" ")}
-              >
-                {index + 1}
-              </span>
+              <SettingsSectionIcon sectionId={section.id} size="sm" active={isActive} />
               <span className="min-w-0">
                 <span className="block text-[0.94rem] font-medium text-[var(--app-text)]">
                   {section.shortLabel}
@@ -1331,10 +1377,24 @@ function AssistantProfileControls({
   profile,
   onChange,
 }: {
-  profile: SummaryProfile;
-  onChange: (updates: Partial<SummaryProfile>) => void;
+  profile: MeetingProfile;
+  onChange: (updates: Partial<MeetingProfile>) => void;
 }) {
   const t = useT();
+  const assistantHelp = useMemo(
+    () => ({
+      enabled: t("options.help.assistantEnabled"),
+      responseIntent: t("options.help.assistantResponseIntent"),
+      responseFormat: t("options.help.assistantResponseFormat"),
+      responseDepth: t("options.help.assistantResponseDepth"),
+      responseTone: t("options.help.assistantResponseTone"),
+      deliveryBias: t("options.help.assistantDeliveryBias"),
+      triggerPolicy: t("options.help.assistantTriggerPolicy"),
+      participantScope: t("options.help.assistantParticipantScope"),
+      instructions: t("options.help.assistantInstructions"),
+    }),
+    [t]
+  );
   const responseIntentOptions = getAssistantResponseIntentOptions(t);
   const responseFormatOptions = getAssistantResponseFormatOptions(t);
   const responseDepthOptions = getAssistantResponseDepthOptions(t);
@@ -1345,7 +1405,7 @@ function AssistantProfileControls({
   const assistantEnabled = profile.assistant.enabledByDefault;
 
   const updateAssistant = (
-    updates: Partial<SummaryProfile["assistant"]>
+    updates: Partial<MeetingProfile["assistant"]>
   ) => {
     onChange({
       assistant: {
@@ -1374,6 +1434,7 @@ function AssistantProfileControls({
           }
           label={t("options.profiles.assistant.enabledLabel")}
           description={t("options.profiles.assistant.enabledDescription")}
+          helpMarkdown={assistantHelp.enabled}
         />
 
         {!assistantEnabled && (
@@ -1388,91 +1449,97 @@ function AssistantProfileControls({
           onChange={(value) =>
             updateAssistant({
               responseIntent:
-                value as SummaryProfile["assistant"]["responseIntent"],
+                value as MeetingProfile["assistant"]["responseIntent"],
             })
           }
           options={responseIntentOptions}
           disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.responseIntent}
         />
 
-          <Select
-            label={t("options.profiles.assistant.responseFormatLabel")}
-            value={profile.assistant.responseFormat}
-            onChange={(value) =>
-              updateAssistant({
-                responseFormat:
-                  value as SummaryProfile["assistant"]["responseFormat"],
-              })
-            }
-            options={responseFormatOptions}
-            disabled={!assistantEnabled}
-          />
+        <Select
+          label={t("options.profiles.assistant.responseFormatLabel")}
+          value={profile.assistant.responseFormat}
+          onChange={(value) =>
+            updateAssistant({
+              responseFormat:
+                value as MeetingProfile["assistant"]["responseFormat"],
+            })
+          }
+          options={responseFormatOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.responseFormat}
+        />
 
-          <Select
-            label={t("options.profiles.assistant.responseDepthLabel")}
-            value={profile.assistant.responseDepth}
-            onChange={(value) =>
-              updateAssistant({
-                responseDepth:
-                  value as SummaryProfile["assistant"]["responseDepth"],
-              })
-            }
-            options={responseDepthOptions}
-            disabled={!assistantEnabled}
-          />
+        <Select
+          label={t("options.profiles.assistant.responseDepthLabel")}
+          value={profile.assistant.responseDepth}
+          onChange={(value) =>
+            updateAssistant({
+              responseDepth:
+                value as MeetingProfile["assistant"]["responseDepth"],
+            })
+          }
+          options={responseDepthOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.responseDepth}
+        />
 
-          <Select
-            label={t("options.profiles.assistant.responseToneLabel")}
-            value={profile.assistant.responseTone}
-            onChange={(value) =>
-              updateAssistant({
-                responseTone:
-                  value as SummaryProfile["assistant"]["responseTone"],
-              })
-            }
-            options={responseToneOptions}
-            disabled={!assistantEnabled}
-          />
+        <Select
+          label={t("options.profiles.assistant.responseToneLabel")}
+          value={profile.assistant.responseTone}
+          onChange={(value) =>
+            updateAssistant({
+              responseTone:
+                value as MeetingProfile["assistant"]["responseTone"],
+            })
+          }
+          options={responseToneOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.responseTone}
+        />
 
-          <Select
-            label={t("options.profiles.assistant.deliveryBiasLabel")}
-            value={profile.assistant.deliveryBias}
-            onChange={(value) =>
-              updateAssistant({
-                deliveryBias:
-                  value as SummaryProfile["assistant"]["deliveryBias"],
-              })
-            }
-            options={deliveryBiasOptions}
-            disabled={!assistantEnabled}
-          />
+        <Select
+          label={t("options.profiles.assistant.deliveryBiasLabel")}
+          value={profile.assistant.deliveryBias}
+          onChange={(value) =>
+            updateAssistant({
+              deliveryBias:
+                value as MeetingProfile["assistant"]["deliveryBias"],
+            })
+          }
+          options={deliveryBiasOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.deliveryBias}
+        />
 
-          <Select
-            label={t("options.profiles.assistant.triggerPolicyLabel")}
-            value={profile.assistant.triggerPolicy}
-            onChange={(value) =>
-              updateAssistant({
-                triggerPolicy:
-                  value as SummaryProfile["assistant"]["triggerPolicy"],
-              })
-            }
-            options={triggerPolicyOptions}
-            disabled={!assistantEnabled}
-          />
+        <Select
+          label={t("options.profiles.assistant.triggerPolicyLabel")}
+          value={profile.assistant.triggerPolicy}
+          onChange={(value) =>
+            updateAssistant({
+              triggerPolicy:
+                value as MeetingProfile["assistant"]["triggerPolicy"],
+            })
+          }
+          options={triggerPolicyOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.triggerPolicy}
+        />
 
-          <Select
-            label={t("options.profiles.assistant.participantScopeLabel")}
-            value={profile.assistant.participantScope}
-            onChange={(value) =>
-              updateAssistant({
-                participantScope:
-                  value as SummaryProfile["assistant"]["participantScope"],
-              })
-            }
-            options={participantScopeOptions}
-            disabled={!assistantEnabled}
-          />
-        </div>
+        <Select
+          label={t("options.profiles.assistant.participantScopeLabel")}
+          value={profile.assistant.participantScope}
+          onChange={(value) =>
+            updateAssistant({
+              participantScope:
+                value as MeetingProfile["assistant"]["participantScope"],
+            })
+          }
+          options={participantScopeOptions}
+          disabled={!assistantEnabled}
+          helpMarkdown={assistantHelp.participantScope}
+        />
 
         <TextArea
           label={t("options.profiles.assistant.instructionsLabel")}
@@ -1482,23 +1549,30 @@ function AssistantProfileControls({
           hint={t("options.profiles.assistant.instructionsHint")}
           maxLength={ASSISTANT_PROFILE_PROMPT_MAX_LENGTH}
           showCharacterCount
+          helpMarkdown={assistantHelp.instructions}
         />
       </div>
+    </div>
   );
 }
 
 function ProfileFieldCard({
   label,
+  helpMarkdown,
   children,
 }: {
   label: string;
+  helpMarkdown?: string;
   children: ReactNode;
 }) {
   return (
     <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] backdrop-blur-xl sm:p-4">
-      <label className="mb-2.5 block text-sm font-medium text-[var(--app-text)]">
-        {label}
-      </label>
+      <div className="pointer-events-none mb-2.5 flex items-center gap-2 text-sm font-medium text-[var(--app-text)]">
+        <span className="pointer-events-auto">{label}</span>
+        {helpMarkdown ? (
+          <HelpPopover label={label} markdown={helpMarkdown} />
+        ) : null}
+      </div>
       {children}
     </div>
   );
@@ -1509,11 +1583,18 @@ function ProfileIdentityControls({
   readOnly = false,
   onChange,
 }: {
-  profile: SummaryProfile;
+  profile: MeetingProfile;
   readOnly?: boolean;
-  onChange?: (updates: Partial<SummaryProfile>) => void;
+  onChange?: (updates: Partial<MeetingProfile>) => void;
 }) {
   const t = useT();
+  const profileHelp = useMemo(
+    () => ({
+      name: t("options.help.profileName"),
+      description: t("options.help.profileDescription"),
+    }),
+    [t]
+  );
 
   return (
     <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-4">
@@ -1526,8 +1607,11 @@ function ProfileIdentityControls({
         </p>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <ProfileFieldCard label={t("options.profiles.identity.nameLabel")}>
+      <div className="mt-4 grid gap-4">
+        <ProfileFieldCard
+          label={t("options.profiles.identity.nameLabel")}
+          helpMarkdown={profileHelp.name}
+        >
           {readOnly ? (
             <p
               className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)] px-4 py-3 text-[var(--app-text)]"
@@ -1558,34 +1642,37 @@ function ProfileIdentityControls({
 
         <ProfileFieldCard
           label={t("options.profiles.identity.descriptionLabel")}
+          helpMarkdown={profileHelp.description}
         >
           {readOnly ? (
             <p
-              className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)] px-4 py-3 text-[var(--app-text)]"
+              className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)] px-4 py-3 text-[var(--app-text)] whitespace-pre-wrap"
               style={DYNAMIC_TEXT_STYLE}
               dir={getDynamicTextDirection(profile.description)}
             >
               {profile.description}
             </p>
           ) : (
-            <input
-              type="text"
-              value={profile.description}
-              maxLength={SUMMARY_PROFILE_DESCRIPTION_MAX_LENGTH}
-              onChange={(event) =>
-                onChange?.({
-                  description: event.target.value.slice(
-                    0,
-                    SUMMARY_PROFILE_DESCRIPTION_MAX_LENGTH
-                  ),
-                })
-              }
-              placeholder={t(
-                "options.profiles.identity.descriptionPlaceholder"
-              )}
-              dir="auto"
-              className="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)] px-4 py-3 text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-accent)]"
-            />
+            <div className="overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg-elevated)] transition-colors focus-within:border-[var(--app-accent)]">
+              <textarea
+                value={profile.description}
+                maxLength={SUMMARY_PROFILE_DESCRIPTION_MAX_LENGTH}
+                onChange={(event) =>
+                  onChange?.({
+                    description: event.target.value.slice(
+                      0,
+                      SUMMARY_PROFILE_DESCRIPTION_MAX_LENGTH
+                    ),
+                  })
+                }
+                placeholder={t(
+                  "options.profiles.identity.descriptionPlaceholder"
+                )}
+                dir="auto"
+                rows={3}
+                className="mc-app-textarea block min-h-[104px] w-full resize-y overflow-x-hidden overflow-y-auto border-0 bg-transparent px-4 py-3 text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-faint)]"
+              />
+            </div>
           )}
         </ProfileFieldCard>
       </div>
@@ -1593,14 +1680,22 @@ function ProfileIdentityControls({
   );
 }
 
-function SummaryProfileControls({
+function MeetingProfileSummaryControls({
   profile,
   onChange,
 }: {
-  profile: SummaryProfile;
-  onChange: (updates: Partial<SummaryProfile>) => void;
+  profile: MeetingProfile;
+  onChange: (updates: Partial<MeetingProfile>) => void;
 }) {
   const t = useT();
+  const summaryHelp = useMemo(
+    () => ({
+      autoSummary: t("options.help.autoSummary"),
+      effort: t("options.help.summaryEffort"),
+      instructions: t("options.help.summaryInstructions"),
+    }),
+    [t]
+  );
   const summaryGenerationModeOptions = getSummaryGenerationModeOptions(t);
 
   return (
@@ -1624,6 +1719,7 @@ function SummaryProfileControls({
           }
           label={t("options.profiles.summary.autoSummaryLabel")}
           description={t("options.profiles.summary.autoSummaryDescription")}
+          helpMarkdown={summaryHelp.autoSummary}
         />
 
         <Select
@@ -1632,10 +1728,11 @@ function SummaryProfileControls({
           onChange={(value) =>
             onChange({
               summaryGenerationMode:
-                value as SummaryProfile["summaryGenerationMode"],
+                value as MeetingProfile["summaryGenerationMode"],
             })
           }
           options={summaryGenerationModeOptions}
+          helpMarkdown={summaryHelp.effort}
         />
 
         <TextArea
@@ -1645,6 +1742,7 @@ function SummaryProfileControls({
           hint={t("options.profiles.summary.instructionsHint")}
           maxLength={SUMMARY_PROFILE_PROMPT_MAX_LENGTH}
           showCharacterCount
+          helpMarkdown={summaryHelp.instructions}
         />
       </div>
     </div>
@@ -1658,7 +1756,7 @@ function ProfileListItem({
   isProtected,
   onSelect,
 }: {
-  profile: SummaryProfile;
+  profile: MeetingProfile;
   selected: boolean;
   isDefault: boolean;
   isProtected: boolean;
@@ -1740,7 +1838,7 @@ function ProfileListItem({
   );
 }
 
-function SummaryProfileEditor({
+function MeetingProfileEditor({
   profile,
   isDefault,
   isProtected,
@@ -1750,13 +1848,13 @@ function SummaryProfileEditor({
   onChange,
   onDelete,
 }: {
-  profile: SummaryProfile;
+  profile: MeetingProfile;
   isDefault: boolean;
   isProtected: boolean;
   canSetDefault: boolean;
   canDelete: boolean;
   onSetDefault: () => void;
-  onChange: (updates: Partial<SummaryProfile>) => void;
+  onChange: (updates: Partial<MeetingProfile>) => void;
   onDelete: () => void;
 }) {
   const t = useT();
@@ -1885,7 +1983,7 @@ function SummaryProfileEditor({
       )}
 
       <ProfileIdentityControls profile={profile} readOnly={isProtected} onChange={onChange} />
-      <SummaryProfileControls profile={profile} onChange={onChange} />
+      <MeetingProfileSummaryControls profile={profile} onChange={onChange} />
       <AssistantProfileControls profile={profile} onChange={onChange} />
     </div>
   );
@@ -1897,6 +1995,7 @@ export default function App() {
   const settingsSections = getSettingsSections(t);
   const captureStartupOptions = getCaptureStartupOptions(t);
   const captionActivationOptions = getCaptionActivationOptions(t);
+  const meetingArchiveRetentionOptions = getMeetingArchiveRetentionOptions(t);
   const uiLanguageOptions = getUiLanguageOptions(t);
   const openAiModels = useMemo(() => getOpenAiModels(t), [t]);
   const languageOptions = useMemo(() => getLanguageOptions(t), [t]);
@@ -1929,16 +2028,32 @@ export default function App() {
     resolveSettingsChoice,
   } = useCloudSync({ onSettingsChanged: reloadSettings });
   const resolvedTheme = useResolvedTheme(settings.appearance);
-  const customSummaryProfiles = settings.summaryProfiles.filter(
-    (profile) => !isProtectedSummaryProfile(profile.id)
+  const customMeetingProfiles = settings.meetingProfiles.filter(
+    (profile) => !isProtectedMeetingProfile(profile.id)
   );
-  const canUseProtectedAsDefault = customSummaryProfiles.length === 0;
-  const defaultSummaryProfile = settings.summaryProfiles.find(
-    (profile) => profile.id === settings.defaultSummaryProfileId
+  const canUseProtectedAsDefault = customMeetingProfiles.length === 0;
+  const defaultMeetingProfile = settings.meetingProfiles.find(
+    (profile) => profile.id === settings.defaultMeetingProfileId
   );
   const currentModelLabel =
     openAiModels.find((model) => model.id === settings.model)?.name ||
     settings.model;
+  const settingsHelp = useMemo(
+    () => ({
+      apiKey: t("options.help.apiKey"),
+      model: t("options.help.model"),
+      uiLanguage: t("options.help.uiLanguage"),
+      translationInstructions: t("options.help.translationInstructions"),
+      captureStartupBehavior: t("options.help.captureStartupBehavior"),
+      captionActivationBehavior: t("options.help.captionActivationBehavior"),
+      sessionContinuationWindow: t("options.help.sessionContinuationWindow"),
+      overlayClickThrough: t("options.help.overlayClickThrough"),
+      meetingArchiveRetention: t("options.help.meetingArchiveRetention"),
+      storeMeetingChat: t("options.help.storeMeetingChat"),
+      meetingOutputLanguage: t("options.help.meetingOutputLanguage"),
+    }),
+    [t]
+  );
   const cloudSyncProviderDetails = useMemo(
     () => getCloudSyncProviderDetails(t),
     [t]
@@ -1968,10 +2083,10 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<string>(
     SETTINGS_SECTION_IDS[0]
   );
-  const [selectedSummaryProfileId, setSelectedSummaryProfileId] = useState<string>(
-    settings.defaultSummaryProfileId || settings.summaryProfiles[0]?.id || ""
+  const [selectedMeetingProfileId, setSelectedMeetingProfileId] = useState<string>(
+    settings.defaultMeetingProfileId || settings.meetingProfiles[0]?.id || ""
   );
-  const initialSummaryProfileSelectionAppliedRef = useRef(false);
+  const initialMeetingProfileSelectionAppliedRef = useRef(false);
   const [backupPassphrase, setBackupPassphrase] = useState("");
   const [showBackupPassphrase, setShowBackupPassphrase] = useState(false);
   const [confirmClearSessionData, setConfirmClearSessionData] = useState(false);
@@ -2087,31 +2202,31 @@ export default function App() {
   }, [settingsSections]);
 
   useEffect(() => {
-    if (!loading && !initialSummaryProfileSelectionAppliedRef.current) {
-      setSelectedSummaryProfileId(
-        settings.defaultSummaryProfileId || settings.summaryProfiles[0]?.id || ""
+    if (!loading && !initialMeetingProfileSelectionAppliedRef.current) {
+      setSelectedMeetingProfileId(
+        settings.defaultMeetingProfileId || settings.meetingProfiles[0]?.id || ""
       );
-      initialSummaryProfileSelectionAppliedRef.current = true;
+      initialMeetingProfileSelectionAppliedRef.current = true;
       return;
     }
 
     if (
-      selectedSummaryProfileId &&
-      settings.summaryProfiles.some(
-        (profile) => profile.id === selectedSummaryProfileId
+      selectedMeetingProfileId &&
+      settings.meetingProfiles.some(
+        (profile) => profile.id === selectedMeetingProfileId
       )
     ) {
       return;
     }
 
-    setSelectedSummaryProfileId(
-      settings.defaultSummaryProfileId || settings.summaryProfiles[0]?.id || ""
+    setSelectedMeetingProfileId(
+      settings.defaultMeetingProfileId || settings.meetingProfiles[0]?.id || ""
     );
   }, [
     loading,
-    selectedSummaryProfileId,
-    settings.defaultSummaryProfileId,
-    settings.summaryProfiles,
+    selectedMeetingProfileId,
+    settings.defaultMeetingProfileId,
+    settings.meetingProfiles,
   ]);
 
   const navigateToSection = (sectionId: string) => {
@@ -2145,20 +2260,20 @@ export default function App() {
     );
   }
 
-  const updateSummaryProfile = (
+  const updateMeetingProfile = (
     profileId: string,
-    updates: Partial<SummaryProfile>
+    updates: Partial<MeetingProfile>
   ) => {
     updateSetting(
-      "summaryProfiles",
-      settings.summaryProfiles.map((profile) =>
+      "meetingProfiles",
+      settings.meetingProfiles.map((profile) =>
         profile.id === profileId ? { ...profile, ...updates } : profile
       )
     );
   };
 
-  const addSummaryProfile = () => {
-    const newProfile: SummaryProfile = {
+  const addMeetingProfile = () => {
+    const newProfile: MeetingProfile = {
       id: `custom_${Date.now()}`,
       name: t("options.profiles.editor.newName"),
       description: t("options.profiles.editor.newDescription"),
@@ -2169,41 +2284,41 @@ export default function App() {
     };
 
     const nextProfiles = [
-      settings.summaryProfiles[0],
+      settings.meetingProfiles[0],
       newProfile,
-      ...settings.summaryProfiles.slice(1),
+      ...settings.meetingProfiles.slice(1),
     ];
 
-    updateSetting("summaryProfiles", nextProfiles);
-    if (customSummaryProfiles.length === 0) {
-      updateSetting("defaultSummaryProfileId", newProfile.id);
+    updateSetting("meetingProfiles", nextProfiles);
+    if (customMeetingProfiles.length === 0) {
+      updateSetting("defaultMeetingProfileId", newProfile.id);
     }
-    setSelectedSummaryProfileId(newProfile.id);
+    setSelectedMeetingProfileId(newProfile.id);
   };
 
-  const deleteSummaryProfile = (profileId: string) => {
-    if (isProtectedSummaryProfile(profileId)) {
+  const deleteMeetingProfile = (profileId: string) => {
+    if (isProtectedMeetingProfile(profileId)) {
       return;
     }
 
-    const remainingProfiles = settings.summaryProfiles.filter(
+    const remainingProfiles = settings.meetingProfiles.filter(
       (profile) => profile.id !== profileId
     );
-    updateSetting("summaryProfiles", remainingProfiles);
+    updateSetting("meetingProfiles", remainingProfiles);
 
-    if (settings.defaultSummaryProfileId === profileId) {
+    if (settings.defaultMeetingProfileId === profileId) {
       const remainingCustomProfiles = remainingProfiles.filter(
-        (profile) => !isProtectedSummaryProfile(profile.id)
+        (profile) => !isProtectedMeetingProfile(profile.id)
       );
       updateSetting(
-        "defaultSummaryProfileId",
+        "defaultMeetingProfileId",
         remainingCustomProfiles[0]?.id || remainingProfiles[0]?.id || ""
       );
     }
 
-    if (selectedSummaryProfileId === profileId) {
-      setSelectedSummaryProfileId(
-        remainingProfiles[0]?.id || settings.defaultSummaryProfileId || ""
+    if (selectedMeetingProfileId === profileId) {
+      setSelectedMeetingProfileId(
+        remainingProfiles[0]?.id || settings.defaultMeetingProfileId || ""
       );
     }
   };
@@ -2238,10 +2353,10 @@ export default function App() {
   const activeMeetingArchiveRiskIds = (["storeMeetingChat"] as const).filter(
     (riskId) => isLegalRiskSettingActive(settings, riskId)
   );
-  const selectedSummaryProfile =
-    settings.summaryProfiles.find(
-      (profile) => profile.id === selectedSummaryProfileId
-    ) || settings.summaryProfiles[0];
+  const selectedMeetingProfile =
+    settings.meetingProfiles.find(
+      (profile) => profile.id === selectedMeetingProfileId
+    ) || settings.meetingProfiles[0];
   const openAiServiceState = getOpenAiServiceState({
     hasApiKey: Boolean(settings.openaiApiKey.trim()),
     hasModel: Boolean(settings.model.trim()),
@@ -2432,7 +2547,7 @@ export default function App() {
               />
               <SettingsSnapshotChip
                 label={t("options.snapshot.primaryProfile")}
-                value={defaultSummaryProfile?.name || t("options.snapshot.none")}
+                value={defaultMeetingProfile?.name || t("options.snapshot.none")}
               />
               <SettingsSnapshotChip
                 label={t("options.snapshot.theme")}
@@ -2501,13 +2616,18 @@ export default function App() {
                   type="button"
                   onClick={() => navigateToSection(section.id)}
                   className={[
-                    "rounded-full border px-3 py-2 text-sm transition-colors",
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-colors",
                     activeSection === section.id
                       ? "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]"
                       : "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]",
                   ].join(" ")}
                 >
-                  {section.shortLabel}
+                  <SettingsSectionIcon
+                    sectionId={section.id}
+                    size="sm"
+                    active={activeSection === section.id}
+                  />
+                  <span>{section.shortLabel}</span>
                 </button>
               ))}
             </div>
@@ -2553,6 +2673,7 @@ export default function App() {
                       )
                     }
                     options={uiLanguageOptions}
+                    helpMarkdown={settingsHelp.uiLanguage}
                   />
                 </div>
               </SurfacePanel>
@@ -2587,6 +2708,7 @@ export default function App() {
                       )
                     }
                     options={captureStartupOptions}
+                    helpMarkdown={settingsHelp.captureStartupBehavior}
                   />
 
                   <Select
@@ -2598,15 +2720,22 @@ export default function App() {
                       )
                     }
                     options={captionActivationOptions}
+                    helpMarkdown={settingsHelp.captionActivationBehavior}
                   />
                 </div>
 
                 <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[0_14px_30px_var(--app-shadow)]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-medium text-[var(--app-text)]">
-                        {t("options.workspace.sessionContinuation.title")}
-                      </h3>
+                      <div className="pointer-events-none flex items-center gap-2">
+                        <h3 className="pointer-events-auto text-sm font-medium text-[var(--app-text)]">
+                          {t("options.workspace.sessionContinuation.title")}
+                        </h3>
+                        <HelpPopover
+                          label={t("options.workspace.sessionContinuation.title")}
+                          markdown={settingsHelp.sessionContinuationWindow}
+                        />
+                      </div>
                       <p className="mt-1 text-sm leading-relaxed text-[var(--app-text-muted)]">
                         {t("options.workspace.sessionContinuation.description")}
                       </p>
@@ -2713,6 +2842,7 @@ export default function App() {
                     label={t("options.workspace.overlayClickThrough.label")}
                     description={t("options.workspace.overlayClickThrough.description")}
                     className="lg:col-span-2"
+                    helpMarkdown={settingsHelp.overlayClickThrough}
                   />
                 </div>
               </SurfacePanel>
@@ -2739,12 +2869,22 @@ export default function App() {
                 })}
 
                 <div className="grid gap-3 lg:grid-cols-2">
+                  <Select
+                    label={t("options.workspace.meetingArchiveRetention.label")}
+                    value={String(settings.meetingArchiveRetentionDays)}
+                    onChange={(value) =>
+                      updateSetting("meetingArchiveRetentionDays", Number(value))
+                    }
+                    options={meetingArchiveRetentionOptions}
+                    helpMarkdown={settingsHelp.meetingArchiveRetention}
+                  />
+
                   <Toggle
                     enabled={settings.storeMeetingChat}
                     onChange={handleStoreMeetingChatChange}
                     label={t("options.workspace.storeMeetingChat.label")}
                     description={t("options.workspace.storeMeetingChat.description")}
-                    className="lg:col-span-2"
+                    helpMarkdown={settingsHelp.storeMeetingChat}
                   />
                 </div>
               </SurfacePanel>
@@ -2846,6 +2986,7 @@ export default function App() {
               <ApiKeyInput
                 value={currentOpenAiApiKey}
                 onChange={setCurrentOpenAiApiKey}
+                helpMarkdown={settingsHelp.apiKey}
               />
 
               <Select
@@ -2853,6 +2994,7 @@ export default function App() {
                 value={settings.model}
                 onChange={(v) => updateSetting("model", v)}
                 options={openAiModels}
+                helpMarkdown={settingsHelp.model}
               />
             </SettingsSection>
 
@@ -2898,6 +3040,7 @@ export default function App() {
                   optional
                   maxLength={CUSTOM_TRANSLATION_INSTRUCTIONS_MAX_LENGTH}
                   showCharacterCount
+                  helpMarkdown={settingsHelp.translationInstructions}
                 />
               </SurfacePanel>
             </SettingsSection>
@@ -2912,9 +3055,10 @@ export default function App() {
               <div className="grid gap-3">
                 <Select
                   label={t("options.profiles.editor.defaultOutputLanguage")}
-                  value={settings.summaryLanguage}
-                  onChange={(value) => updateSetting("summaryLanguage", value)}
+                  value={settings.meetingOutputLanguage}
+                  onChange={(value) => updateSetting("meetingOutputLanguage", value)}
                   options={languageOptions}
+                  helpMarkdown={settingsHelp.meetingOutputLanguage}
                 />
               </div>
 
@@ -2931,7 +3075,7 @@ export default function App() {
                   <ActionButton
                     label={t("options.profiles.editor.addProfile")}
                     icon={<PlusIcon className="h-4 w-4" />}
-                    onClick={addSummaryProfile}
+                    onClick={addMeetingProfile}
                     variant="accent"
                     size="compact"
                     className="border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_72%,var(--app-surface))] text-[var(--app-accent)] shadow-[0_12px_24px_color-mix(in_srgb,var(--app-accent)_10%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--app-accent-soft)_88%,var(--app-surface))]"
@@ -2946,53 +3090,53 @@ export default function App() {
                       </p>
                       <span className="text-xs text-[var(--app-text-faint)]">
                         {t("options.profiles.editor.totalCount", {
-                          count: settings.summaryProfiles.length,
+                          count: settings.meetingProfiles.length,
                         })}
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {settings.summaryProfiles.map((profile) => (
+                      {settings.meetingProfiles.map((profile) => (
                         <ProfileListItem
                           key={profile.id}
                           profile={profile}
-                          selected={profile.id === selectedSummaryProfile?.id}
-                          isDefault={profile.id === settings.defaultSummaryProfileId}
-                          isProtected={isProtectedSummaryProfile(profile.id)}
-                          onSelect={() => setSelectedSummaryProfileId(profile.id)}
+                          selected={profile.id === selectedMeetingProfile?.id}
+                          isDefault={profile.id === settings.defaultMeetingProfileId}
+                          isProtected={isProtectedMeetingProfile(profile.id)}
+                          onSelect={() => setSelectedMeetingProfileId(profile.id)}
                         />
                       ))}
                     </div>
                   </div>
 
-                  {selectedSummaryProfile ? (
-                    <SummaryProfileEditor
-                      profile={selectedSummaryProfile}
+                  {selectedMeetingProfile ? (
+                    <MeetingProfileEditor
+                      profile={selectedMeetingProfile}
                       isDefault={
-                        selectedSummaryProfile.id ===
-                        settings.defaultSummaryProfileId
+                        selectedMeetingProfile.id ===
+                        settings.defaultMeetingProfileId
                       }
-                      isProtected={isProtectedSummaryProfile(
-                        selectedSummaryProfile.id
+                      isProtected={isProtectedMeetingProfile(
+                        selectedMeetingProfile.id
                       )}
                       canSetDefault={
-                        !isProtectedSummaryProfile(selectedSummaryProfile.id) ||
+                        !isProtectedMeetingProfile(selectedMeetingProfile.id) ||
                         canUseProtectedAsDefault
                       }
                       canDelete={
-                        settings.summaryProfiles.length > 1 &&
-                        !isProtectedSummaryProfile(selectedSummaryProfile.id)
+                        settings.meetingProfiles.length > 1 &&
+                        !isProtectedMeetingProfile(selectedMeetingProfile.id)
                       }
                       onSetDefault={() =>
                         updateSetting(
-                          "defaultSummaryProfileId",
-                          selectedSummaryProfile.id
+                          "defaultMeetingProfileId",
+                          selectedMeetingProfile.id
                         )
                       }
                       onChange={(updates) =>
-                        updateSummaryProfile(selectedSummaryProfile.id, updates)
+                        updateMeetingProfile(selectedMeetingProfile.id, updates)
                       }
                       onDelete={() =>
-                        deleteSummaryProfile(selectedSummaryProfile.id)
+                        deleteMeetingProfile(selectedMeetingProfile.id)
                       }
                     />
                   ) : null}

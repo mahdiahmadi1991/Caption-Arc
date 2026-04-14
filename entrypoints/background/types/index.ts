@@ -15,8 +15,8 @@ import type {
   AssistantResponseIntent,
   AssistantResponseTone,
   AssistantTriggerPolicy,
-  SummaryProfileShape,
-} from "../../shared/summary-profiles";
+  MeetingProfileShape,
+} from "../../shared/meeting-profiles";
 
 export type {
   MeetingAssistantMemorySnapshot,
@@ -50,7 +50,7 @@ export type {
   AssistantResponseIntent,
   AssistantResponseTone,
   AssistantTriggerPolicy,
-} from "../../shared/summary-profiles";
+} from "../../shared/meeting-profiles";
 
 export const CLOUD_SYNC_PROVIDERS = {
   googleDrive: "google-drive",
@@ -90,16 +90,17 @@ export type LegalRiskAcknowledgements = Partial<
 >;
 export type { SummaryGenerationMode } from "../../shared/summary-generation";
 export type { SummaryJobStatus } from "../../shared/summary-generation";
-export type SummaryProfile = SummaryProfileShape;
+export type MeetingProfile = MeetingProfileShape;
 
 export type SharedSettings = {
   model: string;
   targetLanguage: string;
   translationEnabled: boolean;
   customPrompt: string;
-  summaryLanguage: string;
-  summaryProfiles: SummaryProfile[];
-  defaultSummaryProfileId: string;
+  meetingOutputLanguage: string;
+  meetingArchiveRetentionDays: number;
+  meetingProfiles: MeetingProfile[];
+  defaultMeetingProfileId: string;
   appearance: ThemePreference;
   overlayVisible: boolean;
   captureStartupBehavior: CaptureStartupBehavior;
@@ -205,7 +206,7 @@ export type ResolveMeetingSessionRequest = {
   sourceUrl: string;
   title?: string;
   identifiers: MeetingSessionIdentifiers;
-  summaryProfileId?: string;
+  meetingProfileId?: string;
   reusePolicy?: "default" | "force-new" | "force-reuse";
   resumeSessionId?: string;
 };

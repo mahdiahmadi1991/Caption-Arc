@@ -50,6 +50,10 @@ Build outputs now live under a shared `.release/` parent directory:
 3. Load `.release/chrome/production` for the Chrome production artifact, or `.release/chrome/development` for the Chrome development artifact.
 4. For Firefox, open `about:debugging#/runtime/this-firefox` and load `.release/firefox/production` or `.release/firefox/development`.
 
+Chrome unpacked development builds keep a stable development ID when `WXT_CHROME_EXTENSION_KEY_DEVELOPMENT` is configured, preferably through `.secrets/.env.local`.
+
+Production builds should use a separate `WXT_CHROME_EXTENSION_KEY_PRODUCTION` value so development and production Chrome artifacts do not share the same extension ID.
+
 ## Daily Workflow
 
 - use `pnpm dev` for local iteration

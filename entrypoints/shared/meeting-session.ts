@@ -8,7 +8,7 @@ import type {
   AssistantResponseFormat,
   AssistantResponseIntent,
   AssistantResponseTone,
-} from "./summary-profiles";
+} from "./meeting-profiles";
 
 export type MeetingPlatform = "google-meet" | "microsoft-teams" | "zoom-web";
 export type MeetingEventSource = "caption" | "chat";
@@ -241,7 +241,7 @@ export type MeetingSession = {
   resumedFromSessionId?: string;
   rejoinHistory?: MeetingSessionRejoin[];
   lastSeenAt?: number;
-  summaryProfileId?: string;
+  meetingProfileId?: string;
   updatedAt?: number;
   updatedByDeviceId?: string;
   syncContentHash?: string;
@@ -937,7 +937,13 @@ export function normalizeMeetingSession(
       typeof storedSession.lastSeenAt === "number"
         ? storedSession.lastSeenAt
         : undefined,
-    summaryProfileId: storedSession.summaryProfileId,
+    meetingProfileId:
+      typeof storedSession.meetingProfileId === "string"
+        ? storedSession.meetingProfileId
+        : typeof (storedSession as { summaryProfileId?: unknown }).summaryProfileId ===
+            "string"
+          ? String((storedSession as { summaryProfileId?: unknown }).summaryProfileId)
+          : undefined,
     derived: storedSession.derived
       ? {
           ...storedSession.derived,

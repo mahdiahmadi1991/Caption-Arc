@@ -29,7 +29,7 @@ function createStorageSessionMock(minLevel = "trace") {
   };
 }
 
-function installChromeMock(
+function installExtensionMock(
   handler: (message: ChromeRuntimeMessage) => Promise<unknown> | unknown,
   minLevel = "trace"
 ) {
@@ -100,7 +100,7 @@ describe("UI i18n diagnostics contracts", () => {
 
   test("I18N-DIAG-001: locale application emits trace, debug, and info diagnostics in healthy flows", async () => {
     const recordedEvents: DiagnosticsEventRecord[] = [];
-    installChromeMock((message) => {
+    installExtensionMock((message) => {
       if (message.action === "recordDiagnosticsEvent") {
         recordedEvents.push(message.event || {});
         return { success: true };
@@ -138,7 +138,7 @@ describe("UI i18n diagnostics contracts", () => {
 
   test("I18N-DIAG-002: invalid persisted uiLanguage falls back and emits a warn diagnostics event", async () => {
     const recordedEvents: DiagnosticsEventRecord[] = [];
-    installChromeMock((message) => {
+    installExtensionMock((message) => {
       if (message.action === "recordDiagnosticsEvent") {
         recordedEvents.push(message.event || {});
         return { success: true };
@@ -167,7 +167,7 @@ describe("UI i18n diagnostics contracts", () => {
 
   test("I18N-DIAG-003: settings lookup failure falls back safely and emits a warn diagnostics event", async () => {
     const recordedEvents: DiagnosticsEventRecord[] = [];
-    installChromeMock((message) => {
+    installExtensionMock((message) => {
       if (message.action === "recordDiagnosticsEvent") {
         recordedEvents.push(message.event || {});
         return { success: true };
@@ -210,7 +210,7 @@ describe("UI i18n diagnostics contracts", () => {
     });
 
     const recordedEvents: DiagnosticsEventRecord[] = [];
-    installChromeMock((message) => {
+    installExtensionMock((message) => {
       if (message.action === "recordDiagnosticsEvent") {
         recordedEvents.push(message.event || {});
         return { success: true };

@@ -36,6 +36,11 @@ export const hiMessages = {
             dark: "डार्क थीम का प्रयोग करें"
         },
         optional: "(वैकल्पिक)",
+        helpPopover: {
+            eyebrow: "फ़ील्ड गाइड",
+            moreAbout: "{label} के बारे में और जानकारी",
+            close: "मदद बंद करें"
+        },
         uiLanguage: {
             label: "इंटरफ़ेस भाषा",
             description: "पॉपअप, सेटिंग्स, इतिहास और इन-मीटिंग यूआई द्वारा उपयोग की जाने वाली भाषा चुनें।",
@@ -261,7 +266,15 @@ export const hiMessages = {
                 title: "मीटिंग पुरालेख",
                 description: "तय करें कि बाद की समीक्षा, निर्यात और सारांश निर्माण के लिए कौन सा मीटिंग डेटा रखा जाना चाहिए।"
             },
-            storeMeetingChat: {
+            meetingArchiveRetention: {
+        label: "आर्काइव रखने की अवधि",
+        description:
+          "चुनें कि CaptionArc समाप्त हो चुकी और बिना स्टार वाली sessions को local archive से हटाने से पहले कितने समय तक रखे। Off चुनने पर पूरी automatic archive deletion बंद हो जाती है।",
+        off: "Off",
+        days: "{count} दिन",
+        oneYear: "1 वर्ष",
+      },
+      storeMeetingChat: {
                 label: "स्टोर मीटिंग चैट",
                 description: "समर्थित मीटिंग चैट सहेजें ताकि यह मीटिंग इतिहास, निर्यात और सारांश में दिखाई दे सके।"
             }
@@ -389,6 +402,10 @@ export const hiMessages = {
             gpt51: {
                 description: "संतुलित गुणवत्ता-से-गति प्रोफ़ाइल के साथ मजबूत ऑल-राउंड मॉडल।"
             },
+            gpt5: {
+                description: "फ़्लैगशिप GPT-5 मॉडल, जब आपको Mini या Nano से मजबूत सामान्य गुणवत्ता चाहिए लेकिन GPT-5.2 तक नहीं जाना है।",
+                badge: "फ़्लैगशिप"
+            },
             gpt5Nano: {
                 description: "सरल आउटपुट गुणवत्ता के साथ, बहुत तेज़ प्रतिक्रियाओं के लिए न्यूनतम-विलंबता विकल्प।",
                 badge: "सबसे तेज़"
@@ -400,7 +417,157 @@ export const hiMessages = {
             gpt41Mini: {
                 description: "हल्के कार्यभार और मध्यम अनुवाद गुणवत्ता के लिए कम लागत वाला GPT-4.1 संस्करण।",
                 badge: "हल्का"
-            }
+            },
+            gpt41Nano: {
+                description: "सबसे हल्के कार्यों के लिए सबसे छोटा GPT-4.1 विकल्प, जहाँ लागत और लेटेंसी सबसे अधिक महत्वपूर्ण हैं।"
+            },
+        },
+        help: {
+          apiKey: `इस डिवाइस पर CaptionArc को जिस OpenAI API key का उपयोग करना है, उसे यहाँ पेस्ट करें।
+
+- यह key इसी डिवाइस पर रहती है और sync या backup export में शामिल नहीं होती।
+- ऐसी key इस्तेमाल करें जो आपकी access और billing policy के साथ मेल खाती हो।
+- अगर verification fail हो, तो key की स्थिति, project credit और model access जाँचें।`,
+          model: `यह OpenAI मॉडल चुनता है जो लाइव अनुवाद, सारांश और असिस्टेंट आउटपुट चलाएगा।
+
+- हल्के मॉडल आम तौर पर लाइव मीटिंग में तेज़ जवाब देते हैं।
+- मजबूत मॉडल आम तौर पर बेहतर लिखते हैं, लेकिन धीमे और महंगे हो सकते हैं।
+- अगर आप निश्चित नहीं हैं, तो सुझाया गया डिफ़ॉल्ट ही रखें।
+
+उदाहरण: लाइव मीटिंग के लिए तेज़ मॉडल रखें और अगर सारांश की गुणवत्ता ज़्यादा महत्वपूर्ण हो जाए तो बाद में मजबूत मॉडल चुनें।`,
+          uiLanguage: `यह विकल्प CaptionArc इंटरफ़ेस की भाषा बदलता है।
+
+- इसका असर settings, meeting history, quick surfaces और in-meeting UI text पर पड़ता है।
+- यह अपने आप live translation या summaries की भाषा नहीं बदलता।
+- अगर आप चाहते हैं कि CaptionArc अपने environment को follow करे, तो browser/system वाला विकल्प रखें।`,
+          translationInstructions: `ये निर्देश हर लाइव अनुवाद अनुरोध के साथ भेजे जाते हैं।
+
+- इन्हें छोटा और साफ़ रखें।
+- शब्दावली, टोन और सबटाइटल सफ़ाई के नियमों के लिए इन्हें इस्तेमाल करें।
+- बहुत लंबे प्रॉम्प्ट लाइव अनुवाद को आम तौर पर धीमा और अस्थिर बना देते हैं।
+
+उदाहरण: \`प्रोडक्ट के नाम अंग्रेज़ी में रखें और छोटे सबटाइटल जैसे वाक्य लिखें।\``,
+          captureStartupBehavior: `यह तय करता है कि CaptionArc किसी समर्थित मीटिंग को पहचानने पर क्या करेगा।
+
+- **पूछें** कैप्चर शुरू होने से पहले पुष्टि दिखाता है।
+- **हमेशा** बिना अतिरिक्त पुष्टि के कैप्चर शुरू कर देता है।
+- **बंद** कैप्चर को निष्क्रिय रखता है जब तक आप उसे खुद चालू न करें।
+
+अगर आपको सुरक्षित डिफ़ॉल्ट चाहिए, तो **पूछें** बेहतर है।`,
+          captionActivationBehavior: `यह नियंत्रित करता है कि मीटिंग कैप्शन कैसे चालू होंगे।
+
+- **मार्गदर्शित** आख़िरी कदम आपके लिए छोड़ता है।
+- **स्वचालित** जहाँ संभव हो, कैप्शन खुद चालू करने की कोशिश करता है।
+- स्वचालित मोड अधिक संवेदनशील है क्योंकि यह आपकी ओर से मीटिंग UI से इंटरैक्ट करता है।
+
+जब तक सच में ज़रूरत न हो, **मार्गदर्शित** विकल्प बेहतर है।`,
+          sessionContinuationWindow: `यह समय सीमा तय करती है कि उसी मीटिंग में दोबारा जुड़ने पर CaptionArc कितनी देर तक वही सत्र जारी रख सकता है।
+
+- छोटी विंडो नई सत्रों को ज़्यादा बार बनाती है।
+- लंबी विंडो संबंधित री-जॉइन को एक ही सत्र में रखती है।
+- \`0 मिनट\` का मतलब है कि हर री-जॉइन नया सत्र शुरू करेगा।
+
+उदाहरण: \`120 मिनट\` पर, अगर मीटिंग 10:00 बजे खत्म हुई, तो उसी मीटिंग में 12:00 बजे तक दोबारा जुड़ने पर वही सत्र जारी रह सकता है।`,
+          overlayClickThrough: `यह तय करता है कि in-meeting overlay आपके mouse clicks को रोके या उन्हें नीचे की meeting तक जाने दे।
+
+- जब आप चाहते हैं कि clicks overlay के पार होकर meeting तक पहुँचें, तब इसे on करें।
+- जब आपको overlay पर CaptionArc controls के साथ सीधे interact करना हो, तब इसे off करें।
+- Click-through passive reading के लिए अच्छा है, लेकिन अगर आप controls बार-बार बदलते हैं तो कम सुविधाजनक हो सकता है।`,
+          meetingArchiveRetention: `यह लोकल आर्काइव में समाप्त और बिना स्टार वाले सत्रों की स्वचालित सफ़ाई को नियंत्रित करता है।
+
+- छोटा समय पुराना इतिहास जल्दी हटाता है।
+- लंबा समय डिवाइस पर ज़्यादा इतिहास रखता है।
+- **बंद** सभी स्वचालित आर्काइव हटाने को निष्क्रिय कर देता है।
+
+स्टार किए गए सत्र अभी भी स्वचालित सफ़ाई से सुरक्षित रहते हैं।`,
+          storeMeetingChat: `यह तय करता है कि समर्थित मीटिंग चैट सहेजे गए मीटिंग रिकॉर्ड का हिस्सा बनेगी या नहीं।
+
+- चालू होने पर चैट इतिहास, एक्सपोर्ट, सारांश और असिस्टेंट संदर्भ में दिख सकती है।
+- चैट में अक्सर दृश्य कैप्शन की तुलना में अधिक संवेदनशील नाम, निर्णय या लिंक होते हैं।
+- इसे तभी चालू करें जब चैट सहेजना आपकी नीति और गोपनीयता जरूरतों के अनुकूल हो।`,
+          meetingOutputLanguage: `यह summaries और Meeting AI responses जैसे meeting outputs की default language तय करता है।
+
+- यह interface language और live translation से अलग है।
+- वही भाषा चुनें जिसमें आप ज्यादातर final output पढ़ना चाहते हैं।
+- जरूरत पड़ने पर बाद में output language बदली जा सकती है।`,
+          profileName: `यह नाम settings और बाद के AI workflows में meeting profile की पहचान करता है।
+
+- इसे इतना छोटा रखें कि profile list में जल्दी पढ़ा जा सके।
+- किसी एक meeting का नाम नहीं, meeting type का नाम दें।
+- अच्छा नाम यह साफ कर देता है कि इस profile को फिर कब इस्तेमाल करना है।
+
+उदाहरण: Customer discovery, Weekly team sync, या Board update.`,
+          profileDescription: `यह description जल्दी से human context देती है कि यह meeting profile कब इस्तेमाल करनी चाहिए।
+
+- Meeting का purpose, audience, या recurring rhythm संक्षेप में लिखें।
+- इसे छोटा और स्पष्ट रखें ताकि एक नज़र में सही profile पहचान सकें।
+- यह profile metadata है, लंबी AI instructions लिखने की जगह नहीं।
+
+उदाहरण: Product, design, और engineering leads के साथ weekly cross-functional review.`,
+          autoSummary: `यह तय करता है कि meeting खत्म होने पर यह profile अपने-आप summary बनाए या नहीं।
+
+- इसे उन recurring meetings के लिए चालू करें जिनमें आपको लगभग हमेशा summary चाहिए।
+- अगर summary सिर्फ ज़रूरत पड़ने पर चाहिए, तो इसे बंद रखें।
+- Automatic summary फिर भी valid OpenAI setup और saved meeting data पर निर्भर रहती है।`,
+          summaryEffort: `यह नियंत्रित करता है कि इस profile की summary बनाने में AI कितना effort लगाए।
+
+- कम effort तेज़ और सस्ता होता है।
+- ज़्यादा effort लंबी या बिखरी हुई meetings के लिए बेहतर होता है।
+- अगर आप निश्चित नहीं हैं, तो **Balanced** आम तौर पर सबसे सुरक्षित default है।`,
+          summaryInstructions: `ये instructions इस profile की summary style को shape करती हैं।
+
+- इन्हें structure, audience और recurring terminology के लिए इस्तेमाल करें।
+- इन्हें summary output तक सीमित रखें, live assistant behavior तक नहीं।
+- छोटे और साफ़ instructions आम तौर पर लंबे policy text से बेहतर काम करते हैं।
+
+उदाहरण: \`पहले executive summary लिखो, फिर owner के साथ action items दो।\``,
+          assistantEnabled: `यह इस profile के लिए Meeting AI को चालू या बंद करता है।
+
+- बंद होने पर बाकी Meeting AI settings दिखती रहती हैं, लेकिन live guidance पर असर नहीं डालतीं।
+- इसे सिर्फ उन्हीं meeting types के लिए चालू करें जहाँ live suggestions सच में मदद करती हों।
+- हर profile का Meeting AI default अलग हो सकता है।`,
+          assistantResponseIntent: `यह तय करता है कि इस profile में Meeting AI किस मुख्य काम पर optimize करे।
+
+- इससे आप assistant को जवाब देने, coach करने, summarize करने या risks surface करने की दिशा में मोड़ते हैं।
+- यह सिर्फ wording नहीं बदलता; suggestions की दिशा भी बदलता है।
+- वही intent चुनें जो उस meeting type में आपकी सामान्य जरूरत से मेल खाता हो।`,
+          assistantResponseFormat: `यह Meeting AI responses की shape नियंत्रित करता है।
+
+- छोटे bullet formats live meeting में जल्दी scan किए जा सकते हैं।
+- ज़्यादा spoken formats तब बेहतर हैं जब आप text लगभग वैसे ही बोलना चाहते हों।
+- वही format चुनें जो समय दबाव में सबसे आसानी से काम आए।`,
+          assistantResponseDepth: `यह नियंत्रित करता है कि Meeting AI responses कितनी छोटी या कितनी विकसित हों।
+
+- कम depth speed और quick scanning के लिए बेहतर है।
+- ज़्यादा depth ज़्यादा context और reasoning देती है, लेकिन live use में भारी लग सकती है।
+- तेज़ calls के लिए हल्का रखें और strategy meetings के लिए बढ़ाएँ।`,
+          assistantResponseTone: `यह Meeting AI wording का default tone तय करता है।
+
+- tone किसी suggestion को ज़्यादा direct, neutral या diplomatic बना सकता है।
+- यह मूल facts नहीं बदलता, लेकिन असर बदल देता है।
+- इसे सिर्फ निजी पसंद से नहीं, meeting के social context से मिलाएँ।`,
+          assistantDeliveryBias: `यह fast output और fuller guidance के बीच संतुलन तय करता है।
+
+- जब timing सबसे अहम हो, तो तेज़ delivery बेहतर है।
+- जब nuance latency से ज़्यादा महत्वपूर्ण हो, तो fuller delivery बेहतर है।
+- अगर निश्चित नहीं हैं, तो middle setting रखें।`,
+          assistantTriggerPolicy: `यह तय करता है कि meeting के दौरान Meeting AI कब guidance दे।
+
+- conservative policies noise कम करती हैं।
+- ज़्यादा proactive policies अधिक suggestions देती हैं, लेकिन ज़्यादा interrupt भी कर सकती हैं।
+- वही सबसे कम level चुनें जो आपके लिए महत्वपूर्ण पलों में मददगार रहे।`,
+          assistantParticipantScope: `यह तय करता है कि किन participants की speech या activity Meeting AI suggestions को प्रभावित करे।
+
+- संकरा scope assistant को आपके रोल के लिए सबसे अहम लोगों पर केंद्रित रखता है।
+- चौड़ा scope पूरे कमरे की reading के लिए बेहतर है।
+- अगर assistant बहुत noisy या distracted लगे, तो scope छोटा करें।`,
+          assistantInstructions: `ये instructions इस profile के लिए Meeting AI behavior को customize करती हैं।
+
+- इन्हें response style, recurring constraints और domain expectations के लिए उपयोग करें।
+- इन्हें summary instructions और live translation instructions से अलग रखें।
+- कुछ टिकाऊ नियम आम तौर पर लंबे edge-case list से बेहतर काम करते हैं।
+
+उदाहरण: \`Concise talking points को प्राथमिकता दो और जवाब लिखने से पहले hidden risks दिखाओ।\``,
         },
         translation: {
             bestFor: {
@@ -697,7 +864,7 @@ export const hiMessages = {
                     meetingSessions: "बैठक सत्र",
                     translations: "अनुवाद",
                     summaries: "सारांश",
-                    summaryProfiles: "सारांश प्रोफ़ाइल",
+                    meetingProfiles: "मीटिंग प्रोफ़ाइल",
                     sharedSettings: "साझा सेटिंग्स"
                 },
                 local: {
@@ -739,7 +906,7 @@ export const hiMessages = {
         dataRecovery: {
             backupFile: {
                 title: "एन्क्रिप्टेड बैकअप फ़ाइल",
-                description: "निर्यात किए गए बैकअप में आपकी सेटिंग्स, सारांश प्रोफ़ाइल, सहेजे गए मीटिंग सत्र, प्रतिलेख, चैट इतिहास, अनुवाद और सारांश शामिल हैं। जब क्लाउड सिंक अनुपलब्ध हो या जब आपको पोर्टेबल एन्क्रिप्टेड स्नैपशॉट की आवश्यकता हो तो इसका उपयोग करें।",
+                description: "एक्सपोर्ट किए गए बैकअप में आपकी साझा सेटिंग्स, मीटिंग प्रोफ़ाइल, सहेजी गई मीटिंग सत्र, ट्रांसक्रिप्ट, चैट इतिहास, अनुवाद और सारांश शामिल होते हैं। OpenAI API key जैसे डिवाइस-स्थानीय सीक्रेट बैकअप में शामिल नहीं होते। जब क्लाउड सिंक उपलब्ध न हो या आपको पोर्टेबल एन्क्रिप्टेड स्नैपशॉट चाहिए, तब इसका उपयोग करें।",
                 export: "सभी डेटा निर्यात करें",
                 import: "बैकअप फ़ाइल आयात करें"
             },
@@ -766,8 +933,8 @@ export const hiMessages = {
             },
             deleteArchive: {
                 title: "सहेजे गए संग्रह को हटाएँ",
-                syncedDescription: "इस डिवाइस, अपने कनेक्टेड क्लाउड प्रदाताओं और अन्य सिंक किए गए डिवाइसों से सिंक किए गए संग्रह को हटा दें। आपका OpenAI सेटअप, प्राथमिकताएं और सारांश प्रोफ़ाइल बरकरार रहती हैं।",
-                localDescription: "स्थानीय संग्रहण से सभी सहेजे गए मीटिंग सत्र हटाएँ। यह आपके OpenAI सेटअप, प्राथमिकताओं और सारांश प्रोफ़ाइल को बनाए रखता है।"
+                syncedDescription: "इस डिवाइस, जुड़े हुए क्लाउड प्रदाताओं और अन्य सिंक किए गए डिवाइसों से सिंक किया गया आर्काइव हटाएँ। आपकी OpenAI सेटअप, प्राथमिकताएँ और मीटिंग प्रोफ़ाइल सुरक्षित रहेंगी।",
+                localDescription: "लोकल स्टोरेज से सभी सहेजे गए मीटिंग सत्र हटाएँ। इससे आपकी OpenAI सेटअप, प्राथमिकताएँ और मीटिंग प्रोफ़ाइल सुरक्षित रहेंगी।"
             },
             confirmDelete: {
                 syncedTitle: "समन्वयित संग्रह को हर जगह से हटाएं?",

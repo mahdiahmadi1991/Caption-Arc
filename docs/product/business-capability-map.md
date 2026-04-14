@@ -8,7 +8,7 @@ This document maps user-facing business capabilities to implementation surfaces 
 | --- | --- | --- |
 | Provider-aware live capture | Capture visible meeting captions from supported web meeting surfaces | `entrypoints/content/platform-runtime.ts`, `entrypoints/content/providers/*`, `entrypoints/content/caption.ts` |
 | Live translation | Translate captured text in near real time with user-configured OpenAI settings | `entrypoints/background/translation.ts`, `entrypoints/background/providers/openai.ts`, `entrypoints/content/translation.ts` |
-| Live in-meeting assistant | Generate short, contextual response guidance during meetings | `entrypoints/background/assistant.ts`, `entrypoints/shared/summary-profiles.ts`, `entrypoints/content/overlay/assistant-surface.ts` |
+| Live in-meeting assistant | Generate short, contextual response guidance during meetings | `entrypoints/background/assistant.ts`, `entrypoints/shared/meeting-profiles.ts`, `entrypoints/content/overlay/assistant-surface.ts` |
 | Quick access runtime control | Check meeting runtime state and apply fast controls from popup surface | `entrypoints/popup/App.tsx`, `entrypoints/background/quick-access-runtime.ts`, `entrypoints/shared/quick-access-status.ts` |
 | Local-first meeting history | Persist sessions, search history, and review saved meeting detail | `entrypoints/background/history.ts`, `entrypoints/background/history-db.ts`, `entrypoints/meeting-history/*` |
 | Profile-driven summaries | Generate profile-shaped summaries in selected target language | `entrypoints/background/history.ts`, `entrypoints/shared/meeting-summary.ts`, `entrypoints/shared/summary-generation.ts` |

@@ -11,7 +11,7 @@ CRITICAL RULES:
 1. Translate the COMPLETE text accurately - DO NOT skip any words
 2. KEEP THE SPEAKER'S PERSPECTIVE: The text is spoken BY the speaker. When they refer to themselves, use "I/me". When they refer to the listener, use "you".
 3. DO NOT flip or swap pronouns. If the speaker says something equivalent to "Do you love me?", translate it as "Do you love me?" - NOT "Do I love you?"
-4. Fix obvious speech recognition errors based on context
+4. Provider captions may be imperfect ASR. Correct obvious captioning errors only when the intended meaning is reasonably clear from the current line or recent context
 5. Output ONLY the translation, nothing else
 
 Target language: ${langName}`;

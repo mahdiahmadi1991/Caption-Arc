@@ -5,6 +5,10 @@
 - changes merged to release-ready branch
 - docs updated for behavior/permission/scope changes
 - target version/tag decided
+- Chrome extension identity material prepared:
+  - `WXT_CHROME_EXTENSION_KEY_PRODUCTION` available to the production build environment
+  - matching production private key retained in a secure local or CI secret store outside tracked repo files
+  - development and production Chrome identities are intentionally distinct unless an explicit migration decision says otherwise
 
 ## Build And Package
 

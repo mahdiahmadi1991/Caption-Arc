@@ -8,7 +8,7 @@ import {
 import { GithubIcon } from "./icons";
 import { Tooltip } from "./tooltip";
 
-type ExtensionChromeLinkProps = Omit<
+type ExtensionPageLinkProps = Omit<
   AnchorHTMLAttributes<HTMLAnchorElement>,
   "children" | "href"
 > & {
@@ -34,7 +34,7 @@ const LINK_SIZE_CLASSNAMES = {
   md: "h-10 min-w-10 px-3.5",
 } as const;
 
-export function ExtensionChromeLink({
+export function ExtensionPageLink({
   href,
   icon,
   label,
@@ -45,7 +45,7 @@ export function ExtensionChromeLink({
   target = "_blank",
   rel = "noreferrer noopener",
   ...props
-}: ExtensionChromeLinkProps) {
+}: ExtensionPageLinkProps) {
   return (
     <Tooltip content={label}>
       <a
@@ -90,7 +90,7 @@ export function GitHubHeaderLink({
   const t = useT();
 
   return (
-    <ExtensionChromeLink
+    <ExtensionPageLink
       href={CAPTION_ARC_GITHUB_URL}
       icon={<GithubIcon />}
       label={t("common.links.github")}

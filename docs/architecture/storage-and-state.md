@@ -24,8 +24,11 @@ From [`entrypoints/background/history-db.ts`](../../entrypoints/background/histo
 - event chunk size: `250`
 - retention guardrails:
   - max archived sessions: `250`
-  - max age for non-starred ended sessions: `180 days`
+  - automatic pruning for non-starred ended sessions is controlled by `settings.meetingArchiveRetentionDays`
+  - supported archive-retention options: `Off`, `30`, `90`, `180`, `365` days
+  - default archive-retention window: `180 days`
   - storage pressure thresholds: `0.7` high, `0.55` target
+  - when archive retention is `Off`, all automatic archive deletion is disabled, including age, count, and storage-pressure pruning
 
 ## Canonical Session Model
 

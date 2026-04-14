@@ -56,9 +56,9 @@ import {
 } from "../shared/summary-generation";
 import {
   isAutomaticSummaryEnabledForProfile,
-  resolveSummaryProfile,
-  resolveSummaryProfilePrompt,
-} from "../shared/summary-profiles";
+  resolveMeetingProfile,
+  resolveMeetingProfilePrompt,
+} from "../shared/meeting-profiles";
 import { getSettings } from "./settings";
 import { getOpenAiServiceAvailability } from "../shared/openai-service";
 import {
@@ -285,7 +285,7 @@ function getAutomaticSummaryRequest(
   session: MeetingSession,
   settings: Awaited<ReturnType<typeof getSettings>>["settings"]
 ): GenerateMeetingSummaryRequest | null {
-  if (!settings.summaryLanguage || settings.summaryProfiles.length === 0) {
+  if (!settings.meetingOutputLanguage || settings.meetingProfiles.length === 0) {
     return null;
   }
 
@@ -297,10 +297,10 @@ function getAutomaticSummaryRequest(
     return null;
   }
 
-  const summaryProfile = resolveSummaryProfile(
-    settings.summaryProfiles,
-    session.summaryProfileId,
-    settings.defaultSummaryProfileId
+  const summaryProfile = resolveMeetingProfile(
+    settings.meetingProfiles,
+    session.meetingProfileId,
+    settings.defaultMeetingProfileId
   );
 
   if (!isAutomaticSummaryEnabledForProfile(summaryProfile)) {
@@ -311,7 +311,7 @@ function getAutomaticSummaryRequest(
     session.summaries || session.artifacts?.summaries,
     {
       profileId: summaryProfile.id,
-      language: settings.summaryLanguage,
+      language: settings.meetingOutputLanguage,
     }
   );
   const latestSessionBoundary = Math.max(
@@ -330,7 +330,7 @@ function getAutomaticSummaryRequest(
 
   return {
     sessionId: session.id,
-    targetLanguage: settings.summaryLanguage,
+    targetLanguage: settings.meetingOutputLanguage,
     profileId: summaryProfile.id,
   };
 }
@@ -386,7 +386,7 @@ async function replaceQueuedMeetingSummaryJob(sessionId: string): Promise<void> 
 
 async function reconcileAutomaticSummaryQueue(): Promise<void> {
   const { settings } = await getSettings();
-  if (!settings.summaryProfiles.some((profile) => profile.autoSummarizeOnMeetingEnd)) {
+  if (!settings.meetingProfiles.some((profile) => profile.autoSummarizeOnMeetingEnd)) {
     return;
   }
 
@@ -811,7 +811,7 @@ function createResolvedSession(
     updatedAt: now,
     searchableText: "",
     startTime: now,
-    summaryProfileId: request.summaryProfileId?.trim() || undefined,
+    meetingProfileId: request.meetingProfileId?.trim() || undefined,
     events: [],
     captions: [],
     chatMessages: [],
@@ -1869,12 +1869,12 @@ async function runMeetingSummaryJob(
   }
 
   const { settings } = await getSettings();
-  const summaryProfile = resolveSummaryProfile(
-    settings.summaryProfiles,
+  const summaryProfile = resolveMeetingProfile(
+    settings.meetingProfiles,
     request.profileId,
-    settings.defaultSummaryProfileId
+    settings.defaultMeetingProfileId
   );
-  const resolvedPrompt = resolveSummaryProfilePrompt(summaryProfile);
+  const resolvedPrompt = resolveMeetingProfilePrompt(summaryProfile);
   const executionPlan = planMeetingSummaryExecution(
     session,
     resolvedPrompt,
@@ -2101,7 +2101,7 @@ async function runMeetingSummaryJob(
       {
         generationMode: executionPlan.mode,
         requestSource: source,
-        sourceSessionProfileId: session.summaryProfileId,
+        sourceSessionProfileId: session.meetingProfileId,
         executionStrategy: executionPlan.strategy,
         continuationCount: response.continuationCount,
         evidenceChunkCount,
@@ -2306,8 +2306,8 @@ export async function resolveMeetingSession(
     providerLabel: request.providerLabel || session.providerLabel,
     meetingUrl: request.sourceUrl || session.meetingUrl,
     title: request.title || session.title,
-    summaryProfileId:
-      session.summaryProfileId || request.summaryProfileId?.trim() || undefined,
+    meetingProfileId:
+      session.meetingProfileId || request.meetingProfileId?.trim() || undefined,
     identifiers: sanitizeMeetingSessionIdentifiers(request.platform, {
       ...session.identifiers,
       ...normalizedIdentifiers,
@@ -2474,6 +2474,28 @@ export async function findMeetingSessionContinuationCandidate(
   };
 }
 
+async function enforceRetentionPolicyAndPropagateDeletes(
+  settings: Awaited<ReturnType<typeof getSettings>>["settings"]
+): Promise<void> {
+  const { deletedSessionIds } = await enforceMeetingHistoryRetentionPolicy(
+    settings.meetingArchiveRetentionDays
+  );
+
+  if (deletedSessionIds.length === 0) {
+    return;
+  }
+
+  deletedSessionIds.forEach((sessionId) => {
+    clearMeetingAssistantRuntimeState(sessionId);
+  });
+
+  await Promise.all(
+    deletedSessionIds.map((sessionId) =>
+      noteMeetingSessionDeleted(sessionId, settings.connectedCloudProviders)
+    )
+  );
+}
+
 export async function saveMeetingSession(
   session: MeetingSession
 ): Promise<{ success: boolean }> {
@@ -2502,7 +2524,7 @@ export async function saveMeetingSession(
   await noteMeetingSessionSaved(normalizedSession, settings.connectedCloudProviders);
   queueMeetingAssistantProcessing(normalizedSession.id);
   if (normalizedSession.endTime || normalizedSession.lifecycleState === "ended") {
-    await enforceMeetingHistoryRetentionPolicy();
+    await enforceRetentionPolicyAndPropagateDeletes(settings);
     await maybeQueueAutomaticSummaryForEndedSession(normalizedSession, settings);
   }
   return { success: true };
@@ -2553,8 +2575,8 @@ export async function updateMeetingSession(
     const { settings } = await getSettings();
     const now = Date.now();
     const normalizedUpdates = { ...updates };
-    if (session.summaryProfileId) {
-      delete normalizedUpdates.summaryProfileId;
+    if (session.meetingProfileId) {
+      delete normalizedUpdates.meetingProfileId;
     }
     const updated = updateSessionSearchableText(
       normalizeMeetingSession({
@@ -2572,7 +2594,7 @@ export async function updateMeetingSession(
       queueMeetingAssistantProcessing(updated.id);
     }
     if (updated.endTime || updated.lifecycleState === "ended") {
-      await enforceMeetingHistoryRetentionPolicy();
+      await enforceRetentionPolicyAndPropagateDeletes(settings);
       await maybeQueueAutomaticSummaryForEndedSession(updated, settings);
     }
   }
@@ -2672,7 +2694,7 @@ export async function translateSessionCaption(
 
   await putStoredMeetingSessionRecord(updatedSession);
   await noteMeetingSessionSaved(updatedSession, settings.connectedCloudProviders);
-  await enforceMeetingHistoryRetentionPolicy();
+  await enforceRetentionPolicyAndPropagateDeletes(settings);
 
   return {
     success: true,
@@ -2758,6 +2780,7 @@ export async function translateSessionCaptions(
 
   await putStoredMeetingSessionRecord(updatedSession);
   await noteMeetingSessionSaved(updatedSession, settings.connectedCloudProviders);
+  await enforceRetentionPolicyAndPropagateDeletes(settings);
 
   return {
     success: true,

@@ -7,7 +7,7 @@ type StorageChangeListener = (
   areaName: string
 ) => void;
 
-function installChromeClientApis(options?: {
+function installExtensionClientApis(options?: {
   storedConfig?: Record<string, unknown>;
   runtimeSendMessageError?: Error;
   includeSession?: boolean;
@@ -100,7 +100,7 @@ describe("Diagnostics client contract", () => {
   });
 
   test("DIAG-CLI-002: enabled client forwards events and snapshots through runtime messaging", async () => {
-    const chromeApis = installChromeClientApis({
+    const extensionApis = installExtensionClientApis({
       storedConfig: {
         environment: "development",
         environmentLevels: {
@@ -125,7 +125,7 @@ describe("Diagnostics client contract", () => {
     await logger.snapshot("content-runtime", { providerPlatform: "microsoft-teams" });
     await logger.clearSnapshot("content-runtime");
 
-    expect(chromeApis.sendMessage).toHaveBeenNthCalledWith(1, {
+    expect(extensionApis.sendMessage).toHaveBeenNthCalledWith(1, {
       action: "recordDiagnosticsEvent",
       event: {
         level: "debug",
@@ -140,20 +140,20 @@ describe("Diagnostics client contract", () => {
         data: { sourceUrl: "https://teams.microsoft.com/meet/abc" },
       },
     });
-    expect(chromeApis.sendMessage).toHaveBeenNthCalledWith(2, {
+    expect(extensionApis.sendMessage).toHaveBeenNthCalledWith(2, {
       action: "setDiagnosticsSnapshot",
       key: "content-runtime",
       runtime: "content",
       data: { providerPlatform: "microsoft-teams" },
     });
-    expect(chromeApis.sendMessage).toHaveBeenNthCalledWith(3, {
+    expect(extensionApis.sendMessage).toHaveBeenNthCalledWith(3, {
       action: "clearDiagnosticsSnapshot",
       key: "content-runtime",
     });
   });
 
   test("DIAG-CLI-003: storage changes can disable capture without breaking callers", async () => {
-    const chromeApis = installChromeClientApis({
+    const extensionApis = installExtensionClientApis({
       storedConfig: {
         environment: "development",
         environmentLevels: {
@@ -170,7 +170,7 @@ describe("Diagnostics client contract", () => {
     expect(diagnosticsClient.isDiagnosticsCaptureEnabled("warn")).toBe(true);
     expect(diagnosticsClient.isDiagnosticsCaptureEnabled("debug")).toBe(false);
 
-    chromeApis.listeners[0]?.(
+    extensionApis.listeners[0]?.(
       {
         [DIAGNOSTICS_STATE_KEY]: {
           newValue: {
@@ -198,11 +198,11 @@ describe("Diagnostics client contract", () => {
     });
 
     await expect(logger.error("lifecycle_sync_failed", { reason: "disabled-after-change" })).resolves.toBeUndefined();
-    expect(chromeApis.sendMessage).not.toHaveBeenCalled();
+    expect(extensionApis.sendMessage).not.toHaveBeenCalled();
   });
 
   test("DIAG-CLI-004: runtime send failures are swallowed so diagnostics never break primary behavior", async () => {
-    installChromeClientApis({
+    installExtensionClientApis({
       storedConfig: {
         environment: "development",
         environmentLevels: {
@@ -227,7 +227,7 @@ describe("Diagnostics client contract", () => {
   });
 
   test("DIAG-CLI-005: client reads diagnostics config from local storage when session storage is unavailable", async () => {
-    installChromeClientApis({
+    installExtensionClientApis({
       includeSession: false,
       storedConfig: {
         environment: "development",

@@ -24,3 +24,4 @@ This matrix maps meeting-summary-pipeline behavior-contract rules to available v
 ## Notes
 
 1. Summary-pipeline deterministic coverage now includes persistence-time notification emission, focus-aware suppression, and summary-target URL construction.
+2. Automatic-summary coverage now assumes the canonical meeting-profile and meeting-output-language model names used by the runtime and storage schema.

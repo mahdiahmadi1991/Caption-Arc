@@ -5,7 +5,7 @@ import type {
   MeetingSession,
   SavedMeetingEvent,
   Settings,
-  SummaryProfile,
+  MeetingProfile,
 } from "./types";
 import {
   getSettings,
@@ -24,7 +24,7 @@ import {
   getOpenAiVerificationSuccessMessage,
 } from "../shared/openai-service";
 import { normalizeMeetingSession } from "../shared/meeting-session";
-import { resolveSummaryProfile } from "../shared/summary-profiles";
+import { resolveMeetingProfile } from "../shared/meeting-profiles";
 import { createBackgroundDiagnosticsLogger } from "./diagnostics";
 
 const DEFAULT_ASSISTANT_MODEL = "gpt-5-mini";
@@ -156,7 +156,7 @@ function looksSalientStatement(text: string): boolean {
 function shouldConsiderEvent(
   selfSpeakerAliases: Set<string>,
   event: SavedMeetingEvent,
-  profile: SummaryProfile
+  profile: MeetingProfile
 ): boolean {
   const text = sanitizeLine(event.text);
   if (text.length < 8) {
@@ -235,7 +235,7 @@ function coalesceAssistantCandidates(
   return candidates.filter((event) => selectedEventIds.has(event.eventId));
 }
 
-function getAssistantMaxTokens(profile: SummaryProfile): number {
+function getAssistantMaxTokens(profile: MeetingProfile): number {
   switch (profile.assistant.responseDepth) {
     case "ultra_brief":
       return 96;
@@ -249,7 +249,7 @@ function getAssistantMaxTokens(profile: SummaryProfile): number {
   }
 }
 
-function getIntentInstruction(profile: SummaryProfile): string {
+function getIntentInstruction(profile: MeetingProfile): string {
   switch (profile.assistant.responseIntent) {
     case "improve_my_answer":
       return "Improve the user's likely answer so it becomes clearer, stronger, and easier to say aloud.";
@@ -267,7 +267,7 @@ function getIntentInstruction(profile: SummaryProfile): string {
   }
 }
 
-function getFormatInstruction(profile: SummaryProfile): string {
+function getFormatInstruction(profile: MeetingProfile): string {
   switch (profile.assistant.responseFormat) {
     case "bullets":
       return "Format the answer as compact bullets.";
@@ -283,7 +283,7 @@ function getFormatInstruction(profile: SummaryProfile): string {
   }
 }
 
-function getDepthInstruction(profile: SummaryProfile): string {
+function getDepthInstruction(profile: MeetingProfile): string {
   switch (profile.assistant.responseDepth) {
     case "ultra_brief":
       return "Keep the answer extremely short.";
@@ -297,7 +297,7 @@ function getDepthInstruction(profile: SummaryProfile): string {
   }
 }
 
-function getToneInstruction(profile: SummaryProfile): string {
+function getToneInstruction(profile: MeetingProfile): string {
   switch (profile.assistant.responseTone) {
     case "direct":
       return "Use direct, low-friction phrasing.";
@@ -313,7 +313,7 @@ function getToneInstruction(profile: SummaryProfile): string {
   }
 }
 
-function getDeliveryBiasInstruction(profile: SummaryProfile): string {
+function getDeliveryBiasInstruction(profile: MeetingProfile): string {
   switch (profile.assistant.deliveryBias) {
     case "fastest":
       return "Prefer the fastest useful answer over completeness.";
@@ -325,7 +325,7 @@ function getDeliveryBiasInstruction(profile: SummaryProfile): string {
   }
 }
 
-function getParticipantScopeInstruction(profile: SummaryProfile): string {
+function getParticipantScopeInstruction(profile: MeetingProfile): string {
   return profile.assistant.participantScope === "others_only"
     ? "Only respond to moments triggered by other participants, not the user's own speech."
     : "You may respond to useful moments from any participant when the trigger policy allows it.";
@@ -483,7 +483,7 @@ export function getMeetingAssistantLiveState(sessionId: string): {
 
 function isAssistantEnabledForSession(
   session: MeetingSession,
-  profile: SummaryProfile
+  profile: MeetingProfile
 ): boolean {
   const sessionOverride = session.artifacts?.assistantState;
   if (typeof sessionOverride?.enabled === "boolean") {
@@ -495,7 +495,7 @@ function isAssistantEnabledForSession(
 
 function buildAssistantPrompt(params: {
   session: MeetingSession;
-  profile: SummaryProfile;
+  profile: MeetingProfile;
   language: string;
   trigger: SavedMeetingEvent;
   memory?: MeetingAssistantMemorySnapshot;
@@ -552,7 +552,7 @@ Rules:
 
 async function generateAssistantOutput(
   session: MeetingSession,
-  profile: SummaryProfile,
+  profile: MeetingProfile,
   settings: Settings,
   trigger: SavedMeetingEvent,
   onTextDelta?: (partialContent: string) => Promise<void> | void,
@@ -571,7 +571,7 @@ async function generateAssistantOutput(
   const prompt = buildAssistantPrompt({
     session,
     profile,
-    language: settings.summaryLanguage,
+    language: settings.meetingOutputLanguage,
     trigger,
     memory: session.artifacts?.assistantMemory,
   });
@@ -655,11 +655,11 @@ async function runAssistantPass(
 
   const session = normalizeMeetingSession(record);
   const { settings } = await getSettings();
-  const profile = resolveSummaryProfile(
-    settings.summaryProfiles,
-    session.summaryProfileId,
-    settings.defaultSummaryProfileId
-  ) as SummaryProfile;
+  const profile = resolveMeetingProfile(
+    settings.meetingProfiles,
+    session.meetingProfileId,
+    settings.defaultMeetingProfileId
+  ) as MeetingProfile;
   throwIfAborted(signal);
 
   if (!getOpenAiServiceAvailability(settings).operational) {

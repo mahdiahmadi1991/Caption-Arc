@@ -88,6 +88,9 @@ describe("Data transfer contract", () => {
     expect(response.data?.settings.connectedCloudProviders).toBeUndefined();
     expect(response.data?.settings.openaiApiKey).toBeUndefined();
     expect(response.data?.settings.termsAcceptance).toBeUndefined();
+    expect(response.data?.settings.meetingArchiveRetentionDays).toBe(
+      createDefaultSettings().meetingArchiveRetentionDays
+    );
     expect(response.data?.settings.legalRiskAcknowledgements).toEqual({
       storeMeetingChat: 101,
     });
@@ -162,14 +165,21 @@ describe("Data transfer contract", () => {
       settings: {
         ...createDefaultSettings(),
         model: "gpt-5.2",
+        meetingArchiveRetentionDays: 365,
       },
       sessions: [portableSession],
     });
 
     expect(imported.success).toBe(false);
     expect(saveSettingsMock).toHaveBeenCalledTimes(2);
-    expect(saveSettingsMock.mock.calls[0]?.[0]).toMatchObject({ model: "gpt-5.2" });
-    expect(saveSettingsMock.mock.calls[1]?.[0]).toMatchObject({ model: "gpt-5-mini" });
+    expect(saveSettingsMock.mock.calls[0]?.[0]).toMatchObject({
+      model: "gpt-5.2",
+      meetingArchiveRetentionDays: 365,
+    });
+    expect(saveSettingsMock.mock.calls[1]?.[0]).toMatchObject({
+      model: "gpt-5-mini",
+      meetingArchiveRetentionDays: createDefaultSettings().meetingArchiveRetentionDays,
+    });
   });
 
   test("DXFER-004: import drops legacy exported OpenAI API keys from portable settings", async () => {
@@ -185,6 +195,7 @@ describe("Data transfer contract", () => {
         ...createDefaultSettings(),
         openaiApiKey: "sk-legacy-exported",
         model: "gpt-5.2",
+        meetingArchiveRetentionDays: 30,
         legalRiskAcknowledgements: {
           captureStartupAlways: 808,
         },
@@ -197,10 +208,46 @@ describe("Data transfer contract", () => {
     const savedSettings = saveSettingsMock.mock.calls[0]?.[0];
     expect(savedSettings).toMatchObject({
       model: "gpt-5.2",
+      meetingArchiveRetentionDays: 30,
       legalRiskAcknowledgements: {
         captureStartupAlways: 808,
       },
     });
     expect(savedSettings).not.toHaveProperty("openaiApiKey");
+  });
+
+  test("DXFER-005: portable bundles preserve archive retention off", async () => {
+    getSettingsMock.mockResolvedValue({
+      settings: {
+        ...createDefaultSettings(),
+        meetingArchiveRetentionDays: 0,
+      },
+    });
+
+    const exported = await exportAppDataBundle();
+
+    expect(exported.success).toBe(true);
+    expect(exported.data?.settings.meetingArchiveRetentionDays).toBe(0);
+
+    await importAppDataBundle({
+      bundleVersion: 1,
+      manifest: {
+        kind: "captionarc-data-bundle",
+        bundleVersion: 1,
+        exportedAt: Date.now(),
+        sessionCount: 0,
+      },
+      settings: {
+        ...createDefaultSettings(),
+        meetingArchiveRetentionDays: 0,
+      },
+      sessions: [],
+    });
+
+    expect(saveSettingsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meetingArchiveRetentionDays: 0,
+      })
+    );
   });
 });

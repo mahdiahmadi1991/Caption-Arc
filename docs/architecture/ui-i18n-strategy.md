@@ -9,7 +9,7 @@ It covers UI copy only.
 It does not change or replace:
 
 - caption translation target handling
-- summary language selection
+- meeting output language selection
 - provider-specific caption extraction behavior
 
 ## Current Repository Shape
@@ -138,7 +138,7 @@ UI locale must be separate from translation settings.
 Do not overload these existing settings:
 
 - `targetLanguage`
-- `summaryLanguage`
+- `meetingOutputLanguage`
 
 Instead, add a dedicated UI locale setting:
 
@@ -203,8 +203,7 @@ Store UI message catalogs under `entrypoints/shared/i18n/`.
 Recommended structure:
 
 - `entrypoints/shared/i18n/types.ts`
-- `entrypoints/shared/i18n/messages/en.ts`
-- `entrypoints/shared/i18n/messages/fa.ts`
+- `entrypoints/shared/i18n/messages/*.ts`
 - `entrypoints/shared/i18n/catalog.ts`
 - `entrypoints/shared/i18n/locale.ts`
 - `entrypoints/shared/i18n/index.ts`
@@ -230,15 +229,21 @@ Message catalogs should use one canonical English key set. Other locales must ma
 Current implementation note:
 
 - `en` is the canonical authored catalog
-- `fa` provides authored UI copy for the current rollout
-- only `en` and `fa` are registered as shipped UI locales after the corrective audit
+- the shipped UI locale set is `en`, `fa`, `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko`
 - English fallback remains available at lookup time, but incomplete locale overlays are not shipped
+
+Settings-help authoring rule:
+
+- shared click-triggered settings help surfaces should keep chrome under `common.helpPopover.*`
+- field-specific markdown help content should live under `options.help.*`
+- markdown help copy must stay compact, plain-language, and localized for every shipped UI locale
+- prefer short bullets and concrete examples over long policy text so the popover remains visually compact
 
 ## Canonical Translator API
 
 The shared i18n core should expose:
 
-- `type SupportedUiLocale = "en" | "fa"`
+- `type SupportedUiLocale = typeof SUPPORTED_UI_LOCALES[number]`
 - `type UiLanguageSetting = "system" | SupportedUiLocale`
 - `resolveUiLocale(setting, browserLocale): SupportedUiLocale`
 - `getLocaleDirection(locale): "ltr" | "rtl"`
@@ -251,6 +256,11 @@ Translator requirements:
 - simple named interpolation
 - no silent key-shape drift across locales
 - safe use in both React and non-React code
+
+Current implementation note:
+
+- the concrete shipped UI locale union currently resolves to `en`, `fa`, `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko`
+- the separate AI language catalog in `entrypoints/shared/language-metadata.ts` is broader and must not be treated as the UI locale inventory
 
 ## React Integration
 

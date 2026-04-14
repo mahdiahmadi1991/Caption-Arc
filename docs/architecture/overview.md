@@ -64,7 +64,7 @@ It currently supports:
   - `structured_single_shot`
   - `multi_stage`
 - evidence extraction and evidence merge for larger or riskier sessions
-- final synthesis shaped by the user's original summary profile
+- final synthesis shaped by the user's original meeting profile
 - continuation fallback only when the final synthesis still hits output limits
 - reconciliation after continuation when needed
 
@@ -110,8 +110,9 @@ CaptionArc is local-first.
 The local archive applies retention and compaction policies to avoid uncontrolled growth:
 
 - archived session count limits
-- age-based pruning for ended, non-starred sessions
-- storage-pressure cleanup
+- automatic pruning for ended, non-starred sessions using the configured archive-retention window
+- storage-pressure cleanup while archive retention is enabled
+- no automatic archive deletion when the archive-retention setting is `Off`
 
 ## Privacy Boundaries
 

@@ -3,12 +3,15 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { Select } from "../../entrypoints/options/components/select";
+import { Toggle } from "../../entrypoints/options/components/toggle";
 import { DropdownSelect } from "../../entrypoints/shared/dropdown-select";
 import {
   GitHubHeaderLink,
   LegalFooter,
-} from "../../entrypoints/shared/extension-page-chrome";
+} from "../../entrypoints/shared/extension-page-frame";
 import { ConfirmDialog } from "../../entrypoints/meeting-history/components/confirm-dialog";
+import { HelpPopover } from "../../entrypoints/shared/help-popover";
 import { I18nProvider } from "../../entrypoints/shared/i18n";
 import { AppLoadingScreen } from "../../entrypoints/shared/loading-screen";
 
@@ -149,7 +152,7 @@ describe("Shared UI controls", () => {
     await harness.cleanup();
   });
 
-  test("UI-CTRL-004: shared legal chrome exposes GitHub, Privacy Policy, and version metadata", async () => {
+  test("UI-CTRL-004: shared legal footer exposes GitHub, Privacy Policy, and version metadata", async () => {
     const harness = await mount(
       React.createElement(
         I18nProvider,
@@ -217,5 +220,175 @@ describe("Shared UI controls", () => {
     expect(unlockedScrollKey.defaultPrevented).toBe(false);
     expect(document.body.style.overflow).toBe("");
     expect(document.documentElement.style.overflow).toBe("");
+  });
+
+  test("UI-CTRL-006: help popovers render localized markdown in a portal and respond to escape dismissal", async () => {
+    const harness = await mount(
+      React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(HelpPopover, {
+          label: "Model",
+          markdown: "**Fast** model\n\nUse `gpt-5` for stronger output.",
+        })
+      )
+    );
+
+    const trigger = harness.container.querySelector(
+      'button[aria-haspopup="dialog"]'
+    ) as HTMLButtonElement | null;
+    expect(trigger).toBeTruthy();
+
+    vi.spyOn(trigger!, "getBoundingClientRect").mockReturnValue(
+      createDomRect({
+        x: 120,
+        y: 220,
+        top: 220,
+        right: 152,
+        bottom: 252,
+        left: 120,
+        width: 32,
+        height: 32,
+      })
+    );
+
+    await act(async () => {
+      trigger!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    const dialog = document.body.querySelector(
+      '[role="dialog"][aria-label="Model"]'
+    ) as HTMLDivElement | null;
+
+    expect(dialog).toBeTruthy();
+    expect(harness.container.contains(dialog)).toBe(false);
+    expect(dialog?.dataset.state).toBe("open");
+    expect(dialog?.textContent).toContain("Field guide");
+    expect(dialog?.innerHTML).toContain("<strong");
+    expect(dialog?.innerHTML).toContain("<code");
+
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+    expect(dialog?.dataset.state).toBe("closed");
+
+    await harness.cleanup();
+  });
+
+  test("UI-CTRL-007: settings help opens only from the icon trigger, not from the field heading text", async () => {
+    const harness = await mount(
+      React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(Select, {
+          label: "Model",
+          value: "gpt-5",
+          onChange: vi.fn(),
+          options: [
+            { id: "gpt-5", name: "GPT-5" },
+            { id: "gpt-5-mini", name: "GPT-5 Mini" },
+          ],
+          helpMarkdown: "Use the stronger model when quality matters most.",
+        })
+      )
+    );
+
+    const headingText = harness.container.querySelector("span");
+    expect(headingText?.textContent).toBe("Model");
+
+    await act(async () => {
+      headingText?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    const trigger = harness.container.querySelector(
+      'button[aria-haspopup="dialog"]'
+    ) as HTMLButtonElement | null;
+    expect(trigger).toBeTruthy();
+
+    vi.spyOn(trigger!, "getBoundingClientRect").mockReturnValue(
+      createDomRect({
+        x: 120,
+        y: 220,
+        top: 220,
+        right: 152,
+        bottom: 252,
+        left: 120,
+        width: 32,
+        height: 32,
+      })
+    );
+
+    await act(async () => {
+      trigger!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+
+    await harness.cleanup();
+  });
+
+  test("UI-CTRL-008: toggle help opens only from the icon trigger, not from the toggle heading text", async () => {
+    const harness = await mount(
+      React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(Toggle, {
+          enabled: true,
+          onChange: vi.fn(),
+          label: "Click-through overlay",
+          description: "Let pointer input pass through the overlay.",
+          helpMarkdown: "Turn this on when the overlay should stay passive.",
+        })
+      )
+    );
+
+    const headingText = Array.from(harness.container.querySelectorAll("h3")).find(
+      (node) => node.textContent === "Click-through overlay"
+    );
+    expect(headingText).toBeTruthy();
+
+    await act(async () => {
+      headingText?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    const trigger = harness.container.querySelector(
+      'button[aria-haspopup="dialog"]'
+    ) as HTMLButtonElement | null;
+    expect(trigger).toBeTruthy();
+
+    vi.spyOn(trigger!, "getBoundingClientRect").mockReturnValue(
+      createDomRect({
+        x: 180,
+        y: 260,
+        top: 260,
+        right: 212,
+        bottom: 292,
+        left: 180,
+        width: 32,
+        height: 32,
+      })
+    );
+
+    await act(async () => {
+      trigger!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+
+    await harness.cleanup();
   });
 });

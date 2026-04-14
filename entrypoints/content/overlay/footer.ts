@@ -11,8 +11,8 @@ import { createContentIcon } from "../icons";
 import { getOpenAiServiceAvailability } from "../../shared/openai-service";
 import {
   isAutomaticSummaryEnabledForProfile,
-  resolveSummaryProfile,
-} from "../../shared/summary-profiles";
+  resolveMeetingProfile,
+} from "../../shared/meeting-profiles";
 import {
   getCurrentSessionSnapshot,
   getPendingSessionMetadata,
@@ -233,10 +233,10 @@ export function syncOverlayFooter(): void {
   const previewSession = getPendingSessionPreviewSnapshot();
   const pendingProfileSelection = getPendingSessionProfileSelection();
   const session = activeSession || previewSession;
-  const resolvedProfile = resolveSummaryProfile(
-    settings.summaryProfiles,
-    session?.summaryProfileId || pendingProfileSelection.profileId || undefined,
-    settings.defaultSummaryProfileId
+  const resolvedProfile = resolveMeetingProfile(
+    settings.meetingProfiles,
+    session?.meetingProfileId || pendingProfileSelection.profileId || undefined,
+    settings.defaultMeetingProfileId
   );
   const autoSummaryEnabled = isAutomaticSummaryEnabledForProfile(resolvedProfile);
   const pendingMetadata = getPendingSessionMetadata();

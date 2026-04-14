@@ -2,15 +2,55 @@
 
 ## Runtime Config Sources
 
+`wxt.config.ts` reads config in this order:
+
+- `.secrets/.env.local`
+- `.secrets/.env`
 - `.env.local`
 - `.env`
-- `.secrets/smoke.env` for smoke-test credentials
+
+Smoke-test credentials continue to live in `.secrets/smoke.env`.
 
 Local smoke-secret handling details:
 
 - [local-smoke-secrets.md](./local-smoke-secrets.md)
 
 `wxt.config.ts` reads select config values from environment or local env files.
+
+## Extension Identity Config
+
+Chrome extension identity should be separated by build mode.
+
+Recommended variables:
+
+- `WXT_CHROME_EXTENSION_KEY_DEVELOPMENT=<base64-public-key>`
+- `WXT_CHROME_EXTENSION_KEY_PRODUCTION=<base64-public-key>`
+
+Compatibility fallback:
+
+- `WXT_CHROME_EXTENSION_KEY=<base64-public-key>`
+
+Resolution behavior:
+
+- development builds prefer `WXT_CHROME_EXTENSION_KEY_DEVELOPMENT`
+- production builds prefer `WXT_CHROME_EXTENSION_KEY_PRODUCTION`
+- if the mode-specific variable is absent, `WXT_CHROME_EXTENSION_KEY` is used as a fallback
+
+Recommended local setup:
+
+- keep the matching private keys only under `.secrets/`
+- store the public keys in `.secrets/.env.local`
+- use separate CI/CD secrets for development and production Chrome identity
+
+Changing either value changes that environment's Chrome extension ID.
+
+Example:
+
+```bash
+# .secrets/.env.local
+WXT_CHROME_EXTENSION_KEY_DEVELOPMENT=<base64-public-key>
+WXT_CHROME_EXTENSION_KEY_PRODUCTION=<base64-public-key>
+```
 
 ## Smoke Runtime Diagnostics Env
 
@@ -33,6 +73,7 @@ Never commit real values for:
 - `OPENAI_API_KEY`
 - OAuth .secrets/tokens
 - any session or cookie values
+- private signing keys
 
 ## Safe Example
 

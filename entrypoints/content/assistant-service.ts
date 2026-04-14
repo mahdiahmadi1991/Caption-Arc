@@ -2,7 +2,7 @@ import type {
   MeetingAssistantOutput,
   MeetingAssistantPendingOutput,
   MeetingSession,
-  SummaryProfile,
+  MeetingProfile,
 } from "./types";
 import {
   getCurrentSessionId,
@@ -45,11 +45,11 @@ function emitAssistantUpdate(): void {
 
 function getResolvedMeetingProfile(
   session: MeetingSession | null
-): SummaryProfile | null {
-  const profileId = session?.summaryProfileId || settings.defaultSummaryProfileId;
+): MeetingProfile | null {
+  const profileId = session?.meetingProfileId || settings.defaultMeetingProfileId;
   return (
-    settings.summaryProfiles.find((profile) => profile.id === profileId) ||
-    settings.summaryProfiles[0] ||
+    settings.meetingProfiles.find((profile) => profile.id === profileId) ||
+    settings.meetingProfiles[0] ||
     null
   );
 }

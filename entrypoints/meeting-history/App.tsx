@@ -19,7 +19,7 @@ import { BrandLockup } from "../shared/brand";
 import {
   GitHubHeaderLink,
   LegalFooter,
-} from "../shared/extension-page-chrome";
+} from "../shared/extension-page-frame";
 import { IconButton } from "../shared/icon-button";
 import { AppLoadingScreen } from "../shared/loading-screen";
 import type { OpenAiServiceAvailability } from "../shared/openai-service";
@@ -221,9 +221,9 @@ export default function App() {
     setSortOrder,
     appearance,
     translationTargetLanguage,
-    summaryDefaultLanguage,
-    summaryProfiles,
-    defaultSummaryProfileId,
+    meetingOutputDefaultLanguage,
+    meetingProfiles,
+    defaultMeetingProfileId,
     openAiAvailability,
     storageInfo,
     storagePercentage,
@@ -653,9 +653,9 @@ export default function App() {
           <SessionDetail
             session={selectedSession}
             translationTargetLanguage={translationTargetLanguage}
-            summaryDefaultLanguage={summaryDefaultLanguage}
-            summaryProfiles={summaryProfiles}
-            defaultSummaryProfileId={defaultSummaryProfileId}
+            meetingOutputDefaultLanguage={meetingOutputDefaultLanguage}
+            meetingProfiles={meetingProfiles}
+            defaultMeetingProfileId={defaultMeetingProfileId}
             openAiAvailability={openAiAvailability}
             translatingCaptionKey={translatingCaptionKey}
             translatingSessionId={translatingSessionId}

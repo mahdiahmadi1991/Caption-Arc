@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type { MeetingPlatform, MeetingSession } from "./components";
 import type {
   SummaryJobStatus,
-  SummaryProfile,
+  MeetingProfile,
 } from "../background/types";
 import {
   getLanguageName,
@@ -15,9 +15,9 @@ import {
   createMeetingSummaryArtifact,
 } from "../shared/meeting-summary";
 import {
-  resolveSummaryProfile,
-  resolveSummaryProfilePrompt,
-} from "../shared/summary-profiles";
+  resolveMeetingProfile,
+  resolveMeetingProfilePrompt,
+} from "../shared/meeting-profiles";
 import {
   getOpenAiServiceAvailability,
   type OpenAiServiceAvailability,
@@ -46,10 +46,10 @@ type SettingsSnapshot = {
   provider: string;
   model: string;
   targetLanguage: string;
-  summaryLanguage: string;
+  meetingOutputLanguage: string;
   customPrompt: string;
-  summaryProfiles: SummaryProfile[];
-  defaultSummaryProfileId: string;
+  meetingProfiles: MeetingProfile[];
+  defaultMeetingProfileId: string;
   verificationSnapshot: {
     status: "verified" | "error";
     message: string;
@@ -264,7 +264,8 @@ export function useHistory() {
     quota: 5242880,
   });
   const [appearance, setAppearance] = useState<ThemePreference>("system");
-  const [summaryDefaultLanguage, setSummaryDefaultLanguage] = useState("en");
+  const [meetingOutputDefaultLanguage, setMeetingOutputDefaultLanguage] =
+    useState("en");
   const [translationTargetLanguage, setTranslationTargetLanguage] =
     useState("en");
   const [translatingCaptionKey, setTranslatingCaptionKey] = useState<
@@ -279,8 +280,8 @@ export function useHistory() {
   const [summaryJobStatuses, setSummaryJobStatuses] = useState<
     Record<string, SummaryJobStatus>
   >({});
-  const [summaryProfiles, setSummaryProfiles] = useState<SummaryProfile[]>([]);
-  const [defaultSummaryProfileId, setDefaultSummaryProfileId] = useState("");
+  const [meetingProfiles, setMeetingProfiles] = useState<MeetingProfile[]>([]);
+  const [defaultMeetingProfileId, setDefaultMeetingProfileId] = useState("");
   const [openAiAvailability, setOpenAiAvailability] =
     useState<OpenAiServiceAvailability>({
       state: "setup",
@@ -739,13 +740,15 @@ export function useHistory() {
           appearance?: ThemePreference;
         };
         setAppearance(nextSettings.appearance || "system");
-        setSummaryDefaultLanguage(nextSettings.summaryLanguage || "en");
+        setMeetingOutputDefaultLanguage(
+          nextSettings.meetingOutputLanguage || "en"
+        );
         setTranslationTargetLanguage(nextSettings.targetLanguage || "en");
-        setSummaryProfiles(nextSettings.summaryProfiles || []);
-        setDefaultSummaryProfileId(nextSettings.defaultSummaryProfileId || "");
+        setMeetingProfiles(nextSettings.meetingProfiles || []);
+        setDefaultMeetingProfileId(nextSettings.defaultMeetingProfileId || "");
         setOpenAiAvailability(getOpenAiServiceAvailability(nextSettings));
         await historyDiagnostics.trace("meeting_history_preferences_loaded", {
-          summaryProfileCount: (nextSettings.summaryProfiles || []).length,
+          meetingProfileCount: (nextSettings.meetingProfiles || []).length,
           targetLanguage: nextSettings.targetLanguage || "en",
         });
       }
@@ -1262,14 +1265,14 @@ export function useHistory() {
         }
 
         const settings = settingsSnapshot;
-        const summaryProfile = resolveSummaryProfile(
-          settings.summaryProfiles.length
-            ? settings.summaryProfiles
-            : summaryProfiles,
+        const summaryProfile = resolveMeetingProfile(
+          settings.meetingProfiles.length
+            ? settings.meetingProfiles
+            : meetingProfiles,
           profileId,
-          settings.defaultSummaryProfileId || defaultSummaryProfileId
+          settings.defaultMeetingProfileId || defaultMeetingProfileId
         );
-        const resolvedPrompt = resolveSummaryProfilePrompt(summaryProfile);
+        const resolvedPrompt = resolveMeetingProfilePrompt(summaryProfile);
 
         const summaryPrompt = buildMeetingSummaryPrompt(
           session,
@@ -1302,7 +1305,7 @@ export function useHistory() {
           resolvedPrompt,
           {
             requestSource: "manual",
-            sourceSessionProfileId: session.summaryProfileId,
+            sourceSessionProfileId: session.meetingProfileId,
           }
         );
 
@@ -1580,9 +1583,9 @@ export function useHistory() {
     setSortOrder,
     appearance,
     translationTargetLanguage,
-    summaryDefaultLanguage,
-    summaryProfiles,
-    defaultSummaryProfileId,
+    meetingOutputDefaultLanguage,
+    meetingProfiles,
+    defaultMeetingProfileId,
     openAiAvailability,
     storageInfo,
     storagePercentage,

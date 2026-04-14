@@ -3,14 +3,14 @@ import { DEFAULT_SETTINGS } from "../background/constants";
 import type { Settings, SummaryJobStatus } from "../background/types";
 import { getOpenAiModels } from "../options/components/constants";
 import { BrandMark } from "../shared/brand";
-import { LegalFooter } from "../shared/extension-page-chrome";
+import { LegalFooter } from "../shared/extension-page-frame";
 import { IconButton } from "../shared/icon-button";
 import {
   getOpenAiServiceAvailability,
   type OpenAiServiceAvailability,
   isOpenAiConfigured,
 } from "../shared/openai-service";
-import { isAutomaticSummaryEnabledForProfile } from "../shared/summary-profiles";
+import { isAutomaticSummaryEnabledForProfile } from "../shared/meeting-profiles";
 import { getLanguageName } from "../shared/language-metadata";
 import type { QuickAccessRuntimeStatus } from "../shared/quick-access-status";
 import { SwitchControl } from "../shared/switch-control";
@@ -735,11 +735,11 @@ export default function App() {
 
   const summaryRow = useMemo(() => {
     const status = dashboard.summaryStatus;
-    const defaultSummaryProfile = settings.summaryProfiles.find(
-      (profile) => profile.id === settings.defaultSummaryProfileId
+    const defaultMeetingProfile = settings.meetingProfiles.find(
+      (profile) => profile.id === settings.defaultMeetingProfileId
     );
     const autoSummaryEnabled = isAutomaticSummaryEnabledForProfile(
-      defaultSummaryProfile
+      defaultMeetingProfile
     );
 
     if (status && ACTIVE_SUMMARY_STATES.has(status.state)) {
@@ -773,7 +773,7 @@ export default function App() {
         label: t("popup.rows.summary.automatic.label"),
         detail: t("popup.rows.summary.automatic.detail", {
           profileName:
-            defaultSummaryProfile?.name || t("popup.rows.summary.defaultProfileName"),
+            defaultMeetingProfile?.name || t("popup.rows.summary.defaultProfileName"),
         }),
         badge: t("popup.rows.summary.automatic.badge"),
       };
@@ -787,8 +787,8 @@ export default function App() {
     };
   }, [
     dashboard.summaryStatus,
-    settings.defaultSummaryProfileId,
-    settings.summaryProfiles,
+    settings.defaultMeetingProfileId,
+    settings.meetingProfiles,
     t,
   ]);
 

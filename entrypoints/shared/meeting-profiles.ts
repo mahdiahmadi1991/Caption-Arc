@@ -49,7 +49,7 @@ export type AssistantProfileConfig = {
   participantScope: AssistantParticipantScope;
 };
 
-export type SummaryProfileShape = {
+export type MeetingProfileShape = {
   id: string;
   name: string;
   description: string;
@@ -61,14 +61,15 @@ export type SummaryProfileShape = {
 
 const DEFAULT_ASSISTANT_PROMPT = `Act as a live in-meeting assistant for the extension user.
 
-Your job is to help the user respond quickly, clearly, and in a way that matches the current meeting context.
+Your job is to help the user respond quickly, clearly, and credibly in a way that matches the current meeting context.
 
 Rules:
 - Follow the configured response format, depth, tone, and delivery bias.
 - Prefer direct, immediately usable output over analysis-heavy explanations.
-- Stay grounded in what was actually said in the meeting context you receive.
+- Stay grounded in what was actually said or strongly implied in the meeting context you receive.
+- Give wording the user can realistically say out loud without rewriting it first.
 - Do not answer your own invented questions.
-- If context is incomplete, be helpful but avoid pretending certainty.
+- If context is incomplete, be helpful but avoid pretending certainty or inventing commitments.
 - Return only the answer content for the rail.`;
 
 export function createDefaultAssistantConfig(
@@ -80,13 +81,15 @@ export function createDefaultAssistantConfig(
         enabledByDefault: true,
         prompt: `Act as a live interview support assistant for the extension user.
 
-Focus on helping the user answer the interviewer's question clearly and fast.
+Focus on helping the user answer the interviewer's question clearly, credibly, and fast.
 
 Rules:
 - Prioritize the interviewer's questions and requests over the user's own speech.
 - Suggest concise, evidence-friendly talking points the user can say naturally.
 - Prefer confidence, clarity, and structure over long explanations.
+- When helpful, organize the answer as short points in a strong speaking order: answer first, evidence second, example third.
 - Avoid overclaiming or inventing experience the user has not signaled.
+- If the interviewer asks for specifics and the context is thin, help the user answer conservatively instead of fabricating detail.
 - Return only the answer content for the rail.`,
         responseIntent: "answer_for_me",
         responseFormat: "talking_points",
@@ -101,12 +104,13 @@ Rules:
         enabledByDefault: false,
         prompt: `Act as a live client-call assistant for the extension user.
 
-Help the user respond with crisp points, clarify requests, and surface risks or commitments that matter during the call.
+Help the user respond with crisp points, clarify requests, and surface risks, commitments, or follow-ups that matter during the call.
 
 Rules:
 - Prefer practical talking points over long prose.
-- Highlight delivery risks, dependencies, or follow-up commitments when they are implied.
+- Highlight delivery risks, dependencies, assumptions, or follow-up commitments when they are implied.
 - Keep suggestions professional, specific, and easy to say aloud.
+- When the conversation is moving toward a decision, help the user state scope, timing, ownership, or next steps explicitly.
 - Return only the answer content for the rail.`,
         responseIntent: "suggest_next_point",
         responseFormat: "talking_points",
@@ -125,7 +129,8 @@ Help the user keep updates clear, brief, and operational.
 
 Rules:
 - Prefer terse bullets the user can say quickly.
-- Focus on blockers, progress framing, and next-step clarity.
+- Focus on blockers, progress framing, ownership, and next-step clarity.
+- Favor status-first wording: progress, blocker, next action.
 - Return only the answer content for the rail.`,
         responseIntent: "suggest_next_point",
         responseFormat: "bullets",
@@ -135,7 +140,7 @@ Rules:
         triggerPolicy: "salience_first",
         participantScope: "all_participants",
       };
-    case PROTECTED_SUMMARY_PROFILE_ID:
+    case PROTECTED_MEETING_PROFILE_ID:
     case undefined:
     default:
       return {
@@ -217,18 +222,18 @@ function normalizeAssistantConfig(
   };
 }
 
-export const PROTECTED_SUMMARY_PROFILE_ID = "general_summary";
+export const PROTECTED_MEETING_PROFILE_ID = "general_summary";
 
-export const PROTECTED_SUMMARY_PROFILE = {
-  id: PROTECTED_SUMMARY_PROFILE_ID,
-  name: "General Summary",
+export const PROTECTED_MEETING_PROFILE = {
+  id: PROTECTED_MEETING_PROFILE_ID,
+  name: "General Meeting",
   description:
-    "A safe default for any meeting when you do not want a specialized summary format.",
+    "A safe default for any meeting when you do not want a specialized meeting profile.",
   summaryGenerationMode: "balanced",
   autoSummarizeOnMeetingEnd: false,
-  prompt: `You are an expert meeting transcript analyst. Create a clear, accurate, and practical summary from the transcript, regardless of meeting type, participant count, or speaking style.
+  prompt: `Create a clear, accurate, and practical meeting summary from the transcript, regardless of meeting type, participant count, or speaking style.
 
-Your job is to first infer the meeting context from the transcript if possible. This may be a work meeting, daily sync, project review, planning session, retrospective, client call, sales call, interview, screening call, consultation, coaching session, support call, technical discussion, incident review, training session, or another multi-person conversation. Adapt emphasis to the conversation type without inventing facts.
+First infer the likely meeting context from the transcript if possible. This may be a work meeting, daily sync, project review, planning session, retrospective, client call, sales call, interview, screening call, consultation, coaching session, support call, technical discussion, incident review, training session, or another multi-person conversation. Adapt emphasis to the conversation type without inventing facts.
 
 Always look for:
 - The main purpose of the meeting
@@ -273,11 +278,11 @@ Rules:
 - If the meeting type is unclear, still produce a useful general-purpose summary without forcing a category.
 - Keep the result readable, structured, and practical for someone who needs to act on the meeting afterward.
 - Return only the summary in Markdown.`,
-  assistant: createDefaultAssistantConfig(PROTECTED_SUMMARY_PROFILE_ID),
-} as const satisfies SummaryProfileShape;
+  assistant: createDefaultAssistantConfig(PROTECTED_MEETING_PROFILE_ID),
+} as const satisfies MeetingProfileShape;
 
-export const STARTER_SUMMARY_PROFILES = [
-  PROTECTED_SUMMARY_PROFILE,
+export const STARTER_MEETING_PROFILES = [
+  PROTECTED_MEETING_PROFILE,
   {
     id: "daily_sync",
     name: "Daily Sync",
@@ -291,6 +296,7 @@ Focus on:
 - What each person completed or reported as progress
 - Current blockers or risks
 - Immediate next steps for the next work block
+- Ownership and timing when they are explicit
 
 Preferred structure:
 1. Snapshot
@@ -301,7 +307,8 @@ Preferred structure:
 Rules:
 - Keep it brief and operational.
 - Mention names only when the owner is explicit.
-- If updates are fragmented, summarize by topic instead of forcing per-person bullets.`,
+- If updates are fragmented, summarize by topic instead of forcing per-person bullets.
+- If there is no real blocker or decision, do not invent one just to fill the structure.`,
     assistant: createDefaultAssistantConfig("daily_sync"),
   },
   {
@@ -329,7 +336,8 @@ Preferred structure:
 Rules:
 - Stay evidence-based and neutral in tone.
 - Do not invent a hiring recommendation if the transcript does not support one.
-- Separate observed evidence from interpretation when needed.`,
+- Separate observed evidence from interpretation when needed.
+- Distinguish what the candidate claimed from what was directly demonstrated in the conversation when that difference matters.`,
     assistant: createDefaultAssistantConfig("interview"),
   },
   {
@@ -357,33 +365,34 @@ Preferred structure:
 Rules:
 - Make the summary easy to share internally after the call.
 - Highlight commitments carefully and only when they are explicit.
-- If no decision was made, say that clearly instead of implying agreement.`,
+- If no decision was made, say that clearly instead of implying agreement.
+- Call out delivery risks, dependencies, and open commercial questions when they materially affect follow-up.`,
     assistant: createDefaultAssistantConfig("client_call"),
   },
-] as const satisfies readonly SummaryProfileShape[];
+] as const satisfies readonly MeetingProfileShape[];
 
-export const DEFAULT_SUMMARY_PROFILES = STARTER_SUMMARY_PROFILES;
+export const DEFAULT_MEETING_PROFILES = STARTER_MEETING_PROFILES;
 
 const STARTER_PROFILE_MAP = new Map(
-  STARTER_SUMMARY_PROFILES.map((profile) => [profile.id, profile])
+  STARTER_MEETING_PROFILES.map((profile) => [profile.id, profile])
 );
 
-export function isProtectedSummaryProfile(profileId: string): boolean {
-  return profileId === PROTECTED_SUMMARY_PROFILE_ID;
+export function isProtectedMeetingProfile(profileId: string): boolean {
+  return profileId === PROTECTED_MEETING_PROFILE_ID;
 }
 
-export function getDefaultSummaryPrompt(profileId?: string): string {
+export function getDefaultMeetingProfilePrompt(profileId?: string): string {
   if (!profileId) {
-    return PROTECTED_SUMMARY_PROFILE.prompt;
+    return PROTECTED_MEETING_PROFILE.prompt;
   }
 
-  return STARTER_PROFILE_MAP.get(profileId)?.prompt || PROTECTED_SUMMARY_PROFILE.prompt;
+  return STARTER_PROFILE_MAP.get(profileId)?.prompt || PROTECTED_MEETING_PROFILE.prompt;
 }
 
-export function normalizeSummaryProfiles<T extends SummaryProfileShape>(
+export function normalizeMeetingProfiles<T extends MeetingProfileShape>(
   profiles: readonly T[] | T[] | undefined | null
-): SummaryProfileShape[] {
-  const normalized = new Map<string, SummaryProfileShape>();
+): MeetingProfileShape[] {
+  const normalized = new Map<string, MeetingProfileShape>();
 
   for (const profile of profiles || []) {
     if (!profile?.id) {
@@ -397,9 +406,9 @@ export function normalizeSummaryProfiles<T extends SummaryProfileShape>(
       description:
         profile.description?.trim() ||
         starterProfile?.description ||
-        "Custom summary profile",
+        "Custom meeting profile",
       prompt:
-        profile.prompt?.trim() || getDefaultSummaryPrompt(profile.id),
+        profile.prompt?.trim() || getDefaultMeetingProfilePrompt(profile.id),
       summaryGenerationMode:
         profile.summaryGenerationMode === "economy" ||
         profile.summaryGenerationMode === "balanced" ||
@@ -417,26 +426,26 @@ export function normalizeSummaryProfiles<T extends SummaryProfileShape>(
     });
   }
 
-  if (!normalized.has(PROTECTED_SUMMARY_PROFILE_ID)) {
-    normalized.set(PROTECTED_SUMMARY_PROFILE_ID, { ...PROTECTED_SUMMARY_PROFILE });
+  if (!normalized.has(PROTECTED_MEETING_PROFILE_ID)) {
+    normalized.set(PROTECTED_MEETING_PROFILE_ID, { ...PROTECTED_MEETING_PROFILE });
   }
 
-  const protectedProfile = normalized.get(PROTECTED_SUMMARY_PROFILE_ID);
-  normalized.set(PROTECTED_SUMMARY_PROFILE_ID, {
-    ...PROTECTED_SUMMARY_PROFILE,
+  const protectedProfile = normalized.get(PROTECTED_MEETING_PROFILE_ID);
+  normalized.set(PROTECTED_MEETING_PROFILE_ID, {
+    ...PROTECTED_MEETING_PROFILE,
     summaryGenerationMode:
       protectedProfile?.summaryGenerationMode ||
-      PROTECTED_SUMMARY_PROFILE.summaryGenerationMode,
+      PROTECTED_MEETING_PROFILE.summaryGenerationMode,
     assistant: normalizeAssistantConfig(
       protectedProfile?.assistant,
-      PROTECTED_SUMMARY_PROFILE.assistant
+      PROTECTED_MEETING_PROFILE.assistant
     ),
   });
 
-  const orderedProfiles = [normalized.get(PROTECTED_SUMMARY_PROFILE_ID)!];
+  const orderedProfiles = [normalized.get(PROTECTED_MEETING_PROFILE_ID)!];
 
   for (const profile of normalized.values()) {
-    if (profile.id !== PROTECTED_SUMMARY_PROFILE_ID) {
+    if (profile.id !== PROTECTED_MEETING_PROFILE_ID) {
       orderedProfiles.push(profile);
     }
   }
@@ -444,28 +453,28 @@ export function normalizeSummaryProfiles<T extends SummaryProfileShape>(
   return orderedProfiles;
 }
 
-export function resolveSummaryProfile<T extends SummaryProfileShape>(
+export function resolveMeetingProfile<T extends MeetingProfileShape>(
   profiles: readonly T[] | T[],
   requestedProfileId?: string,
   fallbackProfileId?: string
-): T | SummaryProfileShape {
+): T | MeetingProfileShape {
   return (
     profiles.find((profile) => profile.id === requestedProfileId) ||
     profiles.find((profile) => profile.id === fallbackProfileId) ||
-    profiles.find((profile) => profile.id === PROTECTED_SUMMARY_PROFILE_ID) ||
+    profiles.find((profile) => profile.id === PROTECTED_MEETING_PROFILE_ID) ||
     profiles[0] ||
-    PROTECTED_SUMMARY_PROFILE
+    PROTECTED_MEETING_PROFILE
   );
 }
 
-export function resolveSummaryProfilePrompt(
-  profile?: Pick<SummaryProfileShape, "id" | "prompt"> | null
+export function resolveMeetingProfilePrompt(
+  profile?: Pick<MeetingProfileShape, "id" | "prompt"> | null
 ): string {
-  return profile?.prompt?.trim() || getDefaultSummaryPrompt(profile?.id);
+  return profile?.prompt?.trim() || getDefaultMeetingProfilePrompt(profile?.id);
 }
 
 export function isAutomaticSummaryEnabledForProfile(
-  profile?: Pick<SummaryProfileShape, "autoSummarizeOnMeetingEnd"> | null
+  profile?: Pick<MeetingProfileShape, "autoSummarizeOnMeetingEnd"> | null
 ): boolean {
   return Boolean(profile?.autoSummarizeOnMeetingEnd);
 }

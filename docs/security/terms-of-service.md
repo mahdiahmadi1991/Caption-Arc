@@ -72,6 +72,7 @@ CaptionArc is designed as local-first software.
 Under the current repository architecture:
 
 - core settings and archive data are stored locally by default
+- automatic archive deletion only runs when you keep an archive-retention window enabled in Settings
 - optional cloud sync writes data to third-party storage accounts you connect
 - encrypted backup export creates a file that you choose where to store
 - your OpenAI API key remains device-local and is not included in backup export

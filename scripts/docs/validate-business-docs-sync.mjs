@@ -13,7 +13,7 @@ const BUSINESS_SENSITIVE_RULES = [
   { type: "prefix", value: "entrypoints/background/cloud-sync/" },
   { type: "exact", value: "entrypoints/background/data-transfer.ts" },
   { type: "exact", value: "entrypoints/background/settings.ts" },
-  { type: "exact", value: "entrypoints/shared/summary-profiles.ts" },
+  { type: "exact", value: "entrypoints/shared/meeting-profiles.ts" },
   { type: "exact", value: "entrypoints/shared/summary-generation.ts" },
   { type: "exact", value: "entrypoints/shared/meeting-summary.ts" },
   { type: "exact", value: "entrypoints/shared/meeting-session.ts" },

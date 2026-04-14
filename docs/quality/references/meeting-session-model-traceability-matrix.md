@@ -21,4 +21,4 @@ This matrix maps meeting-session-model behavior-contract rules to available vali
 
 ## Notes
 
-1. Meeting-session model planned coverage is now closed with deterministic contract tests.
+1. Session-model coverage remains responsible for stored-session compatibility paths, including legacy `summaryProfileId` values that now normalize into `meetingProfileId`.
