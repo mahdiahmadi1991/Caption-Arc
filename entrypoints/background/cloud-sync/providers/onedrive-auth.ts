@@ -1,4 +1,16 @@
-import { getCloudSyncProviderSupport } from "../../../shared/browser-capabilities";
+import {
+  getCloudSyncOAuthClientId,
+  getCloudSyncProviderSupport,
+} from "../../../shared/browser-capabilities";
+import {
+  getExtensionRedirectUrl,
+  launchExtensionWebAuthFlow,
+} from "./identity-api";
+import { createBackgroundDiagnosticsLogger } from "../../diagnostics";
+import {
+  decryptCloudSyncLocalSecret,
+  encryptCloudSyncLocalSecret,
+} from "../crypto";
 
 const MICROSOFT_TOKEN_STORAGE_KEY = "cloudSyncMicrosoftTokens";
 const MICROSOFT_AUTH_BASE = "https://login.microsoftonline.com";
@@ -11,9 +23,12 @@ const MICROSOFT_GRAPH_SCOPE = [
 ].join(" ");
 
 const MICROSOFT_ENV = import.meta.env as ImportMetaEnv & {
-  readonly WXT_MICROSOFT_OAUTH_CLIENT_ID?: string;
   readonly WXT_MICROSOFT_OAUTH_TENANT?: string;
 };
+const cloudSyncOneDriveAuthDiagnostics = createBackgroundDiagnosticsLogger({
+  domain: "cloud-sync",
+  feature: "onedrive-auth",
+});
 
 type MicrosoftStoredTokens = {
   accessToken: string;
@@ -39,7 +54,7 @@ function assertOneDriveBrowserSupport(): void {
 }
 
 function getMicrosoftClientId(): string | null {
-  return MICROSOFT_ENV.WXT_MICROSOFT_OAUTH_CLIENT_ID?.trim() || null;
+  return getCloudSyncOAuthClientId("onedrive");
 }
 
 function getMicrosoftTenant(): string {
@@ -74,43 +89,32 @@ async function loadStoredTokens(): Promise<MicrosoftStoredTokens | null> {
   const result = await chrome.storage.local.get(MICROSOFT_TOKEN_STORAGE_KEY);
   const stored = result[MICROSOFT_TOKEN_STORAGE_KEY];
 
-  if (!stored || typeof stored !== "object") {
-    return null;
+  if (typeof stored === "string" && stored.trim()) {
+    return decryptCloudSyncLocalSecret<MicrosoftStoredTokens>(stored);
   }
 
-  return stored as MicrosoftStoredTokens;
+  return null;
 }
 
 async function saveStoredTokens(tokens: MicrosoftStoredTokens | null): Promise<void> {
   await chrome.storage.local.set({
-    [MICROSOFT_TOKEN_STORAGE_KEY]: tokens,
+    [MICROSOFT_TOKEN_STORAGE_KEY]: tokens
+      ? await encryptCloudSyncLocalSecret(tokens)
+      : null,
   });
-}
-
-function launchWebAuthFlow(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(
-      { url, interactive: true },
-      (redirectedTo) => {
-        if (chrome.runtime.lastError || !redirectedTo) {
-          reject(
-            new Error(
-              chrome.runtime.lastError?.message ||
-                "Microsoft authentication was cancelled or failed."
-            )
-          );
-          return;
-        }
-
-        resolve(redirectedTo);
-      }
-    );
+  await cloudSyncOneDriveAuthDiagnostics.trace("cloud_sync_onedrive_tokens_persisted", {
+    stored: Boolean(tokens),
+    hasRefreshToken: Boolean(tokens?.refreshToken),
   });
 }
 
 async function exchangeToken(
-  body: URLSearchParams
+  body: URLSearchParams,
+  previousRefreshToken?: string
 ): Promise<MicrosoftStoredTokens> {
+  await cloudSyncOneDriveAuthDiagnostics.debug("cloud_sync_onedrive_token_exchange_started", {
+    grantType: body.get("grant_type"),
+  });
   const response = await fetch(
     `${MICROSOFT_AUTH_BASE}/${getMicrosoftTenant()}/oauth2/v2.0/token`,
     {
@@ -129,11 +133,15 @@ async function exchangeToken(
 
   const tokens: MicrosoftStoredTokens = {
     accessToken: payload.access_token,
-    refreshToken: payload.refresh_token,
+    refreshToken: payload.refresh_token || previousRefreshToken,
     expiresAt: Date.now() + Math.max(60, payload.expires_in || 3600) * 1000,
   };
 
   await saveStoredTokens(tokens);
+  await cloudSyncOneDriveAuthDiagnostics.info("cloud_sync_onedrive_token_exchange_completed", {
+    grantType: body.get("grant_type"),
+    hasRefreshToken: Boolean(tokens.refreshToken),
+  });
   return tokens;
 }
 
@@ -145,13 +153,15 @@ async function refreshTokens(refreshToken: string): Promise<MicrosoftStoredToken
     );
   }
 
+  await cloudSyncOneDriveAuthDiagnostics.info("cloud_sync_onedrive_token_refresh_started");
   return exchangeToken(
     new URLSearchParams({
       client_id: clientId,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
       scope: MICROSOFT_GRAPH_SCOPE,
-    })
+    }),
+    refreshToken
   );
 }
 
@@ -160,15 +170,28 @@ export async function getMicrosoftAccessToken(): Promise<string> {
 
   const existing = await loadStoredTokens();
   if (existing && existing.expiresAt > Date.now() + 60_000) {
+    await cloudSyncOneDriveAuthDiagnostics.trace("cloud_sync_onedrive_token_reused", {
+      expiresInMs: existing.expiresAt - Date.now(),
+    });
     return existing.accessToken;
   }
 
   if (existing?.refreshToken) {
-    const refreshed = await refreshTokens(existing.refreshToken);
-    return refreshed.accessToken;
+    try {
+      const refreshed = await refreshTokens(existing.refreshToken);
+      return refreshed.accessToken;
+    } catch (error) {
+      await cloudSyncOneDriveAuthDiagnostics.warn("cloud_sync_onedrive_token_refresh_failed", {
+        error,
+      });
+      await saveStoredTokens(null);
+      throw new Error(
+        "OneDrive authentication refresh failed. Reconnect OneDrive to continue syncing."
+      );
+    }
   }
 
-  return requestMicrosoftAccessTokenInteractive();
+  throw new Error("OneDrive is not connected yet.");
 }
 
 export async function requestMicrosoftAccessTokenInteractive(): Promise<string> {
@@ -181,7 +204,7 @@ export async function requestMicrosoftAccessTokenInteractive(): Promise<string> 
     );
   }
 
-  const redirectUri = chrome.identity.getRedirectURL("microsoft");
+  const redirectUri = getExtensionRedirectUrl("microsoft");
   const verifier = createVerifier();
   const challenge = await createChallenge(verifier);
   const authUrl = new URL(`${MICROSOFT_AUTH_BASE}/${getMicrosoftTenant()}/oauth2/v2.0/authorize`);
@@ -194,7 +217,11 @@ export async function requestMicrosoftAccessTokenInteractive(): Promise<string> 
   authUrl.searchParams.set("code_challenge_method", "S256");
   authUrl.searchParams.set("prompt", "select_account");
 
-  const redirectedTo = await launchWebAuthFlow(authUrl.toString());
+  await cloudSyncOneDriveAuthDiagnostics.info("cloud_sync_onedrive_interactive_auth_started", {
+    redirectUri,
+    tenant: getMicrosoftTenant(),
+  });
+  const redirectedTo = await launchExtensionWebAuthFlow(authUrl.toString());
   const redirectedUrl = new URL(redirectedTo);
   const authCode = redirectedUrl.searchParams.get("code");
 
@@ -213,6 +240,9 @@ export async function requestMicrosoftAccessTokenInteractive(): Promise<string> 
     })
   );
 
+  await cloudSyncOneDriveAuthDiagnostics.info("cloud_sync_onedrive_interactive_auth_completed", {
+    hasRefreshToken: Boolean(tokens.refreshToken),
+  });
   return tokens.accessToken;
 }
 

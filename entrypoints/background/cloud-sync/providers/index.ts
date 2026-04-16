@@ -2,7 +2,9 @@ import {
   deleteGoogleDriveFile,
   disconnectGoogleDrive,
   ensureGoogleDriveAppFolder,
+  getGoogleDriveChangesCursor,
   listGoogleDriveFiles,
+  listGoogleDriveChangedFiles,
   readGoogleDriveFile,
   writeGoogleDriveFile,
   connectGoogleDrive,
@@ -12,6 +14,8 @@ import {
   deleteOneDriveFile,
   disconnectOneDrive,
   ensureOneDriveAppFolder,
+  getOneDriveChangesCursor,
+  listOneDriveChangedFiles,
   listOneDriveFiles,
   readOneDriveFile,
   writeOneDriveFile,
@@ -27,14 +31,20 @@ import type { CloudSyncProvider } from "../../types";
 import {
   buildClearArchivePayload,
   buildDeleteSessionPayload,
-  buildDeviceProfilePayload,
-  buildSharedSettingsPayload,
-  buildSessionEventsPayload,
-  buildSessionMetaPayload,
-  parseClearArchivePayload,
-  parseDeleteSessionPayload,
-  parseSessionEventsPayload,
-  parseSessionMetaPayload,
+    buildDeviceProfilePayload,
+    buildSharedSettingsPayload,
+    buildSessionArtifactsPayload,
+    buildSessionEventsChunkPayloads,
+    buildSessionMetaPayload,
+    getSessionArtifactsSyncContentHash,
+    getSessionEventsSyncContentHash,
+    parseSessionEventsChunkPayload,
+    parseSessionEventsManifestPayload,
+    parseClearArchivePayload,
+    parseDeleteSessionPayload,
+    parseSessionArtifactsPayload,
+    parseSessionEventsPayload,
+    parseSessionMetaPayload,
   parseSharedSettingsPayload,
 } from "../serialization";
 import {
@@ -50,13 +60,20 @@ import {
 } from "../checkpoints";
 import {
   BROWSER_GOVERNED_CLOUD_SYNC_PROVIDERS,
+  filterSupportedCloudSyncProviders,
   getCloudSyncProviderSupport,
 } from "../../../shared/browser-capabilities";
-import { enqueueCloudSyncTask } from "../outbox";
+import {
+  enqueueCloudSyncTask,
+  listCloudSyncTasks,
+  removeCloudSyncTask,
+  updateCloudSyncTask,
+} from "../outbox";
 import { mergeMeetingSessions, mergeSharedSettings } from "../merge";
 import { DEFAULT_SETTINGS } from "../../constants";
 import { normalizeMeetingSession, type StoredMeetingSession } from "../../../shared/meeting-session";
 import { createBackgroundDiagnosticsLogger } from "../../diagnostics";
+import { getMeetingSessionSyncDelayMs } from "../policy";
 
 const cloudSyncProviderDiagnostics = createBackgroundDiagnosticsLogger({
   domain: "cloud-sync",
@@ -94,6 +111,17 @@ function createSupportedDisconnectedCheckpoint(
   };
 }
 
+function isStaleMissingOAuthClientError(message: string | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+
+  return (
+    /cloud sync is not configured/i.test(message) &&
+    /required oauth client is missing for this browser target/i.test(message)
+  );
+}
+
 export function getCloudSyncProviderBaselineCheckpoints(): CloudSyncProviderCheckpoint[] {
   return [...BROWSER_GOVERNED_CLOUD_SYNC_PROVIDERS].map((provider) => {
     const support = getCloudSyncProviderSupport(provider);
@@ -111,8 +139,41 @@ export function normalizeCloudSyncProviderCheckpoint(
     return createUnsupportedCheckpoint(checkpoint.provider);
   }
 
+  const wasUnsupportedCheckpoint =
+    checkpoint.supported === false ||
+    Boolean(checkpoint.unsupportedReason);
+  const hasStaleUnsupportedConfigError =
+    checkpoint.lastErrorKind === "action-required" &&
+    isStaleMissingOAuthClientError(checkpoint.lastError);
+
+  if (
+    !checkpoint.connected &&
+    (wasUnsupportedCheckpoint || hasStaleUnsupportedConfigError)
+  ) {
+    return {
+      ...checkpoint,
+      supported: true,
+      unsupportedReason: undefined,
+      healthState: "disconnected",
+      manualRetryAvailable: false,
+      lastError: undefined,
+      lastErrorKind: undefined,
+    };
+  }
+
+  const fallbackAccountLabel =
+    checkpoint.connected && !checkpoint.accountLabel
+      ? checkpoint.provider === "google-drive"
+        ? "Google Drive"
+        : checkpoint.provider === "onedrive"
+          ? "OneDrive"
+          : undefined
+      : checkpoint.accountLabel;
+
   return {
     ...checkpoint,
+    accountId: checkpoint.accountId || fallbackAccountLabel,
+    accountLabel: fallbackAccountLabel,
     supported: true,
     unsupportedReason: undefined,
   };
@@ -147,9 +208,13 @@ function classifyProviderError(error: unknown): {
 
   if (
     normalized.includes("authentication") ||
+    normalized.includes("authorization") ||
     normalized.includes("unauthorized") ||
     normalized.includes("invalid_grant") ||
     normalized.includes("401") ||
+    normalized.includes("not connected yet") ||
+    normalized.includes("reconnect") ||
+    normalized.includes("cancelled") ||
     normalized.includes("not configured") ||
     normalized.includes("permission") ||
     normalized.includes("scope") ||
@@ -203,6 +268,24 @@ function getSessionEventsPath(sessionId: string): string {
   return `sessions/${sessionId}/events.json.enc`;
 }
 
+function getSessionEventsManifestPath(sessionId: string): string {
+  return `sessions/${sessionId}/events.manifest.json.enc`;
+}
+
+function getSessionEventsChunkDirectoryPath(sessionId: string): string {
+  return `sessions/${sessionId}/events`;
+}
+
+function getSessionEventsChunkPath(sessionId: string, chunkIndex: number): string {
+  return `${getSessionEventsChunkDirectoryPath(sessionId)}/${chunkIndex
+    .toString()
+    .padStart(4, "0")}.json.enc`;
+}
+
+function getSessionArtifactsPath(sessionId: string): string {
+  return `sessions/${sessionId}/artifacts.json.enc`;
+}
+
 function getDeleteSessionPath(sessionId: string): string {
   return `tombstones/session-${sessionId}.json.enc`;
 }
@@ -247,6 +330,10 @@ async function ensureVaultKeyRemote(
 type SyncFileAdapters = {
   ensureAppFolder: () => Promise<void>;
   listFiles: (pathPrefix: string) => Promise<CloudSyncFileRecord[]>;
+  listChangedFiles?: (
+    cursor: string
+  ) => Promise<{ files: CloudSyncFileRecord[]; cursor?: string }>;
+  getLatestChangeCursor?: () => Promise<string | undefined>;
   readFile: (path: string) => Promise<Uint8Array>;
   writeFile: (
     path: string,
@@ -260,6 +347,8 @@ type RemoteSessionEntry = {
   sessionId: string;
   metaFile?: CloudSyncFileRecord;
   eventsFile?: CloudSyncFileRecord;
+  eventsManifestFile?: CloudSyncFileRecord;
+  artifactsFile?: CloudSyncFileRecord;
 };
 
 function isSharedSettingsEqual(
@@ -397,45 +486,169 @@ async function loadConnectedProviders(): Promise<CloudSyncProvider[]> {
   return [...settings.connectedCloudProviders];
 }
 
-async function enqueueSessionFanOut(session: StoredMeetingSession): Promise<void> {
+function buildProviderTargets(
+  connectedProviders: CloudSyncProvider[],
+  excludedProviders: CloudSyncProvider[] = []
+): CloudSyncProvider[] | null {
+  const excludedSet = new Set(excludedProviders);
+  const supportedProviders = filterSupportedCloudSyncProviders(connectedProviders).filter(
+    (provider) => !excludedSet.has(provider)
+  );
+  return supportedProviders.length > 0 ? supportedProviders : null;
+}
+
+async function enqueueSessionFanOut(
+  session: StoredMeetingSession,
+  options?: {
+    excludedProviders?: CloudSyncProvider[];
+  }
+): Promise<void> {
   const connectedProviders = await loadConnectedProviders();
   const normalized = normalizeMeetingSession(session);
   const sessionSyncId = normalized.sessionSyncId || normalized.id;
+  const providerTargets = buildProviderTargets(
+    connectedProviders,
+    options?.excludedProviders || []
+  );
+  const scheduledAt = Date.now() + getMeetingSessionSyncDelayMs(normalized);
 
-  await enqueueCloudSyncTask({
-    dedupeKey: `session-meta:${sessionSyncId}`,
-    kind: "sync-session-meta",
-    entityId: sessionSyncId,
-    contentHash: normalized.syncContentHash,
-    providerTargets: connectedProviders,
-  });
-  await enqueueCloudSyncTask({
-    dedupeKey: `session-events:${sessionSyncId}`,
-    kind: "sync-session-events",
-    entityId: sessionSyncId,
-    contentHash: `${normalized.syncContentHash || ""}:${(normalized.events || []).length}`,
-    providerTargets: connectedProviders,
+  if (!providerTargets || providerTargets.length === 0) {
+    await cloudSyncProviderDiagnostics.trace("cloud_sync_fan_out_skipped_no_targets", {
+      sessionSyncId,
+      excludedProviders: options?.excludedProviders || [],
+    }, {
+      sessionId: normalized.id,
+    });
+    return;
+  }
+
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-meta:${sessionSyncId}`,
+      kind: "sync-session-meta",
+      entityId: sessionSyncId,
+      contentHash: normalized.syncContentHash,
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-events:${sessionSyncId}`,
+      kind: "sync-session-events",
+      entityId: sessionSyncId,
+      contentHash: getSessionEventsSyncContentHash(normalized),
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-artifacts:${sessionSyncId}`,
+      kind: "sync-session-artifacts",
+      entityId: sessionSyncId,
+      contentHash: getSessionArtifactsSyncContentHash(normalized),
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  await cloudSyncProviderDiagnostics.debug("cloud_sync_fan_out_enqueued", {
+    sessionSyncId,
+    providerTargets,
+    scheduledAt,
+    eventCount: (normalized.events || []).length,
+  }, {
+    sessionId: normalized.id,
   });
 }
 
-async function enqueueDeleteFanOut(sessionId: string): Promise<void> {
+async function enqueueDeleteFanOut(
+  sessionId: string,
+  options?: {
+    excludedProviders?: CloudSyncProvider[];
+  }
+): Promise<void> {
   const connectedProviders = await loadConnectedProviders();
+  const providerTargets = buildProviderTargets(
+    connectedProviders,
+    options?.excludedProviders || []
+  );
+  if (!providerTargets || providerTargets.length === 0) {
+    return;
+  }
   await enqueueCloudSyncTask({
     dedupeKey: `delete-session:${sessionId}`,
     kind: "delete-session",
     entityId: sessionId,
-    providerTargets: connectedProviders,
+    providerTargets,
   });
 }
 
-async function enqueueClearArchiveFanOut(): Promise<void> {
+async function enqueueClearArchiveFanOut(options?: {
+  excludedProviders?: CloudSyncProvider[];
+}): Promise<void> {
   const connectedProviders = await loadConnectedProviders();
+  const providerTargets = buildProviderTargets(
+    connectedProviders,
+    options?.excludedProviders || []
+  );
+  if (!providerTargets || providerTargets.length === 0) {
+    return;
+  }
   await enqueueCloudSyncTask({
     dedupeKey: "clear-archive",
     kind: "clear-archive",
     entityId: "vault",
-    providerTargets: connectedProviders,
+    providerTargets,
   });
+}
+
+async function suppressProviderFromQueuedTaskTargets(
+  provider: CloudSyncProvider,
+  dedupeKeys: string[]
+): Promise<void> {
+  const tasks = await listCloudSyncTasks();
+  const targetTasks = tasks.filter((task) => dedupeKeys.includes(task.dedupeKey));
+
+  await Promise.all(
+    targetTasks.map(async (task) => {
+      if (!task.providerTargets) {
+        return;
+      }
+
+      const nextTargets = task.providerTargets.filter(
+        (currentProvider) => currentProvider !== provider
+      );
+
+      if (nextTargets.length === task.providerTargets.length) {
+        return;
+      }
+
+      if (nextTargets.length === 0) {
+        await removeCloudSyncTask(task.id);
+        await cloudSyncProviderDiagnostics.debug("cloud_sync_queue_target_removed", {
+          provider,
+          dedupeKey: task.dedupeKey,
+          reason: "no-targets-remaining",
+        });
+        return;
+      }
+
+      await updateCloudSyncTask({
+        ...task,
+        providerTargets: nextTargets,
+        updatedAt: Date.now(),
+      });
+      await cloudSyncProviderDiagnostics.trace("cloud_sync_queue_targets_filtered", {
+        provider,
+        dedupeKey: task.dedupeKey,
+        nextTargets,
+      });
+    })
+  );
 }
 
 async function applyRemoteSharedSettings(
@@ -517,7 +730,11 @@ async function applyRemoteSharedSettings(
     return { changed: false, blockedByPendingChoice: false };
   }
 
-  await settingsModule.saveSettings(nextSharedSettings);
+  const saveSettingsResponse = await settingsModule.saveSettings(nextSharedSettings);
+  await suppressProviderFromQueuedTaskTargets(provider, [
+    "shared-settings",
+    `device-profile:${saveSettingsResponse.settings.deviceId}`,
+  ]);
   await clearCloudSyncPendingSettingsDecision();
   await cloudSyncProviderDiagnostics.info("cloud_sync_remote_settings_applied", {
     provider,
@@ -529,19 +746,45 @@ async function applyRemoteSharedSettings(
 
 function buildRemoteSession(
   metaBytes: Uint8Array,
-  eventsBytes: Uint8Array
+  eventsBytes: Uint8Array | null,
+  eventsPayloadOverride?: {
+    sessionSyncId: string;
+    updatedAt?: number;
+    syncContentHash?: string;
+    events: StoredMeetingSession["events"];
+    summaries: Record<string, never>;
+    assistantOutputs: Record<string, never>;
+  } | null,
+  artifactsBytes?: Uint8Array
 ): Promise<StoredMeetingSession | null> {
   return (async () => {
     const metaPayload = parseSessionMetaPayload(
       await decryptCloudSyncPayload<unknown>(metaBytes)
     );
-    const eventsPayload = parseSessionEventsPayload(
-      await decryptCloudSyncPayload<unknown>(eventsBytes)
-    );
+    const eventsPayload =
+      eventsPayloadOverride ||
+      (eventsBytes
+        ? parseSessionEventsPayload(
+            await decryptCloudSyncPayload<unknown>(eventsBytes)
+          )
+        : null);
+    const artifactsPayload = artifactsBytes
+      ? parseSessionArtifactsPayload(
+          await decryptCloudSyncPayload<unknown>(artifactsBytes)
+        )
+      : null;
 
     if (!metaPayload || !eventsPayload) {
       return null;
     }
+
+    const sessionSummaries = artifactsPayload?.summaries || eventsPayload.summaries;
+    const assistantOutputs =
+      artifactsPayload?.assistantOutputs || eventsPayload.assistantOutputs;
+    const assistantMemory =
+      artifactsPayload?.assistantMemory || eventsPayload.assistantMemory;
+    const assistantState =
+      artifactsPayload?.assistantState || eventsPayload.assistantState;
 
     return normalizeMeetingSession({
       id: metaPayload.sessionSyncId,
@@ -558,23 +801,25 @@ function buildRemoteSession(
       lastSeenAt: metaPayload.lastSeenAt,
       meetingProfileId: metaPayload.meetingProfileId,
       updatedAt:
-        Math.max(metaPayload.updatedAt || 0, eventsPayload.updatedAt || 0) ||
+        Math.max(
+          metaPayload.updatedAt || 0,
+          eventsPayload.updatedAt || 0,
+          artifactsPayload?.updatedAt || 0
+        ) ||
         undefined,
       updatedByDeviceId: metaPayload.updatedByDeviceId,
-      syncContentHash:
-        eventsPayload.syncContentHash || metaPayload.syncContentHash,
       searchableText: "",
       startTime: metaPayload.startTime,
       endTime: metaPayload.endTime,
       events: eventsPayload.events,
       captions: [],
       chatMessages: [],
-      summaries: eventsPayload.summaries,
+      summaries: sessionSummaries,
       artifacts: {
-        summaries: eventsPayload.summaries,
-        assistantOutputs: eventsPayload.assistantOutputs,
-        assistantMemory: eventsPayload.assistantMemory,
-        assistantState: eventsPayload.assistantState,
+        summaries: sessionSummaries,
+        assistantOutputs,
+        assistantMemory,
+        assistantState,
       },
     });
   })();
@@ -583,21 +828,29 @@ function buildRemoteSession(
 async function applyRemoteSessionEntry(
   entry: RemoteSessionEntry,
   adapters: SyncFileAdapters,
-  localSessionsBySyncId: Map<string, StoredMeetingSession>
+  localSessionsBySyncId: Map<string, StoredMeetingSession>,
+  provider: CloudSyncProvider
 ): Promise<boolean> {
-  if (!entry.metaFile || !entry.eventsFile) {
+  if (!entry.metaFile || (!entry.eventsFile && !entry.eventsManifestFile)) {
     await cloudSyncProviderDiagnostics.trace("cloud_sync_remote_session_skipped", {
       sessionId: entry.sessionId,
-      reason: "missing-meta-or-events",
+      reason: "missing-meta-or-event-stream",
     }, {
       sessionId: entry.sessionId,
     });
     return false;
   }
 
+  const chunkedEventsPayload = entry.eventsManifestFile
+    ? await readChunkedSessionEventsPayload(entry, adapters)
+    : null;
   const remoteSession = await buildRemoteSession(
     await adapters.readFile(getSessionMetaPath(entry.sessionId)),
-    await adapters.readFile(getSessionEventsPath(entry.sessionId))
+    entry.eventsFile ? await adapters.readFile(getSessionEventsPath(entry.sessionId)) : null,
+    chunkedEventsPayload,
+    entry.artifactsFile
+      ? await adapters.readFile(getSessionArtifactsPath(entry.sessionId))
+      : undefined
   );
 
   if (!remoteSession) {
@@ -630,7 +883,9 @@ async function applyRemoteSessionEntry(
   if (!baseSession) {
     await historyDbModule.putStoredMeetingSessionRecord(remoteSession);
     localSessionsBySyncId.set(remoteSession.sessionSyncId || remoteSession.id, remoteSession);
-    await enqueueSessionFanOut(remoteSession);
+    await enqueueSessionFanOut(remoteSession, {
+      excludedProviders: [provider],
+    });
     await cloudSyncProviderDiagnostics.info("cloud_sync_remote_session_created", {
       sessionId: remoteSession.id,
       sessionSyncId: remoteSession.sessionSyncId || remoteSession.id,
@@ -659,10 +914,14 @@ async function applyRemoteSessionEntry(
   await historyDbModule.putStoredMeetingSessionRecord(mergedSession);
   if (previousSessionSyncId !== (mergedSession.sessionSyncId || mergedSession.id)) {
     localSessionsBySyncId.delete(previousSessionSyncId);
-    await enqueueDeleteFanOut(previousSessionSyncId);
+    await enqueueDeleteFanOut(previousSessionSyncId, {
+      excludedProviders: [provider],
+    });
   }
   localSessionsBySyncId.set(mergedSession.sessionSyncId || mergedSession.id, mergedSession);
-  await enqueueSessionFanOut(mergedSession);
+  await enqueueSessionFanOut(mergedSession, {
+    excludedProviders: [provider],
+  });
   await cloudSyncProviderDiagnostics.info("cloud_sync_remote_session_merged", {
     sessionId: mergedSession.id,
     previousSessionSyncId,
@@ -674,7 +933,10 @@ async function applyRemoteSessionEntry(
   return true;
 }
 
-async function applyRemoteDeleteSession(bytes: Uint8Array): Promise<boolean> {
+async function applyRemoteDeleteSession(
+  bytes: Uint8Array,
+  provider: CloudSyncProvider
+): Promise<boolean> {
   const payload = parseDeleteSessionPayload(
     await decryptCloudSyncPayload<unknown>(bytes)
   );
@@ -699,7 +961,9 @@ async function applyRemoteDeleteSession(bytes: Uint8Array): Promise<boolean> {
 
   const historyDbModule = await import("../../history-db");
   await historyDbModule.deleteStoredMeetingSessionRecord(localSession.id);
-  await enqueueDeleteFanOut(payload.deletedSessionId);
+  await enqueueDeleteFanOut(payload.deletedSessionId, {
+    excludedProviders: [provider],
+  });
   await cloudSyncProviderDiagnostics.info("cloud_sync_remote_delete_applied", {
     sessionId: payload.deletedSessionId,
   }, {
@@ -708,7 +972,10 @@ async function applyRemoteDeleteSession(bytes: Uint8Array): Promise<boolean> {
   return true;
 }
 
-async function applyRemoteClearArchive(bytes: Uint8Array): Promise<boolean> {
+async function applyRemoteClearArchive(
+  bytes: Uint8Array,
+  provider: CloudSyncProvider
+): Promise<boolean> {
   const payload = parseClearArchivePayload(
     await decryptCloudSyncPayload<unknown>(bytes)
   );
@@ -725,11 +992,176 @@ async function applyRemoteClearArchive(bytes: Uint8Array): Promise<boolean> {
   }
 
   await historyDbModule.clearStoredMeetingSessionRecords();
-  await enqueueClearArchiveFanOut();
+  await enqueueClearArchiveFanOut({
+    excludedProviders: [provider],
+  });
   await cloudSyncProviderDiagnostics.warn("cloud_sync_remote_clear_applied", {
     clearedSessionCount: existingSessions.length,
   });
   return true;
+}
+
+async function readOptionalCloudSyncFile(
+  adapters: Pick<SyncFileAdapters, "readFile">,
+  path: string
+): Promise<Uint8Array | null> {
+  try {
+    return await adapters.readFile(path);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/not found|404/i.test(message)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function syncSessionEventChunks(
+  adapters: SyncFileAdapters,
+  session: StoredMeetingSession,
+  sessionId: string
+): Promise<void> {
+  const { manifest, chunks } = buildSessionEventsChunkPayloads(session);
+  const existingManifestBytes = await readOptionalCloudSyncFile(
+    adapters,
+    getSessionEventsManifestPath(sessionId)
+  );
+  const existingManifest = existingManifestBytes
+    ? parseSessionEventsManifestPayload(
+        await decryptCloudSyncPayload<unknown>(existingManifestBytes)
+      )
+    : null;
+
+  const existingChunkHashes = new Map(
+    (existingManifest?.chunks || []).map((chunk) => [chunk.index, chunk.contentHash] as const)
+  );
+
+  await Promise.all(
+    chunks
+      .filter((chunk) => existingChunkHashes.get(chunk.chunkIndex) !== chunk.contentHash)
+      .map(async (chunk) =>
+        adapters.writeFile(
+          getSessionEventsChunkPath(sessionId, chunk.chunkIndex),
+          await encryptCloudSyncPayload(chunk)
+        )
+      )
+  );
+
+  const staleChunkIndexes =
+    existingManifest?.chunks
+      .map((chunk) => chunk.index)
+      .filter((index) => index >= chunks.length) || [];
+  await Promise.all(
+    staleChunkIndexes.map((chunkIndex) =>
+      adapters.deleteFile(getSessionEventsChunkPath(sessionId, chunkIndex)).catch(() => undefined)
+    )
+  );
+
+  await adapters.writeFile(
+    getSessionEventsManifestPath(sessionId),
+    await encryptCloudSyncPayload(manifest)
+  );
+
+  await adapters.deleteFile(getSessionEventsPath(sessionId)).catch(() => undefined);
+}
+
+async function readChunkedSessionEventsPayload(
+  entry: RemoteSessionEntry,
+  adapters: SyncFileAdapters
+): Promise<{
+  sessionSyncId: string;
+  updatedAt?: number;
+  syncContentHash?: string;
+  events: StoredMeetingSession["events"];
+  summaries: Record<string, never>;
+  assistantOutputs: Record<string, never>;
+} | null> {
+  if (!entry.eventsManifestFile) {
+    return null;
+  }
+
+  const manifestBytes = await adapters.readFile(entry.eventsManifestFile.path);
+  const manifest = parseSessionEventsManifestPayload(
+    await decryptCloudSyncPayload<unknown>(manifestBytes)
+  );
+  if (!manifest) {
+    return null;
+  }
+
+  const chunkPayloads = await Promise.all(
+    manifest.chunks.map(async (chunk) => {
+      const bytes = await adapters.readFile(
+        getSessionEventsChunkPath(entry.sessionId, chunk.index)
+      );
+      return parseSessionEventsChunkPayload(
+        await decryptCloudSyncPayload<unknown>(bytes)
+      );
+    })
+  );
+
+  if (chunkPayloads.some((chunk) => !chunk)) {
+    return null;
+  }
+
+  return {
+    sessionSyncId: manifest.sessionSyncId,
+    updatedAt: manifest.updatedAt,
+    syncContentHash: manifest.syncContentHash,
+    events: chunkPayloads
+      .sort((left, right) => left!.chunkIndex - right!.chunkIndex)
+      .flatMap((chunk) => chunk!.events),
+    summaries: {},
+    assistantOutputs: {},
+  };
+}
+
+async function listFilesForReconciliation(
+  adapters: SyncFileAdapters,
+  provider: CloudSyncProvider,
+  checkpoint?: CloudSyncProviderCheckpoint
+): Promise<{ files: CloudSyncFileRecord[]; reconciliationCursor?: string }> {
+  if (checkpoint?.reconciliationCursor && adapters.listChangedFiles) {
+    try {
+      const delta = await adapters.listChangedFiles(checkpoint.reconciliationCursor);
+      await cloudSyncProviderDiagnostics.debug("cloud_sync_reconcile_delta_loaded", {
+        provider,
+        fileCount: delta.files.length,
+      });
+      return {
+        files: delta.files,
+        reconciliationCursor: delta.cursor || checkpoint.reconciliationCursor,
+      };
+    } catch (error) {
+      await cloudSyncProviderDiagnostics.warn("cloud_sync_reconcile_delta_failed", {
+        provider,
+        error,
+      }, {
+        provider,
+      });
+    }
+  }
+
+  const prefixes = ["settings/", "tombstones/", "sessions/"];
+  const groupedFiles = await Promise.all(prefixes.map((prefix) => adapters.listFiles(prefix)));
+  const dedupedFiles = new Map<string, CloudSyncFileRecord>();
+
+  groupedFiles.flat().forEach((file) => {
+    dedupedFiles.set(file.path, file);
+  });
+
+  await cloudSyncProviderDiagnostics.debug("cloud_sync_reconcile_file_scan_completed", {
+    provider,
+    prefixes,
+    fileCount: dedupedFiles.size,
+  });
+
+  return {
+    files: [...dedupedFiles.values()],
+    reconciliationCursor: adapters.getLatestChangeCursor
+      ? await adapters.getLatestChangeCursor()
+      : checkpoint?.reconciliationCursor,
+  };
 }
 
 async function reconcileProviderState(
@@ -737,7 +1169,12 @@ async function reconcileProviderState(
   provider: CloudSyncProvider,
   checkpoint?: CloudSyncProviderCheckpoint
 ): Promise<CloudSyncTaskProcessingResult> {
-  const files = await adapters.listFiles("");
+  const reconciliationListing = await listFilesForReconciliation(
+    adapters,
+    provider,
+    checkpoint
+  );
+  const files = reconciliationListing.files;
   const lastAppliedRemoteChangeAt = checkpoint?.lastAppliedRemoteChangeAt || 0;
   const nextAppliedRemoteChangeAt = files.reduce(
     (latest, file) => Math.max(latest, file.updatedAt),
@@ -756,6 +1193,9 @@ async function reconcileProviderState(
       success: true,
       checkpointUpdates: {
         lastAppliedRemoteChangeAt,
+        lastScanAt: Date.now(),
+        reconciliationCursor:
+          reconciliationListing.reconciliationCursor ?? checkpoint?.reconciliationCursor,
       },
     };
   }
@@ -795,20 +1235,48 @@ async function reconcileProviderState(
       return;
     }
 
+    const sessionEventsManifestMatch = file.path.match(
+      /^sessions\/([^/]+)\/events\.manifest\.json\.enc$/
+    );
+    if (sessionEventsManifestMatch) {
+      const sessionId = sessionEventsManifestMatch[1]!;
+      const existing = sessionEntries.get(sessionId) || { sessionId };
+      existing.eventsManifestFile = file;
+      sessionEntries.set(sessionId, existing);
+      return;
+    }
+
+    const sessionArtifactsMatch = file.path.match(
+      /^sessions\/([^/]+)\/artifacts\.json\.enc$/
+    );
+    if (sessionArtifactsMatch) {
+      const sessionId = sessionArtifactsMatch[1]!;
+      const existing = sessionEntries.get(sessionId) || { sessionId };
+      existing.artifactsFile = file;
+      sessionEntries.set(sessionId, existing);
+      return;
+    }
+
     if (/^tombstones\/session-.+\.json\.enc$/.test(file.path)) {
       newDeleteFiles.push(file);
     }
   });
 
   if (clearArchiveFile && clearArchiveFile.updatedAt > lastAppliedRemoteChangeAt) {
-    await applyRemoteClearArchive(await adapters.readFile(clearArchiveFile.path));
+    await applyRemoteClearArchive(
+      await adapters.readFile(clearArchiveFile.path),
+      provider
+    );
     localSessionsBySyncId.clear();
   }
 
   for (const deleteFile of newDeleteFiles
     .filter((file) => file.updatedAt > lastAppliedRemoteChangeAt)
     .sort((left, right) => left.updatedAt - right.updatedAt)) {
-    await applyRemoteDeleteSession(await adapters.readFile(deleteFile.path));
+    await applyRemoteDeleteSession(
+      await adapters.readFile(deleteFile.path),
+      provider
+    );
     localSessionsBySyncId.delete(
       deleteFile.path
         .replace(/^tombstones\/session-/, "")
@@ -828,24 +1296,30 @@ async function reconcileProviderState(
     .filter((entry) => {
       const newestFileUpdatedAt = Math.max(
         entry.metaFile?.updatedAt || 0,
-        entry.eventsFile?.updatedAt || 0
+        entry.eventsFile?.updatedAt || 0,
+        entry.eventsManifestFile?.updatedAt || 0,
+        entry.artifactsFile?.updatedAt || 0
       );
       return newestFileUpdatedAt > lastAppliedRemoteChangeAt;
     })
     .sort((left, right) => {
       const leftUpdatedAt = Math.max(
         left.metaFile?.updatedAt || 0,
-        left.eventsFile?.updatedAt || 0
+        left.eventsFile?.updatedAt || 0,
+        left.eventsManifestFile?.updatedAt || 0,
+        left.artifactsFile?.updatedAt || 0
       );
       const rightUpdatedAt = Math.max(
         right.metaFile?.updatedAt || 0,
-        right.eventsFile?.updatedAt || 0
+        right.eventsFile?.updatedAt || 0,
+        right.eventsManifestFile?.updatedAt || 0,
+        right.artifactsFile?.updatedAt || 0
       );
       return leftUpdatedAt - rightUpdatedAt;
     });
 
   for (const entry of newSessionEntries) {
-    await applyRemoteSessionEntry(entry, adapters, localSessionsBySyncId);
+    await applyRemoteSessionEntry(entry, adapters, localSessionsBySyncId, provider);
   }
 
   await cloudSyncProviderDiagnostics.info("cloud_sync_reconcile_completed", {
@@ -862,6 +1336,9 @@ async function reconcileProviderState(
     success: true,
     checkpointUpdates: {
       lastAppliedRemoteChangeAt: nextAppliedRemoteChangeAt,
+      lastScanAt: Date.now(),
+      reconciliationCursor:
+        reconciliationListing.reconciliationCursor ?? checkpoint?.reconciliationCursor,
     },
   };
 }
@@ -905,7 +1382,11 @@ async function syncProviderTask(
       };
     }
 
-    if (task.kind === "sync-session-meta" || task.kind === "sync-session-events") {
+    if (
+      task.kind === "sync-session-meta" ||
+      task.kind === "sync-session-events" ||
+      task.kind === "sync-session-artifacts"
+    ) {
       if (!task.entityId) {
         return {
           success: false,
@@ -931,10 +1412,12 @@ async function syncProviderTask(
           getSessionMetaPath(task.entityId),
           await encryptCloudSyncPayload(buildSessionMetaPayload(session))
         );
+      } else if (task.kind === "sync-session-events") {
+        await syncSessionEventChunks(adapters, session, task.entityId);
       } else {
         await adapters.writeFile(
-          getSessionEventsPath(task.entityId),
-          await encryptCloudSyncPayload(buildSessionEventsPayload(session))
+          getSessionArtifactsPath(task.entityId),
+          await encryptCloudSyncPayload(buildSessionArtifactsPayload(session))
         );
       }
 
@@ -955,6 +1438,18 @@ async function syncProviderTask(
       );
       await adapters.deleteFile(getSessionMetaPath(task.entityId));
       await adapters.deleteFile(getSessionEventsPath(task.entityId));
+      const eventChunkFiles = await adapters
+        .listFiles(getSessionEventsChunkDirectoryPath(task.entityId))
+        .catch(() => []);
+      await adapters.deleteFile(getSessionEventsManifestPath(task.entityId)).catch(
+        () => undefined
+      );
+      await Promise.all(
+        eventChunkFiles.map((file) =>
+          adapters.deleteFile(file.path, file.versionToken).catch(() => undefined)
+        )
+      );
+      await adapters.deleteFile(getSessionArtifactsPath(task.entityId));
       return {
         success: true,
         checkpointUpdates: { lastUploadedLocalChangeAt: Date.now() },
@@ -1019,6 +1514,8 @@ async function syncGoogleDriveTask(
   return syncProviderTask(task, {
     ensureAppFolder: ensureGoogleDriveAppFolder,
     listFiles: listGoogleDriveFiles,
+    listChangedFiles: listGoogleDriveChangedFiles,
+    getLatestChangeCursor: getGoogleDriveChangesCursor,
     readFile: readGoogleDriveFile,
     writeFile: writeGoogleDriveFile,
     deleteFile: deleteGoogleDriveFile,
@@ -1032,6 +1529,8 @@ async function syncOneDriveTask(
   return syncProviderTask(task, {
     ensureAppFolder: ensureOneDriveAppFolder,
     listFiles: listOneDriveFiles,
+    listChangedFiles: listOneDriveChangedFiles,
+    getLatestChangeCursor: getOneDriveChangesCursor,
     readFile: readOneDriveFile,
     writeFile: writeOneDriveFile,
     deleteFile: deleteOneDriveFile,

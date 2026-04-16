@@ -782,6 +782,47 @@ async function loadStoredMeetingSession(
   return record ? normalizeMeetingSession(record) : null;
 }
 
+function mergeMeetingSessionArtifacts(
+  existingSession: MeetingSession | null,
+  incomingSession: MeetingSession
+): MeetingSession["artifacts"] {
+  const existingArtifacts = existingSession?.artifacts;
+  const incomingArtifacts = incomingSession.artifacts;
+  const existingSummaries =
+    existingArtifacts?.summaries || existingSession?.summaries || {};
+  const incomingSummaries =
+    incomingArtifacts?.summaries || incomingSession.summaries || {};
+
+  if (!existingArtifacts && !incomingArtifacts) {
+    return {
+      summaries: incomingSummaries,
+    };
+  }
+
+  return {
+    ...(existingArtifacts || {}),
+    ...(incomingArtifacts || {}),
+    summaries: {
+      ...existingSummaries,
+      ...incomingSummaries,
+    },
+    assistantOutputs: {
+      ...(existingArtifacts?.assistantOutputs || {}),
+      ...(incomingArtifacts?.assistantOutputs || {}),
+    },
+    assistantMemory:
+      (incomingArtifacts?.assistantMemory?.updatedAt || 0) >=
+      (existingArtifacts?.assistantMemory?.updatedAt || 0)
+        ? incomingArtifacts?.assistantMemory || existingArtifacts?.assistantMemory
+        : existingArtifacts?.assistantMemory || incomingArtifacts?.assistantMemory,
+    assistantState:
+      (incomingArtifacts?.assistantState?.updatedAt || 0) >=
+      (existingArtifacts?.assistantState?.updatedAt || 0)
+        ? incomingArtifacts?.assistantState || existingArtifacts?.assistantState
+        : existingArtifacts?.assistantState || incomingArtifacts?.assistantState,
+  };
+}
+
 function createResolvedSession(
   request: ResolveMeetingSessionRequest
 ): MeetingSession {
@@ -2486,7 +2527,7 @@ async function enforceRetentionPolicyAndPropagateDeletes(
   }
 
   deletedSessionIds.forEach((sessionId) => {
-    clearMeetingAssistantRuntimeState(sessionId);
+    clearMeetingAssistantRuntimeState(sessionId, "retention-policy-delete");
   });
 
   await Promise.all(
@@ -2501,9 +2542,12 @@ export async function saveMeetingSession(
 ): Promise<{ success: boolean }> {
   const { settings } = await getSettings();
   const now = Date.now();
+  const existingSession = await loadStoredMeetingSession(session.id);
   const normalizedSession = updateSessionSearchableText(
     normalizeMeetingSession({
       ...session,
+      meetingProfileId:
+        existingSession?.meetingProfileId || session.meetingProfileId,
       schemaVersion: 3,
       sessionSyncId: session.sessionSyncId || session.id,
       lastSeenAt: now,
@@ -2515,9 +2559,7 @@ export async function saveMeetingSession(
         updatedAt: event.updatedAt ?? now,
         updatedByDeviceId: event.updatedByDeviceId || settings.deviceId,
       })),
-      artifacts: session.artifacts || {
-        summaries: session.summaries,
-      },
+      artifacts: mergeMeetingSessionArtifacts(existingSession, session),
     })
   );
   await putStoredMeetingSessionRecord(normalizedSession);
@@ -2535,9 +2577,12 @@ export async function storeMeetingSessionShell(
 ): Promise<{ success: boolean }> {
   const { settings } = await getSettings();
   const now = Date.now();
+  const existingSession = await loadStoredMeetingSession(session.id);
   const normalizedSession = updateSessionSearchableText(
     normalizeMeetingSession({
       ...session,
+      meetingProfileId:
+        existingSession?.meetingProfileId || session.meetingProfileId,
       schemaVersion: 3,
       sessionSyncId: session.sessionSyncId || session.id,
       lastSeenAt: now,
@@ -2545,9 +2590,7 @@ export async function storeMeetingSessionShell(
       updatedByDeviceId: settings.deviceId,
       lifecycleState: session.endTime ? "ended" : session.lifecycleState || "live",
       events: session.events || [],
-      artifacts: session.artifacts || {
-        summaries: session.summaries,
-      },
+      artifacts: mergeMeetingSessionArtifacts(existingSession, session),
     })
   );
 
@@ -2558,7 +2601,7 @@ export async function storeMeetingSessionShell(
 export async function deleteMeetingSession(
   sessionId: string
 ): Promise<{ success: boolean }> {
-  clearMeetingAssistantRuntimeState(sessionId);
+  clearMeetingAssistantRuntimeState(sessionId, "session-delete");
   await deleteStoredMeetingSessionRecord(sessionId);
   const { settings } = await getSettings();
   await noteMeetingSessionDeleted(sessionId, settings.connectedCloudProviders);
@@ -2567,7 +2610,12 @@ export async function deleteMeetingSession(
 
 export async function updateMeetingSession(
   sessionId: string,
-  updates: Partial<MeetingSession>
+  updates: Partial<MeetingSession>,
+  sourceContext?: {
+    senderTabId?: number | null;
+    senderUrl?: string | null;
+    senderOrigin?: string | null;
+  }
 ): Promise<{ success: boolean }> {
   const session = await loadStoredMeetingSession(sessionId);
 
@@ -2575,9 +2623,6 @@ export async function updateMeetingSession(
     const { settings } = await getSettings();
     const now = Date.now();
     const normalizedUpdates = { ...updates };
-    if (session.meetingProfileId) {
-      delete normalizedUpdates.meetingProfileId;
-    }
     const updated = updateSessionSearchableText(
       normalizeMeetingSession({
         ...session,
@@ -2589,7 +2634,18 @@ export async function updateMeetingSession(
     await putStoredMeetingSessionRecord(updated);
     await noteMeetingSessionSaved(updated, settings.connectedCloudProviders);
     if (updated.artifacts?.assistantState?.enabled === false) {
-      clearMeetingAssistantRuntimeState(updated.id);
+      await historyDiagnosticsLogger.warn("assistant_runtime_disable_requested", {
+        sessionId: updated.id,
+        updateKeys: Object.keys(normalizedUpdates || {}),
+        assistantState: normalizedUpdates.artifacts?.assistantState || null,
+        meetingProfileId: normalizedUpdates.meetingProfileId || null,
+        senderTabId: sourceContext?.senderTabId ?? null,
+        senderUrl: sourceContext?.senderUrl ?? null,
+        senderOrigin: sourceContext?.senderOrigin ?? null,
+      }, {
+        sessionId: updated.id,
+      });
+      clearMeetingAssistantRuntimeState(updated.id, "assistant-disabled");
     } else {
       queueMeetingAssistantProcessing(updated.id);
     }
@@ -2873,7 +2929,7 @@ export async function finalizeMeetingSessionEnd(
 }
 
 export async function clearMeetingHistory(): Promise<{ success: boolean }> {
-  clearMeetingAssistantRuntimeState();
+  clearMeetingAssistantRuntimeState(undefined, "meeting-history-cleared");
   await clearStoredMeetingSessionRecords();
   const { settings } = await getSettings();
   await noteMeetingArchiveCleared(settings.connectedCloudProviders);
@@ -2945,6 +3001,7 @@ export function handleMeetingHistoryTabRemoved(tabId: number): void {
 }
 
 export const historySummaryInternals = {
+  mergeMeetingSessionArtifacts,
   getAutomaticSummaryRequest,
   generateMeetingSummaryText,
   queueMeetingSummaryJob,

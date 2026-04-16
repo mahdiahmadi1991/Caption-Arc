@@ -123,3 +123,12 @@ export async function importCloudSyncVaultKeyPayload(
 
   await setCloudSyncVaultKey(decodeBase64(payload.rawKey));
 }
+
+export async function encryptCloudSyncLocalSecret(payload: unknown): Promise<string> {
+  const encryptedBytes = await encryptCloudSyncPayload(payload);
+  return encodeBase64(encryptedBytes);
+}
+
+export async function decryptCloudSyncLocalSecret<T>(value: string): Promise<T> {
+  return decryptCloudSyncPayload<T>(decodeBase64(value));
+}

@@ -246,11 +246,11 @@ When this plan is executed, record at minimum:
 
 ## Progress
 
-- [ ] Confirm provider registration strategy for Chrome/Firefox development and production
-- [ ] Implement Firefox ID and capability-gating foundation
-- [ ] Ship OneDrive Firefox parity
-- [ ] Ship Google Drive Firefox parity
-- [ ] Update docs, contracts, traceability, and verification evidence
+- [x] Confirm provider registration strategy for Chrome/Firefox development and production
+- [x] Implement Firefox ID and capability-gating foundation
+- [x] Ship OneDrive Firefox parity in code/config
+- [x] Ship Google Drive Firefox parity in code/config
+- [ ] Update docs, contracts, and verification evidence to close the rollout
 
 ## Surprises and Discoveries
 
@@ -258,6 +258,8 @@ When this plan is executed, record at minimum:
   Evidence: `entrypoints/shared/browser-capabilities.ts`, `entrypoints/background/cloud-sync/providers/google-drive.ts`, `entrypoints/background/cloud-sync/providers/onedrive-auth.ts`
 - Observation: OneDrive is structurally closer to Firefox support than Google Drive because it already uses `launchWebAuthFlow` + PKCE instead of Chrome-only `getAuthToken`.
   Evidence: `entrypoints/background/cloud-sync/providers/onedrive-auth.ts`, `entrypoints/background/cloud-sync/providers/google-drive.ts`
+- Observation: Browser-specific OAuth registrations are necessary but not sufficient; release-readiness still depends on provider-console hardening and recorded Firefox evidence.
+  Evidence: Firefox builds now support a stable `gecko.id` path in `wxt.config.ts`, but provider registrations, consent branding, and redirect inventory still live outside the repository and can drift silently without an explicit follow-up checklist.
 
 ## Decision Log
 
@@ -270,7 +272,27 @@ When this plan is executed, record at minimum:
 - Decision: Treat a brokered/server-assisted Google solution as a fallback, not the default.
   Rationale: Cross-browser parity should remain extension-local if provider constraints allow it, but the plan should still acknowledge a realistic escape hatch.
   Date/Author: 2026-04-14 / Codex
+- Decision: Use browser-targeted OAuth env resolution plus a stable repo-level Firefox add-on ID fallback to unblock local parity work before per-environment secrets are fully standardized.
+  Rationale: Firefox redirect-based auth cannot be verified reliably with a floating temporary add-on ID, and relying only on user-local env overrides would leave the parity path too fragile for normal development builds.
+  Date/Author: 2026-04-16 / Codex
 
 ## Outcomes and Retrospective
 
-Plan created for future implementation. No runtime behavior changed in this planning-only change set.
+- Implemented browser-targeted cloud-sync capability resolution so Google Drive and OneDrive support now depends on the current browser target's OAuth configuration instead of a coarse Chrome-only family gate.
+- Added browser-aware OAuth client resolution and stable Firefox add-on identity support in `wxt.config.ts`, including a repo-level fallback `gecko.id` for development/production Firefox builds when no local override is present.
+- Refactored OneDrive auth to use a shared cross-browser identity helper and kept its PKCE flow portable across Chrome and Firefox.
+- Replaced the Google Drive Chrome-only `chrome.identity.getAuthToken()` shortcut with a cross-browser authorization-code + PKCE flow built on the extension web-auth redirect path.
+- Updated browser-capability and cloud-sync contracts/traceability docs plus setup guidance to reflect browser-targeted OAuth configuration and Firefox parity implementation status.
+- Recorded a follow-up hardening need for provider-console setup outside the repo:
+  - split and review browser/environment-specific provider registrations
+  - verify least-privilege and consent-screen settings in Google Cloud Console and Microsoft Entra
+  - keep a durable redirect-URI inventory for Chrome/Firefox development and production targets
+- Verification completed in this implementation pass:
+  - `pnpm vitest run tests/google-meet/browser-capabilities.contract.test.ts tests/google-meet/cloud-sync-browser-support.contract.test.ts tests/google-meet/cloud-sync-orchestration.contract.test.ts tests/google-meet/cloud-sync-engine-retries.contract.test.ts`
+  - `pnpm docs:check`
+  - `pnpm docs:check:behavior`
+  - `pnpm build:all:development`
+- Verification still pending for rollout closure:
+  - manual Firefox provider connect/disconnect/sync evidence for OneDrive
+  - manual Firefox provider connect/disconnect/sync evidence for Google Drive
+  - Chrome/Firefox runtime smoke evidence for the real provider flows after local provider-console setup is finalized

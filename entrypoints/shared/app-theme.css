@@ -3,6 +3,9 @@
   --app-accent-strong: #0c8a6d;
   --app-accent-soft: rgba(16, 163, 127, 0.12);
   --app-accent-border: rgba(16, 163, 127, 0.32);
+  --app-success: #1f8f61;
+  --app-success-soft: rgba(31, 143, 97, 0.14);
+  --app-success-border: rgba(31, 143, 97, 0.3);
   --app-danger: #d14b57;
   --app-danger-soft: rgba(209, 75, 87, 0.12);
   --app-danger-border: rgba(209, 75, 87, 0.28);
@@ -43,6 +46,9 @@
   --app-text-faint: #717973;
   --app-shadow: rgba(0, 0, 0, 0.34);
   --app-selection-bg: rgba(16, 163, 127, 0.3);
+  --app-success: #56d59a;
+  --app-success-soft: rgba(86, 213, 154, 0.16);
+  --app-success-border: rgba(86, 213, 154, 0.34);
 }
 
 html,
@@ -60,6 +66,20 @@ body {
     background-color 180ms ease,
     color 180ms ease,
     border-color 180ms ease;
+}
+
+.mc-options-page-shell {
+  transition:
+    filter 240ms ease,
+    opacity 240ms ease,
+    transform 240ms ease;
+  will-change: filter, opacity, transform;
+}
+
+body[data-diagnostics-drawer-open="true"] .mc-options-page-shell {
+  filter: blur(14px) saturate(0.94);
+  opacity: 0.92;
+  transform: scale(0.996);
 }
 
 button:not(:disabled),

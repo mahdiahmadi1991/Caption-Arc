@@ -18,10 +18,12 @@ function setUserAgent(userAgent: string): void {
 describe("Browser capability contracts", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     setUserAgent(originalUserAgent);
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     setUserAgent(originalUserAgent);
   });
 
@@ -60,7 +62,23 @@ describe("Browser capability contracts", () => {
     expect(createDefaultDeviceLabel()).toBe("Firefox on Linux");
   });
 
-  test("BROW-CAP-003: cloud sync provider support is gated by browser family", () => {
+  test("BROW-CAP-003: cloud sync provider support is gated by browser-specific OAuth configuration", () => {
+    vi.stubEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME", "chromium-google-client");
+    vi.stubEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX", "firefox-google-client");
+    vi.stubEnv(
+      "WXT_GOOGLE_OAUTH_CLIENT_SECRET_CHROME",
+      "chromium-google-secret"
+    );
+    vi.stubEnv(
+      "WXT_GOOGLE_OAUTH_CLIENT_SECRET_FIREFOX",
+      "firefox-google-secret"
+    );
+    vi.stubEnv(
+      "WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME",
+      "chromium-microsoft-client"
+    );
+    vi.stubEnv("WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX", "firefox-microsoft-client");
+
     expect(getCloudSyncProviderSupport("google-drive", "chrome")).toEqual({
       provider: "google-drive",
       supported: true,
@@ -71,16 +89,32 @@ describe("Browser capability contracts", () => {
       "google-drive",
       "firefox"
     );
-    expect(googleFirefoxSupport.supported).toBe(false);
-    expect(googleFirefoxSupport.reason).toContain("Google Drive");
-    expect(googleFirefoxSupport.reason).toContain("Firefox");
+    expect(googleFirefoxSupport).toEqual({
+      provider: "google-drive",
+      supported: true,
+      browser: "firefox",
+    });
 
     const oneDriveFirefoxSupport = getCloudSyncProviderSupport(
       "onedrive",
       "firefox"
     );
-    expect(oneDriveFirefoxSupport.supported).toBe(false);
-    expect(oneDriveFirefoxSupport.reason).toContain("OneDrive");
-    expect(oneDriveFirefoxSupport.reason).toContain("Firefox");
+    expect(oneDriveFirefoxSupport).toEqual({
+      provider: "onedrive",
+      supported: true,
+      browser: "firefox",
+    });
+  });
+
+  test("BROW-CAP-004: Google Drive stays unsupported when the browser-targeted client secret is missing", () => {
+    vi.stubEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME", "chromium-google-client");
+
+    expect(getCloudSyncProviderSupport("google-drive", "chrome")).toEqual({
+      provider: "google-drive",
+      supported: false,
+      browser: "chrome",
+      reason:
+        "Google Drive cloud sync is not configured for Chrome yet because the required OAuth client secret is missing for this browser target.",
+    });
   });
 });

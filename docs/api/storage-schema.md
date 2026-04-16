@@ -43,10 +43,10 @@ Defined in [`entrypoints/background/history-db.ts`](../../entrypoints/background
   - `session-index`
   - `session-event-chunks`
 
-## Migration Rule
+## Schema Change Rule
 
 When changing settings/session schema:
 
 - update this file
-- document migration strategy in PR
-- keep backward compatibility behavior explicit
+- update the relevant behavior contract and traceability docs in the same change
+- keep one canonical persisted shape unless the repository owner explicitly asks for migration behavior

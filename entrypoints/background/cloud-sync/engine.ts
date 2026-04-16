@@ -32,10 +32,22 @@ import {
 import { filterSupportedCloudSyncProviders } from "../../shared/browser-capabilities";
 import { getSettings } from "../settings";
 import { hasAcceptedCurrentTerms } from "../../shared/legal";
+import {
+  getCloudSyncCycleTaskLimit,
+  getCloudSyncFollowUpDelayMs,
+  getCloudSyncReconciliationDeferralMs,
+  getCloudSyncReconciliationDelayMs,
+  shouldDeferCloudSyncReconciliation,
+} from "./policy";
+import { createBackgroundDiagnosticsLogger } from "../diagnostics";
 
 const MAX_TRANSIENT_RETRY_COUNT = 3;
 const TRANSIENT_RETRY_BASE_DELAY_MS = 2_000;
 const TRANSIENT_RETRY_MAX_DELAY_MS = 5 * 60_000;
+const cloudSyncEngineDiagnostics = createBackgroundDiagnosticsLogger({
+  domain: "cloud-sync",
+  feature: "engine",
+});
 
 let scheduledRunHandle: ReturnType<typeof timerApi.setTimeout> | null = null;
 let scheduledRunAt: number | null = null;
@@ -77,6 +89,22 @@ function updateCheckpointForSuccess(
   task: CloudSyncTask,
   result: Extract<CloudSyncTaskProcessingResult, { success: true }>
 ): CloudSyncProviderCheckpoint {
+  let nextTaskContentHashes = checkpoint.lastTaskContentHashes;
+  if (task.kind === "clear-archive") {
+    nextTaskContentHashes = undefined;
+  } else if (task.kind === "delete-session" && task.entityId) {
+    nextTaskContentHashes = removeTaskContentHash(checkpoint.lastTaskContentHashes, [
+      `session-meta:${task.entityId}`,
+      `session-events:${task.entityId}`,
+      `session-artifacts:${task.entityId}`,
+    ]);
+  } else if (task.contentHash) {
+    nextTaskContentHashes = {
+      ...(checkpoint.lastTaskContentHashes || {}),
+      [task.dedupeKey]: task.contentHash,
+    };
+  }
+
   const baseCheckpoint: CloudSyncProviderCheckpoint = {
     ...checkpoint,
     healthState: "up-to-date",
@@ -84,11 +112,17 @@ function updateCheckpointForSuccess(
     lastError: undefined,
     lastErrorKind: undefined,
     lastSuccessfulSyncAt: Date.now(),
+    lastTaskContentHashes: nextTaskContentHashes,
   };
 
   if (task.kind === "reconcile-provider") {
     return {
       ...baseCheckpoint,
+      lastScanAt:
+        result.checkpointUpdates?.lastScanAt ?? checkpoint.lastScanAt ?? Date.now(),
+      reconciliationCursor:
+        result.checkpointUpdates?.reconciliationCursor ??
+        checkpoint.reconciliationCursor,
       lastAppliedRemoteChangeAt:
         result.checkpointUpdates?.lastAppliedRemoteChangeAt ??
         checkpoint.lastAppliedRemoteChangeAt,
@@ -99,6 +133,34 @@ function updateCheckpointForSuccess(
     ...baseCheckpoint,
     lastUploadedLocalChangeAt:
       result.checkpointUpdates?.lastUploadedLocalChangeAt ?? Date.now(),
+  };
+}
+
+function selectDueTasksForCycle(
+  dueTasks: CloudSyncTask[],
+  connectedProviderCount: number
+): {
+  tasksToProcess: CloudSyncTask[];
+  deferredReconcileTasks: CloudSyncTask[];
+  dueNonReconcileTaskCount: number;
+} {
+  const dueNonReconcileTasks = dueTasks.filter(
+    (task) => task.kind !== "reconcile-provider"
+  );
+  const dueReconcileTasks = dueTasks.filter(
+    (task) => task.kind === "reconcile-provider"
+  );
+  const cycleTaskLimit = getCloudSyncCycleTaskLimit(connectedProviderCount);
+  const deferReconciliation = shouldDeferCloudSyncReconciliation(
+    dueNonReconcileTasks.length,
+    connectedProviderCount
+  );
+  const candidateTasks = deferReconciliation ? dueNonReconcileTasks : dueTasks;
+
+  return {
+    tasksToProcess: candidateTasks.slice(0, cycleTaskLimit),
+    deferredReconcileTasks: deferReconciliation ? dueReconcileTasks : [],
+    dueNonReconcileTaskCount: dueNonReconcileTasks.length,
   };
 }
 
@@ -133,6 +195,123 @@ function createRetryDelayMs(transientRetryCount: number): number {
   return Math.max(TRANSIENT_RETRY_BASE_DELAY_MS, cappedDelay + jitterOffset);
 }
 
+async function runCloudSyncCycleWithDiagnostics(reason: string): Promise<void> {
+  try {
+    await processCloudSyncCycle(reason);
+  } catch (error) {
+    await cloudSyncEngineDiagnostics.error("cloud_sync_cycle_failed", {
+      reason,
+      error,
+    });
+    throw error;
+  }
+}
+
+function removeTaskContentHash(
+  taskContentHashes: Record<string, string> | undefined,
+  dedupeKeys: string[]
+): Record<string, string> | undefined {
+  if (!taskContentHashes) {
+    return undefined;
+  }
+
+  const nextHashes = { ...taskContentHashes };
+  dedupeKeys.forEach((dedupeKey) => {
+    delete nextHashes[dedupeKey];
+  });
+
+  return Object.keys(nextHashes).length > 0 ? nextHashes : undefined;
+}
+
+function hasDueTaskForProvider(
+  tasks: CloudSyncTask[],
+  provider: CloudSyncProvider,
+  now = Date.now()
+): boolean {
+  return tasks.some(
+    (task) =>
+      task.nextAttemptAt <= now &&
+      Array.isArray(task.providerTargets) &&
+      task.providerTargets.includes(provider)
+  );
+}
+
+function normalizeIdleCheckpointHealth(
+  checkpoint: CloudSyncProviderCheckpoint,
+  tasks: CloudSyncTask[],
+  engine: CloudSyncEngineState,
+  now = Date.now()
+): CloudSyncProviderCheckpoint {
+  if (
+    !checkpoint.connected ||
+    checkpoint.healthState !== "syncing" ||
+    engine.running ||
+    hasDueTaskForProvider(tasks, checkpoint.provider, now)
+  ) {
+    return checkpoint;
+  }
+
+  if (
+    checkpoint.lastSuccessfulSyncAt ||
+    checkpoint.lastScanAt ||
+    checkpoint.lastUploadedLocalChangeAt ||
+    checkpoint.lastAppliedRemoteChangeAt
+  ) {
+    return {
+      ...checkpoint,
+      healthState: "up-to-date",
+    };
+  }
+
+  return checkpoint;
+}
+
+type CloudSyncProviderTaskFailure = {
+  provider: CloudSyncProvider;
+  result: Extract<CloudSyncTaskProcessingResult, { success: false }>;
+  nextTransientRetryCount: number;
+  manualRetryAvailable: boolean;
+};
+
+function getTaskFailureMessage(
+  failures: CloudSyncProviderTaskFailure[]
+): string {
+  if (failures.length === 1) {
+    return failures[0]!.result.message;
+  }
+
+  return failures
+    .map((failure) => `${failure.provider}: ${failure.result.message}`)
+    .join(" | ");
+}
+
+function getTaskFailureKind(
+  failures: CloudSyncProviderTaskFailure[]
+): CloudSyncTask["lastErrorKind"] {
+  if (failures.length === 0) {
+    return undefined;
+  }
+
+  const firstNonRetryable = failures.find((failure) => !failure.result.retryable);
+  return (firstNonRetryable || failures[0])?.result.errorKind;
+}
+
+function shouldSkipTaskUploadForCheckpoint(
+  task: CloudSyncTask,
+  checkpoint: CloudSyncProviderCheckpoint
+): boolean {
+  if (
+    task.kind === "reconcile-provider" ||
+    task.kind === "delete-session" ||
+    task.kind === "clear-archive" ||
+    !task.contentHash
+  ) {
+    return false;
+  }
+
+  return checkpoint.lastTaskContentHashes?.[task.dedupeKey] === task.contentHash;
+}
+
 async function processTaskAcrossProviders(
   task: CloudSyncTask,
   checkpoints: CloudSyncProviderCheckpoint[]
@@ -148,13 +327,39 @@ async function processTaskAcrossProviders(
     return { checkpoints };
   }
 
-  let nextTask: CloudSyncTask | null = { ...task };
   const nextCheckpoints = [...checkpoints];
+  const failures: CloudSyncProviderTaskFailure[] = [];
 
   for (const checkpoint of targetProviders) {
+    if (shouldSkipTaskUploadForCheckpoint(task, checkpoint)) {
+      const checkpointIndex = nextCheckpoints.findIndex(
+        (current) => current.provider === checkpoint.provider
+      );
+      if (checkpointIndex >= 0) {
+        nextCheckpoints[checkpointIndex] = updateCheckpointForSuccess(
+          nextCheckpoints[checkpointIndex]!,
+          task,
+          {
+            success: true,
+            checkpointUpdates: {
+              lastUploadedLocalChangeAt:
+                checkpoint.lastUploadedLocalChangeAt ?? Date.now(),
+            },
+          }
+        );
+      }
+      await cloudSyncEngineDiagnostics.trace("cloud_sync_task_skipped_unchanged", {
+        provider: checkpoint.provider,
+        dedupeKey: task.dedupeKey,
+        kind: task.kind,
+        entityId: task.entityId || null,
+      });
+      continue;
+    }
+
     const result = await processCloudSyncTaskForProvider(
       checkpoint.provider,
-      nextTask,
+      task,
       checkpoint
     );
     const checkpointIndex = nextCheckpoints.findIndex(
@@ -165,7 +370,7 @@ async function processTaskAcrossProviders(
       if (checkpointIndex >= 0) {
         nextCheckpoints[checkpointIndex] = updateCheckpointForSuccess(
           nextCheckpoints[checkpointIndex]!,
-          nextTask,
+          task,
           result
         );
       }
@@ -173,8 +378,8 @@ async function processTaskAcrossProviders(
     }
 
     const nextTransientRetryCount = result.retryable
-      ? nextTask.transientRetryCount + 1
-      : nextTask.transientRetryCount;
+      ? task.transientRetryCount + 1
+      : task.transientRetryCount;
     const manualRetryAvailable =
       result.retryable && nextTransientRetryCount >= MAX_TRANSIENT_RETRY_COUNT;
 
@@ -188,25 +393,6 @@ async function processTaskAcrossProviders(
       );
     }
 
-    if (!nextTask) {
-      break;
-    }
-
-    nextTask = {
-      ...nextTask,
-      attemptCount: nextTask.attemptCount + 1,
-      updatedAt: Date.now(),
-      lastError: result.message,
-      lastErrorKind: result.errorKind,
-      transientRetryCount: nextTransientRetryCount,
-      nextAttemptAt: result.retryable
-        ? Date.now() +
-          (manualRetryAvailable
-            ? 24 * 60 * 60_000
-            : createRetryDelayMs(nextTransientRetryCount))
-        : Date.now() + 60 * 60_000,
-    };
-
     await appendCloudSyncDiagnostic(
       createDiagnosticEvent(
         result.retryable ? "warning" : "error",
@@ -215,19 +401,45 @@ async function processTaskAcrossProviders(
       )
     );
 
-    if (
-      !result.retryable ||
-      nextTask.transientRetryCount >= MAX_TRANSIENT_RETRY_COUNT
-    ) {
-      await updateCloudSyncTask(nextTask);
-      return { checkpoints: nextCheckpoints };
-    }
+    failures.push({
+      provider: checkpoint.provider,
+      result,
+      nextTransientRetryCount,
+      manualRetryAvailable,
+    });
+  }
 
-    await updateCloudSyncTask(nextTask);
+  if (failures.length === 0) {
+    await removeCloudSyncTask(task.id);
     return { checkpoints: nextCheckpoints };
   }
 
-  await removeCloudSyncTask(task.id);
+  const highestTransientRetryCount = failures.reduce(
+    (maxRetryCount, failure) =>
+      Math.max(maxRetryCount, failure.nextTransientRetryCount),
+    task.transientRetryCount
+  );
+  const allFailuresRetryable = failures.every((failure) => failure.result.retryable);
+  const manualRetryAvailable = failures.some(
+    (failure) => failure.manualRetryAvailable
+  );
+
+  await updateCloudSyncTask({
+    ...task,
+    providerTargets: failures.map((failure) => failure.provider),
+    attemptCount: task.attemptCount + 1,
+    updatedAt: Date.now(),
+    lastError: getTaskFailureMessage(failures),
+    lastErrorKind: getTaskFailureKind(failures),
+    transientRetryCount: highestTransientRetryCount,
+    nextAttemptAt: allFailuresRetryable
+      ? Date.now() +
+        (manualRetryAvailable
+          ? 24 * 60 * 60_000
+          : createRetryDelayMs(highestTransientRetryCount))
+      : Date.now() + 60 * 60_000,
+  });
+
   return { checkpoints: nextCheckpoints };
 }
 
@@ -306,6 +518,9 @@ export async function queueCloudSyncReconciliation(
 }
 
 async function processCloudSyncCycle(reason: string): Promise<void> {
+  await cloudSyncEngineDiagnostics.debug("cloud_sync_cycle_started", {
+    reason,
+  });
   const { settings } = await getSettings();
   if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
     await updateEngineState({
@@ -324,18 +539,25 @@ async function processCloudSyncCycle(reason: string): Promise<void> {
     scheduledAt: undefined,
   });
 
-  const dueTasks = await listDueCloudSyncTasks();
+  const dueTasks = await listDueCloudSyncTasks(Date.now(), 100);
   const checkpoints = await listCloudSyncCheckpoints();
   const connectedProviders = checkpoints.filter(
     (checkpoint) => checkpoint.connected && checkpoint.supported !== false
   );
 
   if (dueTasks.length === 0) {
+    await cloudSyncEngineDiagnostics.trace("cloud_sync_cycle_no_due_tasks", {
+      reason,
+    });
     await updateEngineState({ running: false, lastCompletedRunAt: Date.now() });
     return;
   }
 
   if (connectedProviders.length === 0) {
+    await cloudSyncEngineDiagnostics.warn("cloud_sync_cycle_skipped_no_connected_provider", {
+      reason,
+      dueTaskCount: dueTasks.length,
+    });
     await appendCloudSyncDiagnostic(
       createDiagnosticEvent(
         "info",
@@ -346,30 +568,70 @@ async function processCloudSyncCycle(reason: string): Promise<void> {
     return;
   }
 
+  const { tasksToProcess, deferredReconcileTasks, dueNonReconcileTaskCount } =
+    selectDueTasksForCycle(dueTasks, connectedProviders.length);
+  if (deferredReconcileTasks.length > 0) {
+    const reconciliationDeferralMs = getCloudSyncReconciliationDeferralMs(
+      dueNonReconcileTaskCount,
+      connectedProviders.length
+    );
+    await Promise.all(
+      deferredReconcileTasks.map((task) =>
+        updateCloudSyncTask({
+          ...task,
+          updatedAt: Date.now(),
+          nextAttemptAt: Date.now() + reconciliationDeferralMs,
+        })
+      )
+    );
+    await cloudSyncEngineDiagnostics.info("cloud_sync_reconcile_deferred_for_backlog", {
+      reason,
+      deferredReconcileTaskCount: deferredReconcileTasks.length,
+      dueNonReconcileTaskCount,
+      reconciliationDeferralMs,
+    });
+    await appendCloudSyncDiagnostic(
+      createDiagnosticEvent(
+        "info",
+        `Deferred ${deferredReconcileTasks.length} remote reconcile scan${
+          deferredReconcileTasks.length === 1 ? "" : "s"
+        } while ${dueNonReconcileTaskCount} local sync task${
+          dueNonReconcileTaskCount === 1 ? "" : "s"
+        } remained queued.`
+      )
+    );
+  }
+
   let updatedCheckpoints = checkpoints.map((checkpoint) =>
     checkpoint.connected
       ? {
           ...checkpoint,
-          lastScanAt: Date.now(),
           healthState:
-            dueTasks.length > 0 ? "syncing" : checkpoint.healthState,
+            tasksToProcess.length > 0 ? "syncing" : checkpoint.healthState,
         }
       : checkpoint
   );
   await saveCloudSyncCheckpoints(updatedCheckpoints);
 
   await appendCloudSyncDiagnostic(
-    createDiagnosticEvent(
-      "info",
-      `Cloud sync cycle ran with ${dueTasks.length} queued task${
-        dueTasks.length === 1 ? "" : "s"
-      } and ${connectedProviders.length} connected provider${
-        connectedProviders.length === 1 ? "" : "s"
-      }.`
-    )
-  );
+      createDiagnosticEvent(
+        "info",
+        `Cloud sync cycle ran with ${dueTasks.length} due task${
+          dueTasks.length === 1 ? "" : "s"
+        } and ${connectedProviders.length} connected provider${
+          connectedProviders.length === 1 ? "" : "s"
+        }, processing ${tasksToProcess.length}.`
+      )
+    );
+  await cloudSyncEngineDiagnostics.info("cloud_sync_cycle_processing", {
+    reason,
+    dueTaskCount: dueTasks.length,
+    processedTaskCount: tasksToProcess.length,
+    deferredReconcileTaskCount: deferredReconcileTasks.length,
+    connectedProviderCount: connectedProviders.length,
+  });
 
-  for (const task of dueTasks) {
+  for (const task of tasksToProcess) {
     const { settings } = await getSettings();
     if (!hasAcceptedCurrentTerms(settings.termsAcceptance)) {
       await updateEngineState({
@@ -388,13 +650,47 @@ async function processCloudSyncCycle(reason: string): Promise<void> {
 
   await queueCloudSyncReconciliation(
     connectedProviders.map((checkpoint) => checkpoint.provider),
-    Date.now() + 5 * 60_000
+    Date.now() + getCloudSyncReconciliationDelayMs()
   );
 
-  if ((await listDueCloudSyncTasks()).length > 0) {
-    scheduleCloudSyncRun("follow-up", 0);
+  const remainingDueTaskCount = (await listCloudSyncTasks()).filter(
+    (task) => task.nextAttemptAt <= Date.now()
+  ).length;
+  if (remainingDueTaskCount > 0) {
+    const followUpDelayMs = getCloudSyncFollowUpDelayMs(
+      remainingDueTaskCount,
+      connectedProviders.length
+    );
+    await cloudSyncEngineDiagnostics.debug("cloud_sync_cycle_follow_up_scheduled", {
+      remainingDueTaskCount,
+      connectedProviderCount: connectedProviders.length,
+      followUpDelayMs,
+    });
+    scheduleCloudSyncRun("follow-up", followUpDelayMs);
   }
 
+  if (remainingDueTaskCount === 0) {
+    updatedCheckpoints = updatedCheckpoints.map((checkpoint) =>
+      checkpoint.connected && checkpoint.healthState === "syncing"
+        ? {
+            ...checkpoint,
+            healthState:
+              checkpoint.lastSuccessfulSyncAt ||
+              checkpoint.lastScanAt ||
+              checkpoint.lastUploadedLocalChangeAt ||
+              checkpoint.lastAppliedRemoteChangeAt
+                ? "up-to-date"
+                : checkpoint.healthState,
+          }
+        : checkpoint
+    );
+    await saveCloudSyncCheckpoints(updatedCheckpoints);
+  }
+
+  await cloudSyncEngineDiagnostics.info("cloud_sync_cycle_completed", {
+    reason,
+    processedTaskCount: dueTasks.length,
+  });
   await updateEngineState({ running: false, lastCompletedRunAt: Date.now() });
 }
 
@@ -402,6 +698,12 @@ export function scheduleCloudSyncRun(reason: string, delayMs = 2_000): void {
   const nextRunAt = Date.now() + Math.max(0, delayMs);
 
   if (scheduledRunHandle !== null && scheduledRunAt !== null && scheduledRunAt <= nextRunAt) {
+    void cloudSyncEngineDiagnostics.trace("cloud_sync_run_schedule_kept_existing", {
+      reason,
+      delayMs,
+      scheduledRunAt,
+      requestedRunAt: nextRunAt,
+    });
     return;
   }
 
@@ -410,12 +712,17 @@ export function scheduleCloudSyncRun(reason: string, delayMs = 2_000): void {
   }
 
   scheduledRunAt = nextRunAt;
+  void cloudSyncEngineDiagnostics.debug("cloud_sync_run_scheduled", {
+    reason,
+    delayMs,
+    nextRunAt,
+  });
   void updateEngineState({ scheduledAt: nextRunAt, lastRunReason: reason });
 
   scheduledRunHandle = timerApi.setTimeout(() => {
     scheduledRunHandle = null;
     scheduledRunAt = null;
-    runInFlight = processCloudSyncCycle(reason).finally(() => {
+    runInFlight = runCloudSyncCycleWithDiagnostics(reason).finally(() => {
       runInFlight = null;
     });
   }, Math.max(0, delayMs));
@@ -432,7 +739,7 @@ export async function runCloudSyncNow(reason = "manual"): Promise<void> {
     await runInFlight;
   }
 
-  runInFlight = processCloudSyncCycle(reason).finally(() => {
+  runInFlight = runCloudSyncCycleWithDiagnostics(reason).finally(() => {
     runInFlight = null;
   });
   await runInFlight;
@@ -471,7 +778,9 @@ export async function getCloudSyncStateSnapshot(): Promise<CloudSyncState> {
     queueSize: tasks.length,
     dueTaskCount: tasks.filter((task) => task.nextAttemptAt <= Date.now()).length,
     engine,
-    checkpoints: mergeCloudSyncProviderCheckpoints(checkpoints),
+    checkpoints: mergeCloudSyncProviderCheckpoints(checkpoints).map((checkpoint) =>
+      normalizeIdleCheckpointHealth(checkpoint, tasks, engine)
+    ),
     diagnostics,
     pendingSettingsDecision,
   };
@@ -479,5 +788,8 @@ export async function getCloudSyncStateSnapshot(): Promise<CloudSyncState> {
 
 export const cloudSyncEngineInternals = {
   createRetryDelayMs,
+  getCloudSyncStateSnapshot,
+  normalizeIdleCheckpointHealth,
   processTaskAcrossProviders,
+  selectDueTasksForCycle,
 };

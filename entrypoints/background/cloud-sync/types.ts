@@ -5,6 +5,7 @@ export type CloudSyncTaskKind =
   | "sync-device-profile"
   | "sync-session-meta"
   | "sync-session-events"
+  | "sync-session-artifacts"
   | "delete-session"
   | "clear-archive"
   | "reconcile-provider";
@@ -30,6 +31,8 @@ export type CloudSyncFileRecord = {
   size: number;
 };
 
+export type CloudSyncTaskSchedulingStrategy = "earliest" | "latest";
+
 export type CloudSyncTask = {
   id: string;
   dedupeKey: string;
@@ -40,6 +43,7 @@ export type CloudSyncTask = {
   createdAt: number;
   updatedAt: number;
   nextAttemptAt: number;
+  schedulingStrategy?: CloudSyncTaskSchedulingStrategy;
   attemptCount: number;
   transientRetryCount: number;
   lastError?: string;
@@ -48,7 +52,7 @@ export type CloudSyncTask = {
 
 export type CloudSyncTaskInput = Pick<
   CloudSyncTask,
-  "dedupeKey" | "kind" | "providerTargets"
+  "dedupeKey" | "kind" | "providerTargets" | "schedulingStrategy"
 > & {
   entityId?: string;
   contentHash?: string;
@@ -63,9 +67,11 @@ export type CloudSyncProviderCheckpoint = {
   accountLabel?: string;
   connectedAt?: number;
   lastScanAt?: number;
+  reconciliationCursor?: string;
   lastAppliedRemoteChangeAt?: number;
   lastUploadedLocalChangeAt?: number;
   lastSuccessfulSyncAt?: number;
+  lastTaskContentHashes?: Record<string, string>;
   healthState: CloudSyncProviderHealthState;
   manualRetryAvailable?: boolean;
   lastError?: string;
@@ -110,7 +116,10 @@ export type CloudSyncTaskProcessingResult =
       checkpointUpdates?: Partial<
         Pick<
           CloudSyncProviderCheckpoint,
-          "lastAppliedRemoteChangeAt" | "lastUploadedLocalChangeAt"
+          | "lastAppliedRemoteChangeAt"
+          | "lastUploadedLocalChangeAt"
+          | "lastScanAt"
+          | "reconciliationCursor"
         >
       >;
     }

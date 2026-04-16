@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { CloudSyncState } from "../background/cloud-sync/types";
 import type { CloudSyncProvider } from "../background/types";
 import { createDiagnosticsLogger } from "../shared/diagnostics-client";
@@ -9,13 +9,15 @@ type CloudSyncMutationIntent =
   | "disconnect"
   | "retry"
   | "reconnect"
-  | "refresh";
+  | "refresh"
+  | "resolve-choice";
 
 type CloudSyncMutationState = {
-  status: "idle" | "loading" | "error";
+  status: "idle" | "loading" | "success" | "error";
   intent?: CloudSyncMutationIntent;
   provider?: CloudSyncProvider;
   message: string;
+  detail?: string;
 };
 
 type Props = {
@@ -23,6 +25,7 @@ type Props = {
 };
 
 const CLOUD_SYNC_POLL_INTERVAL_MS = 15_000;
+const CLOUD_SYNC_SUCCESS_STATE_TTL_MS = 4_000;
 
 const EMPTY_CLOUD_SYNC_STATE: CloudSyncState = {
   queueSize: 0,
@@ -39,6 +42,159 @@ const optionsCloudSyncDiagnostics = createDiagnosticsLogger({
   feature: "options-cloud-sync",
 });
 
+function deriveIdleMessage(
+  state: CloudSyncState,
+  t: ReturnType<typeof useT>
+): string {
+  if (state.pendingSettingsDecision) {
+    return t("options.cloudSync.pendingChoice.description");
+  }
+
+  const connectedCheckpoints = state.checkpoints.filter(
+    (checkpoint) => checkpoint.connected
+  );
+
+  if (connectedCheckpoints.length === 0) {
+    return t("options.runtime.cloudSync.idleDisconnected");
+  }
+
+  if (state.engine.running || state.dueTaskCount > 0) {
+    return t("options.cloudSync.overview.syncingDescription");
+  }
+
+  if (
+    connectedCheckpoints.some(
+      (checkpoint) =>
+        checkpoint.healthState === "action-required" ||
+        checkpoint.healthState === "needs-attention" ||
+        checkpoint.healthState === "retrying-automatically"
+    )
+  ) {
+    return t("options.cloudSync.overview.needsAttentionDescription");
+  }
+
+  return t("options.runtime.cloudSync.idleConnected");
+}
+
+function getCloudSyncProviderLabel(
+  provider: CloudSyncProvider | undefined,
+  t: ReturnType<typeof useT>
+): string {
+  if (provider === "google-drive") {
+    return t("options.cloudSync.providers.googleDrive.title");
+  }
+
+  if (provider === "onedrive") {
+    return t("options.cloudSync.providers.oneDrive.title");
+  }
+
+  return t("options.sections.cloudSync.title");
+}
+
+function getLoadingFeedback(
+  intent: CloudSyncMutationIntent,
+  provider: CloudSyncProvider | undefined,
+  t: ReturnType<typeof useT>
+): Pick<CloudSyncMutationState, "message" | "detail"> {
+  const providerLabel = getCloudSyncProviderLabel(provider, t);
+
+  switch (intent) {
+    case "connect":
+      return {
+        message: t("options.runtime.cloudSync.connectingProvider", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.connectHint"),
+      };
+    case "reconnect":
+      return {
+        message: t("options.runtime.cloudSync.reconnectingProvider", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.connectHint"),
+      };
+    case "disconnect":
+      return {
+        message: t("options.runtime.cloudSync.disconnectingProvider", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.disconnectHint"),
+      };
+    case "retry":
+      return {
+        message: t("options.runtime.cloudSync.retryingProvider", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.retryHint"),
+      };
+    case "refresh":
+      return {
+        message: t("options.runtime.cloudSync.refreshing"),
+        detail: t("options.runtime.cloudSync.refreshHint"),
+      };
+    case "resolve-choice":
+      return {
+        message: t("options.runtime.cloudSync.resolvingChoice"),
+        detail: t("options.runtime.cloudSync.resolveChoiceHint"),
+      };
+    default:
+      return {
+        message: t("options.runtime.cloudSync.connecting"),
+      };
+  }
+}
+
+function getSuccessFeedback(
+  intent: CloudSyncMutationIntent,
+  provider: CloudSyncProvider | undefined,
+  t: ReturnType<typeof useT>
+): Pick<CloudSyncMutationState, "message" | "detail"> {
+  const providerLabel = getCloudSyncProviderLabel(provider, t);
+
+  switch (intent) {
+    case "connect":
+      return {
+        message: t("options.runtime.cloudSync.connectSuccess", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.connectSuccessHint"),
+      };
+    case "reconnect":
+      return {
+        message: t("options.runtime.cloudSync.reconnectSuccess", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.connectSuccessHint"),
+      };
+    case "disconnect":
+      return {
+        message: t("options.runtime.cloudSync.disconnectSuccess", {
+          provider: providerLabel,
+        }),
+        detail: t("options.runtime.cloudSync.disconnectSuccessHint"),
+      };
+    case "retry":
+      return {
+        message: t("options.runtime.cloudSync.retrySuccess"),
+        detail: t("options.runtime.cloudSync.retrySuccessHint"),
+      };
+    case "refresh":
+      return {
+        message: t("options.runtime.cloudSync.refreshSuccess"),
+        detail: t("options.runtime.cloudSync.refreshSuccessHint"),
+      };
+    case "resolve-choice":
+      return {
+        message: t("options.runtime.cloudSync.choiceSuccess"),
+        detail: t("options.runtime.cloudSync.choiceSuccessHint"),
+      };
+    default:
+      return {
+        message: t("options.runtime.cloudSync.updated"),
+      };
+  }
+}
+
 export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
   const t = useT();
   const [cloudSyncState, setCloudSyncState] = useState<CloudSyncState>(
@@ -50,15 +206,42 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
     message: t("options.runtime.cloudSync.idleAvailable"),
   });
   const isMountedRef = useRef(true);
+  const latestLoadRequestIdRef = useRef(0);
+  const resetFeedbackTimerRef = useRef<number | null>(null);
+
+  const clearResetFeedbackTimer = () => {
+    if (resetFeedbackTimerRef.current !== null) {
+      window.clearTimeout(resetFeedbackTimerRef.current);
+      resetFeedbackTimerRef.current = null;
+    }
+  };
+
+  const scheduleIdleMutationState = (nextState: CloudSyncState) => {
+    clearResetFeedbackTimer();
+    resetFeedbackTimerRef.current = window.setTimeout(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setMutationState({
+        status: "idle",
+        message: deriveIdleMessage(nextState, t),
+      });
+      resetFeedbackTimerRef.current = null;
+    }, CLOUD_SYNC_SUCCESS_STATE_TTL_MS);
+  };
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      clearResetFeedbackTimer();
     };
   }, []);
 
-  const loadCloudSyncState = async () => {
+  const loadCloudSyncState = async (): Promise<CloudSyncState | null> => {
+    const requestId = latestLoadRequestIdRef.current + 1;
+    latestLoadRequestIdRef.current = requestId;
     await optionsCloudSyncDiagnostics.trace("options_cloud_sync_load_started");
     try {
       const response = await chrome.runtime.sendMessage({
@@ -69,34 +252,41 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         throw new Error(response?.error || "Could not load cloud sync state.");
       }
 
-      if (!isMountedRef.current) {
+      if (
+        !isMountedRef.current ||
+        requestId !== latestLoadRequestIdRef.current
+      ) {
         await optionsCloudSyncDiagnostics.trace("options_cloud_sync_load_discarded_unmounted");
         return;
       }
 
-      setCloudSyncState(response.state as CloudSyncState);
+      const nextState = response.state as CloudSyncState;
       await optionsCloudSyncDiagnostics.info("options_cloud_sync_load_completed", {
-        checkpointCount: response.state.checkpoints.length,
-        queueSize: response.state.queueSize,
-        diagnosticsCount: response.state.diagnostics.length,
+        checkpointCount: nextState.checkpoints.length,
+        queueSize: nextState.queueSize,
+        diagnosticsCount: nextState.diagnostics.length,
       });
-      setMutationState((current) =>
-        current.status === "loading"
-          ? current
-          : {
-              status: "idle",
-              message:
-                response.state.checkpoints.some(
-                  (checkpoint: CloudSyncState["checkpoints"][number]) => checkpoint.connected
-                )
-                  ? t("options.runtime.cloudSync.idleConnected")
-                  : t("options.runtime.cloudSync.idleDisconnected"),
-            }
-      );
+      startTransition(() => {
+        setCloudSyncState(nextState);
+        setMutationState((current) =>
+          current.status === "loading" ||
+          current.status === "error" ||
+          current.status === "success"
+            ? current
+            : {
+                status: "idle",
+                message: deriveIdleMessage(nextState, t),
+              }
+        );
+      });
+      return nextState;
     } catch (error) {
-      if (!isMountedRef.current) {
+      if (
+        !isMountedRef.current ||
+        requestId !== latestLoadRequestIdRef.current
+      ) {
         await optionsCloudSyncDiagnostics.trace("options_cloud_sync_load_failed_unmounted");
-        return;
+        return null;
       }
 
       await optionsCloudSyncDiagnostics.warn("options_cloud_sync_load_failed", {
@@ -110,8 +300,12 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
             ? error.message
             : t("options.runtime.cloudSync.loadFailed"),
       });
+      return null;
     } finally {
-      if (isMountedRef.current) {
+      if (
+        isMountedRef.current &&
+        requestId === latestLoadRequestIdRef.current
+      ) {
         setLoading(false);
       }
     }
@@ -140,24 +334,25 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
   const runMutation = async (
     intent: CloudSyncMutationIntent,
     provider: CloudSyncProvider | undefined,
-    operation: () => Promise<unknown>,
-    loadingMessage: string
+    operation: () => Promise<unknown>
   ) => {
     await optionsCloudSyncDiagnostics.info("options_cloud_sync_mutation_started", {
       intent,
       provider,
     });
+    clearResetFeedbackTimer();
+    const loadingFeedback = getLoadingFeedback(intent, provider, t);
     setMutationState({
       status: "loading",
       intent,
       provider,
-      message: loadingMessage,
+      ...loadingFeedback,
     });
 
     try {
       await operation();
       await onSettingsChanged?.();
-      await loadCloudSyncState();
+      const refreshedState = await loadCloudSyncState();
 
       if (!isMountedRef.current) {
         await optionsCloudSyncDiagnostics.trace("options_cloud_sync_mutation_completed_unmounted", {
@@ -167,14 +362,21 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         return;
       }
 
+      if (!refreshedState) {
+        return;
+      }
+
       await optionsCloudSyncDiagnostics.info("options_cloud_sync_mutation_completed", {
         intent,
         provider,
       });
       setMutationState({
-        status: "idle",
-        message: t("options.runtime.cloudSync.updated"),
+        status: "success",
+        intent,
+        provider,
+        ...getSuccessFeedback(intent, provider, t),
       });
+      scheduleIdleMutationState(refreshedState);
     } catch (error) {
       if (!isMountedRef.current) {
         await optionsCloudSyncDiagnostics.trace("options_cloud_sync_mutation_failed_unmounted", {
@@ -215,8 +417,7 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         if (!response?.success) {
           throw new Error(response?.error || "Could not connect cloud provider.");
         }
-      },
-      t("options.runtime.cloudSync.connecting")
+      }
     );
   };
 
@@ -233,8 +434,7 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         if (!response?.success) {
           throw new Error(response?.error || "Could not disconnect cloud provider.");
         }
-      },
-      t("options.runtime.cloudSync.disconnecting")
+      }
     );
   };
 
@@ -251,8 +451,7 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         if (!response?.success) {
           throw new Error(response?.error || "Could not retry cloud sync.");
         }
-      },
-      t("options.runtime.cloudSync.retrying")
+      }
     );
   };
 
@@ -280,8 +479,7 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
         if (!connectResponse?.success) {
           throw new Error(connectResponse?.error || "Could not reconnect cloud provider.");
         }
-      },
-      t("options.runtime.cloudSync.reconnecting")
+      }
     );
   };
 
@@ -289,7 +487,7 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
     choice: "keep-local" | "use-cloud"
   ) => {
     await runMutation(
-      "refresh",
+      "resolve-choice",
       undefined,
       async () => {
         const response = await chrome.runtime.sendMessage({
@@ -302,16 +500,46 @@ export const useCloudSync = ({ onSettingsChanged }: Props = {}) => {
             response?.error || "Could not resolve the shared settings choice."
           );
         }
-      },
-      t("options.runtime.cloudSync.resolvingChoice")
+      }
     );
+  };
+
+  const refreshCloudSyncState = async () => {
+    await optionsCloudSyncDiagnostics.info("options_cloud_sync_mutation_started", {
+      intent: "refresh",
+      provider: undefined,
+    });
+
+    clearResetFeedbackTimer();
+    const loadingFeedback = getLoadingFeedback("refresh", undefined, t);
+    setMutationState({
+      status: "loading",
+      intent: "refresh",
+      ...loadingFeedback,
+    });
+
+    const refreshedState = await loadCloudSyncState();
+    if (!isMountedRef.current || !refreshedState) {
+      return;
+    }
+
+    await optionsCloudSyncDiagnostics.info("options_cloud_sync_mutation_completed", {
+      intent: "refresh",
+      provider: undefined,
+    });
+    setMutationState({
+      status: "success",
+      intent: "refresh",
+      ...getSuccessFeedback("refresh", undefined, t),
+    });
+    scheduleIdleMutationState(refreshedState);
   };
 
   return {
     cloudSyncState,
     cloudSyncLoading: loading,
     cloudSyncMutationState: mutationState,
-    refreshCloudSyncState: loadCloudSyncState,
+    refreshCloudSyncState,
     connectProvider,
     disconnectProvider,
     retryProvider,

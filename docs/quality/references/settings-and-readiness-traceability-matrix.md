@@ -13,8 +13,8 @@ This matrix maps settings-and-readiness behavior-contract rules to available val
 
 | Case ID | Contract ID | Behavior Summary | Validation Surface | Status |
 | --- | --- | --- | --- | --- |
-| SETRDY-001 | C-SETRDY-001 | settings loads merge legacy and split-state payloads before normalization, including the shared archive-retention window | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
-| SETRDY-002 | C-SETRDY-002 | settings saves persist both shapes, including archive retention, and notify cloud sync afterwards | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
+| SETRDY-001 | C-SETRDY-001 | settings loads read the canonical structured state and normalize it, including the shared archive-retention window | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
+| SETRDY-002 | C-SETRDY-002 | settings saves persist the canonical structured shape, including archive retention, and notify cloud sync afterwards | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
 | SETRDY-002B | C-SETRDY-001, C-SETRDY-002 | archive retention accepts and persists the canonical `Off` value in shared settings | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
 | SETRDY-005 | C-SETRDY-001, C-SETRDY-002 | legal-risk acknowledgments normalize from split state and persist with shared settings | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
 | SETRDY-006 | C-SETRDY-001, C-SETRDY-002 | local Terms acceptance normalizes from device state and persists outside shared settings | `tests/google-meet/settings-and-readiness.contract.test.ts` | implemented |
@@ -28,5 +28,5 @@ This matrix maps settings-and-readiness behavior-contract rules to available val
 ## Notes
 
 1. Settings/readiness planned coverage is now closed with deterministic contract tests.
-2. Coverage in this area now also protects the canonical shared archive-retention setting alongside the legacy-to-current settings alias path for `summaryLanguage`, `summaryProfiles`, and `defaultSummaryProfileId` while the canonical model uses `meetingOutputLanguage`, `meetingProfiles`, and `defaultMeetingProfileId`.
+2. Coverage in this area protects the canonical shared archive-retention setting inside the structured `settingsState` payload.
 3. `SETRDY-007` remains `planned` until the universal Terms-gate behavior receives dedicated automated validation beyond storage normalization coverage.

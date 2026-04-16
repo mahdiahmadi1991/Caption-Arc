@@ -56,10 +56,10 @@ beforeEach(() => {
       schemaVersion: 3,
       platform: "google-meet",
       providerLabel: "Google Meet",
-      meetingUrl: "https://meet.google.com/abc-defg-hij",
+      meetingUrl: "https://meet.google.com/xxx-xxxx-xxx",
       title: "Daily",
       starred: false,
-      identifiers: { meetingCode: "abc-defg-hij" },
+      identifiers: { meetingCode: "xxx-xxxx-xxx" },
       sessionFingerprint: "fp-1",
       lifecycleState: "ended",
       startTime: Date.now() - 2000,
@@ -136,10 +136,10 @@ describe("Data transfer contract", () => {
       schemaVersion: 3,
       platform: "google-meet",
       providerLabel: "Google Meet",
-      meetingUrl: "https://meet.google.com/abc-defg-hij",
+      meetingUrl: "https://meet.google.com/xxx-xxxx-xxx",
       title: "Daily",
       starred: false,
-      identifiers: { meetingCode: "abc-defg-hij" },
+      identifiers: { meetingCode: "xxx-xxxx-xxx" },
       sessionFingerprint: "fp-1",
       lifecycleState: "ended",
       startTime: Date.now() - 2000,
@@ -182,7 +182,7 @@ describe("Data transfer contract", () => {
     });
   });
 
-  test("DXFER-004: import drops legacy exported OpenAI API keys from portable settings", async () => {
+  test("DXFER-004: import ignores non-portable OpenAI API keys in portable settings", async () => {
     const imported = await importAppDataBundle({
       bundleVersion: 1,
       manifest: {

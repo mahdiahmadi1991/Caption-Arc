@@ -42,7 +42,10 @@ import {
   initializeQuickAccessRuntimeRegistry,
   updateQuickAccessRuntimeStatus,
 } from "./quick-access-runtime";
-import { getMeetingAssistantLiveState } from "./assistant";
+import {
+  getMeetingAssistantLiveState,
+  requeueAssistantSessionsAfterSettingsRecovery,
+} from "./assistant";
 import {
   appendDiagnosticsEvent,
   clearDiagnosticsData,
@@ -376,6 +379,10 @@ async function handleMessage(
             previousSettings.termsAcceptance,
             response.settings.termsAcceptance
           );
+          await requeueAssistantSessionsAfterSettingsRecovery(
+            previousSettings,
+            response.settings
+          );
         }
         return response;
       }
@@ -543,7 +550,12 @@ async function handleMessage(
     case "updateMeetingSession":
       return updateMeetingSession(
         message.sessionId as string,
-        message.updates as Parameters<typeof updateMeetingSession>[1]
+        message.updates as Parameters<typeof updateMeetingSession>[1],
+        {
+          senderTabId: sender.tab?.id ?? null,
+          senderUrl: sender.url ?? null,
+          senderOrigin: sender.origin ?? null,
+        }
       );
 
     case "translateSessionCaption":

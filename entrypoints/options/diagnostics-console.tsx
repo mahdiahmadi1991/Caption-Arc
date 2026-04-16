@@ -39,7 +39,35 @@ import { useDiagnosticsConsole } from "./use-diagnostics-console";
 
 type DiagnosticsBadgeTone = "neutral" | "accent" | "warning" | "danger";
 const DIAGNOSTICS_DRAWER_TRANSITION_MS = 800;
-const DIAGNOSTICS_DRAWER_HEIGHT = "min(76vh, 48rem)";
+const DIAGNOSTICS_DRAWER_HEIGHT = "min(92vh, 62rem)";
+const DIAGNOSTICS_DRAWER_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+const DIAGNOSTICS_DRAWER_HIDDEN_TRANSLATE = "translateY(calc(100% + 1.25rem))";
+const SCROLL_LOCK_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+  " ",
+  "Spacebar",
+]);
+
+function isTextInputTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  return (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
 
 const BADGE_CLASSNAMES: Record<DiagnosticsBadgeTone, string> = {
   neutral:
@@ -94,11 +122,13 @@ function DiagnosticsActionButton({
   onClick,
   disabled = false,
   tone = "neutral",
+  compact = false,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   tone?: DiagnosticsBadgeTone;
+  compact?: boolean;
 }) {
   return (
     <button
@@ -106,7 +136,8 @@ function DiagnosticsActionButton({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-default disabled:opacity-60",
+        "inline-flex items-center justify-center rounded-full border font-medium transition-colors disabled:cursor-default disabled:opacity-60",
+        compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]",
         BADGE_CLASSNAMES[tone],
       ].join(" ")}
     >
@@ -160,81 +191,104 @@ function DiagnosticsConsoleSummary({
   snapshotCount,
   lastUpdatedAt,
   resolvedSnapshot,
+  visibleCounts,
 }: {
   loadedCount: number;
   visibleCount: number;
   snapshotCount: number;
   lastUpdatedAt: string | null;
   resolvedSnapshot: DiagnosticsSnapshot | null;
+  visibleCounts: ReturnType<typeof getDiagnosticsViewerCounts>;
 }) {
   const t = useT();
+  const summaryItems = [
+    {
+      key: "loaded",
+      label: t("options.diagnostics.summary.loadedWindowTitle"),
+      value: formatDiagnosticsRelativeCount(
+        t,
+        loadedCount,
+        "options.diagnostics.summary.eventOne",
+        "options.diagnostics.summary.eventOther"
+      ),
+      detail: `max ${DIAGNOSTICS_VIEWER_EVENT_LIMIT}`,
+    },
+    {
+      key: "visible",
+      label: t("options.diagnostics.summary.visibleNowTitle"),
+      value: formatDiagnosticsRelativeCount(
+        t,
+        visibleCount,
+        "options.diagnostics.summary.eventOne",
+        "options.diagnostics.summary.eventOther"
+      ),
+      detail: t("options.diagnostics.summary.visibleNowBody"),
+    },
+    {
+      key: "snapshots",
+      label: t("options.diagnostics.summary.snapshotsTitle"),
+      value: formatDiagnosticsRelativeCount(
+        t,
+        snapshotCount,
+        "options.diagnostics.summary.snapshotOne",
+        "options.diagnostics.summary.snapshotOther"
+      ),
+      detail: resolvedSnapshot
+        ? `${resolvedSnapshot.runtime} · ${resolvedSnapshot.provider || t("options.diagnostics.summary.noProvider")}`
+        : t("options.diagnostics.summary.noResolvedSnapshot"),
+    },
+    {
+      key: "last-sync",
+      label: t("options.diagnostics.summary.lastSyncTitle"),
+      value: lastUpdatedAt
+        ? formatDiagnosticsTimestamp(lastUpdatedAt)
+        : t("options.diagnostics.summary.waiting"),
+      detail: t("options.diagnostics.summary.lastSyncBody"),
+    },
+  ];
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-      <div className="rounded-[1.1rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2.5">
-        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-          {t("options.diagnostics.summary.loadedWindowTitle")}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-[var(--app-text)] sm:text-sm">
-          {formatDiagnosticsRelativeCount(
-            t,
-            loadedCount,
-            "options.diagnostics.summary.eventOne",
-            "options.diagnostics.summary.eventOther"
-          )}
-        </p>
-        <p className="mt-1 text-[11px] leading-5 text-[var(--app-text-muted)]">
-          {t("options.diagnostics.summary.loadedWindowBody", {
-            limit: DIAGNOSTICS_VIEWER_EVENT_LIMIT,
-          })}
-        </p>
-      </div>
-      <div className="rounded-[1.1rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2.5">
-        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-          {t("options.diagnostics.summary.visibleNowTitle")}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-[var(--app-text)] sm:text-sm">
-          {formatDiagnosticsRelativeCount(
-            t,
-            visibleCount,
-            "options.diagnostics.summary.eventOne",
-            "options.diagnostics.summary.eventOther"
-          )}
-        </p>
-        <p className="mt-1 text-[11px] leading-5 text-[var(--app-text-muted)]">
-          {t("options.diagnostics.summary.visibleNowBody")}
-        </p>
-      </div>
-      <div className="rounded-[1.1rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2.5">
-        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-          {t("options.diagnostics.summary.snapshotsTitle")}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-[var(--app-text)] sm:text-sm">
-          {formatDiagnosticsRelativeCount(
-            t,
-            snapshotCount,
-            "options.diagnostics.summary.snapshotOne",
-            "options.diagnostics.summary.snapshotOther"
-          )}
-        </p>
-        <p className="mt-1 text-[11px] leading-5 text-[var(--app-text-muted)]">
-          {resolvedSnapshot
-            ? `${resolvedSnapshot.runtime} · ${resolvedSnapshot.provider || t("options.diagnostics.summary.noProvider")}`
-            : t("options.diagnostics.summary.noResolvedSnapshot")}
-        </p>
-      </div>
-      <div className="rounded-[1.1rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2.5">
-        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-          {t("options.diagnostics.summary.lastSyncTitle")}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-[var(--app-text)] sm:text-sm">
-          {lastUpdatedAt
-            ? formatDiagnosticsTimestamp(lastUpdatedAt)
-            : t("options.diagnostics.summary.waiting")}
-        </p>
-        <p className="mt-1 text-[11px] leading-5 text-[var(--app-text-muted)]">
-          {t("options.diagnostics.summary.lastSyncBody")}
-        </p>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {summaryItems.map((item) => (
+        <div
+          key={item.key}
+          className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-0.5"
+        >
+          <span className="text-[8px] font-medium uppercase tracking-[0.14em] text-[var(--app-text-faint)]">
+            {item.label}
+          </span>
+          <span className="text-[11px] font-semibold text-[var(--app-text)]">
+            {item.value}
+          </span>
+          <span className="max-w-[8rem] truncate text-[10px] text-[var(--app-text-muted)] sm:max-w-[10rem]">
+            {item.detail}
+          </span>
+        </div>
+      ))}
+      <div className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-2 py-0.5">
+        <span className="text-[8px] font-medium uppercase tracking-[0.14em] text-[var(--app-text-faint)]">
+          {t("options.diagnostics.filters.visibleCounts")}
+        </span>
+        <DiagnosticsBadge
+          label={`${t("options.diagnostics.filters.error")} ${visibleCounts.error}`}
+          tone="danger"
+        />
+        <DiagnosticsBadge
+          label={`${t("options.diagnostics.filters.warn")} ${visibleCounts.warn}`}
+          tone="warning"
+        />
+        <DiagnosticsBadge
+          label={`${t("options.diagnostics.filters.info")} ${visibleCounts.info}`}
+          tone="accent"
+        />
+        <DiagnosticsBadge
+          label={`${t("options.diagnostics.filters.debug")} ${visibleCounts.debug}`}
+          tone="neutral"
+        />
+        <DiagnosticsBadge
+          label={`${t("options.diagnostics.filters.trace")} ${visibleCounts.trace}`}
+          tone="neutral"
+        />
       </div>
     </div>
   );
@@ -281,9 +335,9 @@ function DiagnosticsConsoleEventRow({
   return (
     <article
       dir="ltr"
-      className={`rounded-[1.15rem] border border-l-[3px] p-2.5 text-left shadow-[0_10px_24px_var(--app-shadow)] backdrop-blur-xl ${LEVEL_ROW_CLASSNAMES[event.level]}`}
+      className={`rounded-[1rem] border border-l-[3px] p-2 text-left shadow-[0_8px_20px_var(--app-shadow)] backdrop-blur-xl ${LEVEL_ROW_CLASSNAMES[event.level]}`}
     >
-      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <DiagnosticsBadge
@@ -294,13 +348,43 @@ function DiagnosticsConsoleEventRow({
               {formatDiagnosticsTimestamp(event.timestamp)}
             </span>
           </div>
-          <p className="mt-1.5 line-clamp-1 text-sm font-semibold leading-5 text-[var(--app-text)]">
-            {description.title}
-          </p>
-          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-[var(--app-text-muted)]">
-            {description.summary}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--app-text-muted)]">
+          <div className="mt-1 flex flex-col gap-1 lg:flex-row lg:items-start lg:justify-between lg:gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-1 text-[13px] font-semibold leading-5 text-[var(--app-text)]">
+                {description.title}
+              </p>
+              <p className="mt-0.5 line-clamp-1 text-[11px] leading-5 text-[var(--app-text-muted)]">
+                {description.summary}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5 self-start">
+              <DiagnosticsActionButton
+                label={
+                  copied
+                    ? t("options.diagnostics.row.copied")
+                    : t("options.diagnostics.row.copyRow")
+                }
+                onClick={() => {
+                  void handleCopyRow();
+                }}
+                tone={copied ? "accent" : "neutral"}
+                compact
+              />
+              {hasStructuredDetails && (
+                <DiagnosticsActionButton
+                  label={
+                    expanded
+                      ? t("options.diagnostics.row.hideDetails")
+                      : t("options.diagnostics.row.showDetails")
+                  }
+                  onClick={() => setExpanded((current) => !current)}
+                  compact
+                />
+              )}
+            </div>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-[var(--app-text-muted)]">
             <span className="rounded-full border border-[var(--app-border)] px-1.5 py-0.5">
               {event.runtime}
             </span>
@@ -320,34 +404,10 @@ function DiagnosticsConsoleEventRow({
             </span>
           </div>
         </div>
-
-        <div className="flex shrink-0 items-center gap-1.5 self-start">
-          <DiagnosticsActionButton
-            label={
-              copied
-                ? t("options.diagnostics.row.copied")
-                : t("options.diagnostics.row.copyRow")
-            }
-            onClick={() => {
-              void handleCopyRow();
-            }}
-            tone={copied ? "accent" : "neutral"}
-          />
-          {hasStructuredDetails && (
-            <DiagnosticsActionButton
-              label={
-                expanded
-                  ? t("options.diagnostics.row.hideDetails")
-                  : t("options.diagnostics.row.showDetails")
-              }
-              onClick={() => setExpanded((current) => !current)}
-            />
-          )}
-        </div>
       </div>
 
       {expanded && (
-        <div className="mt-2.5 space-y-2.5 rounded-[1rem] border border-[var(--app-border)] bg-[var(--app-surface-soft)] p-2.5">
+        <div className="mt-2 space-y-2 rounded-[0.95rem] border border-[var(--app-border)] bg-[var(--app-surface-soft)] p-2">
           {detailBlocks.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {detailBlocks.map((entry) => (
@@ -425,18 +485,26 @@ export function DiagnosticsConsoleLauncher({
   const t = useT();
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] sm:bottom-5 sm:right-5">
+    <div
+      className={[
+        "fixed bottom-4 right-4 z-[60] transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none sm:bottom-5 sm:right-5",
+        open
+          ? "pointer-events-none translate-y-3 opacity-0"
+          : "pointer-events-auto translate-y-0 opacity-100",
+      ].join(" ")}
+    >
       <div className="rounded-[1.7rem] border border-[var(--app-border-strong)] bg-[color:color-mix(in_srgb,var(--app-surface)_82%,transparent)] p-2 shadow-[0_20px_48px_var(--app-shadow)] backdrop-blur-2xl">
         <button
           ref={buttonRef}
           type="button"
           onClick={onToggle}
-          disabled={disabled}
+          disabled={disabled || open}
           aria-expanded={open}
           aria-controls="diagnostics-console-drawer"
-          className="group flex items-center gap-3 rounded-[1.2rem] bg-[linear-gradient(135deg,var(--app-surface),color-mix(in_srgb,var(--app-accent-soft)_36%,var(--app-surface)))] px-3.5 py-3 text-start transition-transform hover:-translate-y-0.5 disabled:cursor-default disabled:opacity-60"
+          tabIndex={open ? -1 : undefined}
+          className="group flex items-center gap-3 rounded-[1.2rem] bg-[linear-gradient(135deg,var(--app-surface),color-mix(in_srgb,var(--app-accent-soft)_36%,var(--app-surface)))] px-3.5 py-3 text-start transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:shadow-[0_14px_30px_var(--app-shadow)] disabled:cursor-default disabled:opacity-60"
         >
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)] transition-colors duration-200 ease-out group-hover:bg-[color:color-mix(in_srgb,var(--app-accent-soft)_72%,var(--app-surface))]">
             <BeakerIcon className="h-5 w-5" />
           </span>
           <span className="hidden min-w-0 sm:block">
@@ -489,7 +557,8 @@ export function DiagnosticsConsoleDrawer({
 }) {
   const t = useT();
   const [rendered, setRendered] = useState(open);
-  const [animatedOpen, setAnimatedOpen] = useState(open);
+  const [visible, setVisible] = useState(open);
+  const drawerRef = useRef<HTMLElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [levelFilter, setLevelFilter] = useState<DiagnosticsViewerLevelFilter>(
     () => getDiagnosticsViewerDefaultLevelFilter()
@@ -514,20 +583,16 @@ export function DiagnosticsConsoleDrawer({
   useEffect(() => {
     if (open) {
       setRendered(true);
-      let settleFrameId = 0;
       const frameId = window.requestAnimationFrame(() => {
-        settleFrameId = window.requestAnimationFrame(() => {
-          setAnimatedOpen(true);
-        });
+        setVisible(true);
       });
 
       return () => {
         window.cancelAnimationFrame(frameId);
-        window.cancelAnimationFrame(settleFrameId);
       };
     }
 
-    setAnimatedOpen(false);
+    setVisible(false);
     const timeoutId = window.setTimeout(() => {
       setRendered(false);
     }, DIAGNOSTICS_DRAWER_TRANSITION_MS);
@@ -536,6 +601,14 @@ export function DiagnosticsConsoleDrawer({
       window.clearTimeout(timeoutId);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !visible) {
+      return;
+    }
+
+    drawerRef.current?.focus();
+  }, [open, visible]);
 
   useEffect(() => {
     if (!open) {
@@ -555,12 +628,25 @@ export function DiagnosticsConsoleDrawer({
   }, [onClose, open]);
 
   useEffect(() => {
-    if (!open || !listRef.current || autoScrollPaused) {
+    if (!open || !visible || !listRef.current || autoScrollPaused) {
       return;
     }
 
-    listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [autoScrollPaused, filteredEvents.length, open]);
+    const listElement = listRef.current;
+    const scrollToLatest = () => {
+      listElement.scrollTop = listElement.scrollHeight;
+    };
+
+    scrollToLatest();
+    const outerFrameId = window.requestAnimationFrame(() => {
+      scrollToLatest();
+      window.requestAnimationFrame(scrollToLatest);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(outerFrameId);
+    };
+  }, [autoScrollPaused, filteredEvents.length, open, visible]);
 
   useEffect(() => {
     if (!open) {
@@ -570,34 +656,105 @@ export function DiagnosticsConsoleDrawer({
 
   useEffect(() => {
     if (!open) {
+      delete document.body.dataset.diagnosticsDrawerOpen;
       return;
     }
 
-    const root = document.documentElement;
-    const body = document.body;
-    const previousStyles = {
-      bodyOverflow: body.style.overflow,
-      bodyOverscrollBehaviorY: body.style.overscrollBehaviorY,
-      rootOverflow: root.style.overflow,
-      rootOverscrollBehaviorY: root.style.overscrollBehaviorY,
-    };
-
-    body.style.overflow = "hidden";
-    body.style.overscrollBehaviorY = "none";
-    root.style.overflow = "hidden";
-    root.style.overscrollBehaviorY = "none";
+    document.body.dataset.diagnosticsDrawerOpen = "true";
 
     return () => {
-      body.style.overflow = previousStyles.bodyOverflow;
-      body.style.overscrollBehaviorY = previousStyles.bodyOverscrollBehaviorY;
-      root.style.overflow = previousStyles.rootOverflow;
-      root.style.overscrollBehaviorY = previousStyles.rootOverscrollBehaviorY;
+      delete document.body.dataset.diagnosticsDrawerOpen;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const lockedScrollY = window.scrollY;
+    const body = document.body;
+    const previousBodyStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflowY: body.style.overflowY,
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${lockedScrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflowY = "scroll";
+
+    const isInsideDrawer = (target: EventTarget | null): boolean =>
+      target instanceof Node && Boolean(drawerRef.current?.contains(target));
+
+    const preventWheel = (event: WheelEvent) => {
+      if (isInsideDrawer(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    const preventTouchMove = (event: TouchEvent) => {
+      if (isInsideDrawer(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    const preventScrollKeys = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        isTextInputTarget(event.target) ||
+        isInsideDrawer(event.target)
+      ) {
+        return;
+      }
+
+      if (SCROLL_LOCK_KEYS.has(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("wheel", preventWheel, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("touchmove", preventTouchMove, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("keydown", preventScrollKeys, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      body.style.position = previousBodyStyles.position;
+      body.style.top = previousBodyStyles.top;
+      body.style.left = previousBodyStyles.left;
+      body.style.right = previousBodyStyles.right;
+      body.style.width = previousBodyStyles.width;
+      body.style.overflowY = previousBodyStyles.overflowY;
+      window.removeEventListener("wheel", preventWheel, true);
+      window.removeEventListener("touchmove", preventTouchMove, true);
+      window.removeEventListener("keydown", preventScrollKeys, true);
+      window.scrollTo(0, lockedScrollY);
     };
   }, [open]);
 
   if (!rendered) {
     return null;
   }
+
+  const drawerVisible = open && visible;
 
   const status = getDiagnosticsViewerStatus({
     viewerEnabled: true,
@@ -619,27 +776,26 @@ export function DiagnosticsConsoleDrawer({
   return (
     <div
       className={[
-        "fixed inset-0 z-[70] overscroll-y-none transition-opacity ease-out motion-reduce:transition-none",
-        animatedOpen
-          ? "pointer-events-auto opacity-100"
-          : "pointer-events-none opacity-0",
+        "fixed inset-0 z-[70] pointer-events-auto overscroll-y-none transition-opacity ease-out motion-reduce:transition-none",
+        drawerVisible ? "opacity-100" : "opacity-0",
       ].join(" ")}
       style={{ transitionDuration: `${DIAGNOSTICS_DRAWER_TRANSITION_MS}ms` }}
     >
-      <button
-        type="button"
-        aria-label={t("options.diagnostics.closeConsole")}
+      <div
+        aria-hidden="true"
         className={[
-          "absolute inset-0 bg-[color:color-mix(in_srgb,var(--app-bg)_64%,transparent)] backdrop-blur-[2px] transition-opacity ease-out motion-reduce:transition-none",
-          animatedOpen ? "opacity-100" : "opacity-0",
+          "absolute inset-0 cursor-default bg-[color:color-mix(in_srgb,var(--app-bg)_44%,transparent)] backdrop-blur-xl transition-opacity ease-out motion-reduce:transition-none",
+          drawerVisible ? "opacity-100" : "opacity-0",
         ].join(" ")}
         style={{ transitionDuration: `${DIAGNOSTICS_DRAWER_TRANSITION_MS}ms` }}
         onClick={onClose}
       />
 
       <section
+        ref={drawerRef}
         id="diagnostics-console-drawer"
         aria-label={t("options.diagnostics.drawerLabel")}
+        tabIndex={-1}
         onWheel={(event) => {
           event.stopPropagation();
         }}
@@ -647,31 +803,31 @@ export function DiagnosticsConsoleDrawer({
           event.stopPropagation();
         }}
         className={[
-          "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-7xl flex-col overflow-hidden overscroll-y-contain rounded-t-[2rem] border border-b-0 border-[var(--app-border-strong)] bg-[color:color-mix(in_srgb,var(--app-surface)_88%,transparent)] shadow-[0_-24px_72px_var(--app-shadow)] backdrop-blur-2xl transition-[height,opacity] motion-reduce:transition-none",
-          animatedOpen ? "opacity-100" : "opacity-0",
+          "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-7xl flex-col overflow-hidden overscroll-y-contain rounded-t-[2rem] border border-b-0 border-[var(--app-border-strong)] bg-[color:color-mix(in_srgb,var(--app-surface)_88%,transparent)] shadow-[0_-24px_72px_var(--app-shadow)] backdrop-blur-2xl transition-[transform,opacity] motion-reduce:transition-none",
+          drawerVisible ? "opacity-100" : "opacity-0",
         ].join(" ")}
         style={{
-          height: animatedOpen ? DIAGNOSTICS_DRAWER_HEIGHT : "0px",
+          height: DIAGNOSTICS_DRAWER_HEIGHT,
           transitionDuration: `${DIAGNOSTICS_DRAWER_TRANSITION_MS}ms`,
-          transitionTimingFunction: "cubic-bezier(0.2, 0.9, 0.2, 1)",
-          willChange: "height, opacity",
+          transitionTimingFunction: DIAGNOSTICS_DRAWER_EASING,
+          transform: drawerVisible
+            ? "translateY(0)"
+            : DIAGNOSTICS_DRAWER_HIDDEN_TRANSLATE,
+          willChange: "transform, opacity",
         }}
       >
-        <div className="sticky top-0 z-10 border-b border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_82%,transparent)] px-4 py-3 backdrop-blur-2xl sm:px-5">
-          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
+        <div className="sticky top-0 z-10 border-b border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_82%,transparent)] px-4 py-1.5 backdrop-blur-2xl sm:px-5">
+          <div className="flex flex-col gap-1 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--app-accent)]">
                   {t("options.diagnostics.drawerLabel")}
                 </p>
                 <DiagnosticsBadge label={status.label} tone={status.tone} />
               </div>
-              <p className="mt-1.5 max-w-3xl text-[13px] leading-5 text-[var(--app-text-muted)]">
-                {status.description}
-              </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="flex flex-wrap items-center gap-1.5 xl:justify-end">
               <DiagnosticsActionButton
                 label={
                   config?.enabled
@@ -724,8 +880,8 @@ export function DiagnosticsConsoleDrawer({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-1 flex flex-col gap-1 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-1.5">
               {getDiagnosticsViewerLevelOptions().map((option) => {
                 const isActive =
                   option === "all"
@@ -747,7 +903,7 @@ export function DiagnosticsConsoleDrawer({
                       )
                     }
                     className={[
-                      "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors",
                       isActive
                         ? "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]"
                         : "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]",
@@ -768,29 +924,21 @@ export function DiagnosticsConsoleDrawer({
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={t("options.diagnostics.filters.searchPlaceholder")}
-                className="w-full rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] py-2 pl-9 pr-3 text-sm text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-accent-border)]"
+                className="w-full rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] py-1.5 pl-9 pr-3 text-sm text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-accent-border)]"
               />
             </label>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-3 sm:px-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-4 py-1.5 sm:px-5">
           <DiagnosticsConsoleSummary
             loadedCount={events.length}
             visibleCount={filteredEvents.length}
             snapshotCount={snapshotCount}
             lastUpdatedAt={lastUpdatedAt}
             resolvedSnapshot={resolvedSnapshot}
+            visibleCounts={visibleCounts}
           />
-
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--app-text-muted)]">
-            <span className="mr-1">{t("options.diagnostics.filters.visibleCounts")}</span>
-            <DiagnosticsBadge label={`${t("options.diagnostics.filters.error")} ${visibleCounts.error}`} tone="danger" />
-            <DiagnosticsBadge label={`${t("options.diagnostics.filters.warn")} ${visibleCounts.warn}`} tone="warning" />
-            <DiagnosticsBadge label={`${t("options.diagnostics.filters.info")} ${visibleCounts.info}`} tone="accent" />
-            <DiagnosticsBadge label={`${t("options.diagnostics.filters.debug")} ${visibleCounts.debug}`} tone="neutral" />
-            <DiagnosticsBadge label={`${t("options.diagnostics.filters.trace")} ${visibleCounts.trace}`} tone="neutral" />
-          </div>
 
           {requestError && (
             <div className="rounded-[1rem] border border-[var(--app-warning-border)] bg-[var(--app-warning-soft)] px-3 py-2.5 text-[13px] leading-5 text-[var(--app-text-muted)]">
@@ -816,10 +964,10 @@ export function DiagnosticsConsoleDrawer({
             onTouchMove={(event) => {
               event.stopPropagation();
             }}
-            className="mc-app-scrollbar min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-y-contain pb-2 [scrollbar-gutter:stable]"
+            className="mc-app-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-y-contain pb-1.5 [scrollbar-gutter:stable]"
           >
             {!config?.enabled && events.length === 0 && (
-              <div className="rounded-[1.2rem] border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_82%,var(--app-surface))] p-4">
+              <div className="rounded-[1.05rem] border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_82%,var(--app-surface))] p-3.5">
                 <p className="text-sm font-semibold text-[var(--app-text)] sm:text-base">
                   {t("options.diagnostics.states.captureOffTitle")}
                 </p>
@@ -840,7 +988,7 @@ export function DiagnosticsConsoleDrawer({
             )}
 
             {config?.enabled && events.length === 0 && (
-              <div className="rounded-[1.2rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
+              <div className="rounded-[1.05rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5">
                 <p className="text-sm font-semibold text-[var(--app-text)] sm:text-base">
                   {t("options.diagnostics.states.waitingTitle")}
                 </p>
@@ -851,7 +999,7 @@ export function DiagnosticsConsoleDrawer({
             )}
 
             {hasNoMatches && (
-              <div className="rounded-[1.2rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
+              <div className="rounded-[1.05rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5">
                 <p className="text-sm font-semibold text-[var(--app-text)] sm:text-base">
                   {t("options.diagnostics.states.noMatchesTitle")}
                 </p>

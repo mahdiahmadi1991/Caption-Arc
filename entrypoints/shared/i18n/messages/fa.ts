@@ -1224,10 +1224,41 @@ export const faMessages = {
         updated: "وضعیت همگام سازی ابری به روز شد.",
         actionFailed: "اقدام همگام سازی ابری ناموفق بود.",
         connecting: "در حال اتصال ارائه دهنده ابری...",
+        connectingProvider: "در حال شروع ورود برای {provider}...",
+        connectHint:
+          "باید یک پنجره امن مرورگر باز شود. ورود را آنجا کامل کنید و سپس به این صفحه برگردید.",
+        connectSuccess: "{provider} متصل شد.",
+        connectSuccessHint:
+          "محافظت پس زمینه از چرخه بعدی همگام سازی ادامه پیدا می کند.",
         disconnecting: "در حال قطع اتصال ارائه دهنده ابری...",
+        disconnectingProvider: "در حال قطع اتصال {provider}...",
+        disconnectHint:
+          "آرشیو محلی روی همین دستگاه می ماند و فقط دسترسی ابری حذف می شود.",
+        disconnectSuccess: "{provider} قطع شد.",
+        disconnectSuccessHint:
+          "آرشیو محلی شما همچنان روی این دستگاه در دسترس می ماند.",
         retrying: "در حال تلاش دوباره برای همگام سازی ابری...",
+        retryingProvider: "در حال صف کردن یک تلاش تازه برای {provider}...",
+        retryHint:
+          "CaptionArc دوباره از ارائه دهنده می خواهد همگام سازی پس زمینه را ادامه دهد.",
+        retrySuccess: "یک تلاش تازه برای همگام سازی در صف قرار گرفت.",
+        retrySuccessHint:
+          "در اجرای بعدی، ارائه دهنده دوباره در پس زمینه تلاش می شود.",
         reconnecting: "در حال نوسازی دسترسی ارائه دهنده ابری...",
+        reconnectingProvider: "در حال نوسازی دسترسی {provider}...",
+        reconnectSuccess: "دسترسی {provider} نوسازی شد.",
         resolvingChoice: "در حال اعمال انتخاب تنظیمات مشترک...",
+        resolveChoiceHint:
+          "چرخه بعدی همگام سازی از نقطه شروعی که انتخاب کرده اید تطبیق را ادامه می دهد.",
+        choiceSuccess: "انتخاب تنظیمات مشترک اعمال شد.",
+        choiceSuccessHint:
+          "همگام سازی ابری از baseline انتخاب شده برای تنظیمات مشترک ادامه پیدا می کند.",
+        refreshing: "در حال بررسی تازه ترین وضعیت همگام سازی ابری...",
+        refreshHint:
+          "سلامت صف، checkpointهای ارائه دهنده و فعالیت اخیر همگام سازی در حال خواندن است.",
+        refreshSuccess: "وضعیت همگام سازی ابری نوسازی شد.",
+        refreshSuccessHint:
+          "جدیدترین وضعیت ارائه دهنده ها و سلامت صف اکنون روی این صفحه دیده می شود.",
       },
     },
   },

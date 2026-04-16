@@ -37,7 +37,7 @@ type VerificationResult = {
 };
 
 const AUTOSAVE_DELAY_MS = 700;
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 
 function downloadFile(
   content: string,

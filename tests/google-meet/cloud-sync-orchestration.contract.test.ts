@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const {
   syncCheckpointConnectionsMock,
@@ -64,6 +64,16 @@ vi.mock("../../entrypoints/background/settings", () => ({
   saveSettings: saveSettingsMock,
 }));
 
+vi.mock("../../entrypoints/background/diagnostics", () => ({
+  createBackgroundDiagnosticsLogger: () => ({
+    trace: vi.fn(async () => undefined),
+    debug: vi.fn(async () => undefined),
+    info: vi.fn(async () => undefined),
+    warn: vi.fn(async () => undefined),
+    error: vi.fn(async () => undefined),
+  }),
+}));
+
 import {
   initializeCloudSyncEngine,
   noteMeetingSessionSaved,
@@ -72,6 +82,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(Date, "now").mockReturnValue(1_000_000);
   getSettingsMock.mockResolvedValue({
     settings: {
       connectedCloudProviders: ["google-drive"],
@@ -126,6 +137,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("Cloud sync orchestration contract", () => {
   test("CSYNC-004: initialization and local-save hooks queue deferred runs instead of syncing inline", async () => {
     initializeCloudSyncEngine();
@@ -146,17 +161,66 @@ describe("Cloud sync orchestration contract", () => {
       ["google-drive"]
     );
 
-    expect(enqueueCloudSyncTaskMock).toHaveBeenCalledTimes(2);
+    expect(enqueueCloudSyncTaskMock).toHaveBeenCalledTimes(3);
     expect(enqueueCloudSyncTaskMock.mock.calls[0]?.[0]).toMatchObject({
       dedupeKey: "session-meta:sync-1",
       kind: "sync-session-meta",
+      schedulingStrategy: "latest",
     });
     expect(enqueueCloudSyncTaskMock.mock.calls[1]?.[0]).toMatchObject({
       dedupeKey: "session-events:sync-1",
       kind: "sync-session-events",
+      schedulingStrategy: "latest",
     });
-    expect(scheduleCloudSyncRunMock).toHaveBeenCalledWith("meeting-session-saved", 2_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[2]?.[0]).toMatchObject({
+      dedupeKey: "session-artifacts:sync-1",
+      kind: "sync-session-artifacts",
+      schedulingStrategy: "latest",
+    });
+    expect(enqueueCloudSyncTaskMock.mock.calls[0]?.[1]).toBe(Date.now() + 15_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[1]?.[1]).toBe(Date.now() + 15_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[2]?.[1]).toBe(Date.now() + 15_000);
+    expect(scheduleCloudSyncRunMock).toHaveBeenCalledWith("meeting-session-saved", 15_000);
     expect(runCloudSyncNowMock).not.toHaveBeenCalled();
+  });
+
+  test("CSYNC-010: ended sessions keep the short sync delay instead of the live-session debounce", async () => {
+    await noteMeetingSessionSaved(
+      {
+        id: "session-2",
+        sessionSyncId: "sync-2",
+        syncContentHash: "hash-2",
+        lifecycleState: "ended",
+        endTime: 123,
+        events: [{ timestamp: 1 }],
+      } as never,
+      ["google-drive"]
+    );
+
+    expect(enqueueCloudSyncTaskMock.mock.calls[0]?.[1]).toBe(Date.now() + 2_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[1]?.[1]).toBe(Date.now() + 2_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[2]?.[1]).toBe(Date.now() + 2_000);
+    expect(scheduleCloudSyncRunMock).toHaveBeenCalledWith("meeting-session-saved", 2_000);
+  });
+
+  test("CSYNC-018: long live sessions widen the deferred sync window to reduce full event-stream rewrites", async () => {
+    await noteMeetingSessionSaved(
+      {
+        id: "session-3",
+        sessionSyncId: "sync-3",
+        syncContentHash: "hash-3",
+        lifecycleState: "live",
+        events: Array.from({ length: 140 }, (_, index) => ({
+          timestamp: index + 1,
+        })),
+      } as never,
+      ["google-drive"]
+    );
+
+    expect(enqueueCloudSyncTaskMock.mock.calls[0]?.[1]).toBe(Date.now() + 30_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[1]?.[1]).toBe(Date.now() + 30_000);
+    expect(enqueueCloudSyncTaskMock.mock.calls[2]?.[1]).toBe(Date.now() + 30_000);
+    expect(scheduleCloudSyncRunMock).toHaveBeenCalledWith("meeting-session-saved", 30_000);
   });
 
   test("CSYNC-006: resolving pending settings writes selected settings and immediately reruns reconciliation", async () => {

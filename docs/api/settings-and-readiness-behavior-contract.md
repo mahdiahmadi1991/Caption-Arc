@@ -18,13 +18,13 @@ It is a characterization artifact derived from implementation code, not a requir
 
 ## Contract Rules
 
-## C-SETRDY-001: Settings loads merge legacy and split-state payloads before shape normalization
+## C-SETRDY-001: Settings loads read the canonical structured state and normalize it before use
 
 Source: `flattenSettingsState`, `sanitizeSettingsShape`, `loadSettingsState`, `getSettings` in [../../entrypoints/background/settings.ts](../../entrypoints/background/settings.ts)
 
 Rules:
 
-1. Settings loads merge the legacy `settings` payload with the structured `settingsState` payload before normalization.
+1. Settings loads read the structured `settingsState` payload as the only persisted source of truth before normalization.
 2. Settings normalization clamps overlay opacity, capture startup behavior, caption activation behavior, the meeting archive retention window to the canonical option set (`0`, `30`, `90`, `180`, `365`), model names, cloud providers, device identity, and overlay positions.
 3. Legal-risk acknowledgments are normalized into a bounded shared-settings record and invalid or non-numeric values are discarded.
 4. Local Terms-of-Service acceptance and decline records are normalized from local-device state and invalid records are discarded.
@@ -33,7 +33,7 @@ Rules:
 7. Default meeting profile selection always resolves to a selectable profile, preferring custom profiles before protected built-ins.
 8. `getSettings()` persists the normalized state back to storage when structured state was missing.
 
-## C-SETRDY-002: Settings saves always persist the normalized merged shape and notify cloud sync afterwards
+## C-SETRDY-002: Settings saves always persist the canonical structured shape and notify cloud sync afterwards
 
 Source: `persistSettingsState`, `saveSettings` in [../../entrypoints/background/settings.ts](../../entrypoints/background/settings.ts)
 
@@ -41,7 +41,7 @@ Rules:
 
 1. `saveSettings(partialSettings)` merges incoming keys over the currently loaded normalized settings.
 2. Merged settings are normalized again before persistence.
-3. Settings persistence writes both the legacy `settings` key and the structured `settingsState` key.
+3. Settings persistence writes only the canonical `settingsState` key.
 4. Shared-settings persistence includes the configured meeting archive retention window plus legal-risk acknowledgment timestamps alongside the associated shared setting values.
 5. Local-device persistence includes the Terms-of-Service acceptance and decline records outside shared settings.
 6. Successful settings saves return the normalized persisted settings shape to the caller.
