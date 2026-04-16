@@ -12,8 +12,11 @@ This section describes product intent, business-facing capability boundaries, an
 - [assistant-and-summary-strategy.md](./assistant-and-summary-strategy.md)
 - [quick-access-and-runtime-control.md](./quick-access-and-runtime-control.md)
 - [session-continuation-and-rejoin.md](./session-continuation-and-rejoin.md)
-- [business-kpi-framework.md](./business-kpi-framework.md)
 - [business-non-goals-and-scope-boundaries.md](./business-non-goals-and-scope-boundaries.md)
-- [monetization-readiness-checklist.md](./monetization-readiness-checklist.md)
-- [roadmap.md](./roadmap.md)
-- [backlog-summary.md](./backlog-summary.md)
+
+The following product-wide planning docs moved to the private workspace-control repo and are no longer canonical in the public extension repo:
+
+- `business-kpi-framework.md`
+- `monetization-readiness-checklist.md`
+- `roadmap.md`
+- `backlog-summary.md`

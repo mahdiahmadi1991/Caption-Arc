@@ -76,6 +76,7 @@ Repository governance adds constraints:
 - GitHub license detection and release automation will update only after remote pushes
 - selective promotion from `develope` to `main` requires careful branch choreography to avoid leaking extra docs into the release branch
 - release build or tag push could fail if local version sources drift
+- `main` may be too stale to accept a meaningful release-only subset without first receiving the current repository baseline
 
 ## Documentation Impact
 
@@ -158,13 +159,13 @@ Verification:
 
 ## Progress
 
-- [ ] Create and index the execution plan
-- [ ] Capture current work on a topic branch and merge to `develope`
+- [x] Create and index the execution plan
+- [x] Capture current work on a topic branch and merge to `develope`
 - [ ] Prepare the `main` hotfix release subset with version bump and notes
 - [ ] Run local verification for docs and production builds
 - [ ] Merge the hotfix to `main`, tag, and push
 - [ ] Realign `develope` with `main`
-- [ ] Apply GitHub public-repo hardening settings
+- [x] Apply GitHub public-repo hardening settings
 
 ## Surprises and Discoveries
 
@@ -174,6 +175,10 @@ Verification:
   Evidence: `gh api repos/mahdiahmadi1991/Caption-Arc/rulesets`
 - Observation: GitHub Actions check-run names are currently `docs-check` and `quality-checks`.
   Evidence: `gh api repos/mahdiahmadi1991/Caption-Arc/commits/765d86a/check-runs`
+- Observation: `main` is currently 28 commits behind `develope` and does not contain the repository's active baseline.
+  Evidence: `git rev-list --left-right --count origin/main...origin/develope`
+- Observation: The repository already had classic branch protection on `develope`, but not equivalent required status checks on `main`.
+  Evidence: `gh api repos/mahdiahmadi1991/Caption-Arc/branches/develope/protection`, `gh api repos/mahdiahmadi1991/Caption-Arc/branches/main/protection`
 
 ## Decision Log
 
@@ -183,7 +188,20 @@ Verification:
 - Decision: Use a `hotfix/*` branch from `main` for the selective release of only the relicensing subset.
   Rationale: The user explicitly requested promotion of only the license-related subset to `main`, and governance provides `hotfix/*` as the supported way to branch from `main`.
   Date/Author: 2026-04-14 / Codex
+- Decision: Pause the `main` release path until the user confirms how to handle the stale `main` baseline.
+  Rationale: With `main` 28 commits behind `develope`, promoting only the relicensing subset is not technically coherent without either releasing the current baseline or intentionally restructuring `main`.
+  Date/Author: 2026-04-14 / Codex
+- Decision: Harden the repository immediately through repository settings, security features, and stricter classic branch protection.
+  Rationale: These protections are independently useful and do not require resolving the stale-`main` release decision first.
+  Date/Author: 2026-04-14 / Codex
 
 ## Outcomes and Retrospective
 
-To be completed after the branch, release, and GitHub-hardening work is finished.
+Interim 2026-04-14 state:
+
+- current monetization and relicensing work was committed on `chore/monetization-license-foundation`
+- that topic branch was merged into `develope` with a merge commit and pushed
+- repository merge settings were confirmed/aligned to merge-commit workflow
+- `dependabot_security_updates`, vulnerability alerts, and private vulnerability reporting were enabled
+- `main` and `develope` now both require `docs-check` and `quality-checks`, enforce admin protection, and block force pushes and deletions
+- release promotion to `main` is paused pending an explicit decision on how to handle the stale `main` branch baseline

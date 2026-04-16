@@ -1,7 +1,5 @@
 # Roadmap
 
-This file is intentionally lightweight.
+This product-wide roadmap placeholder moved to the private workspace-control repository.
 
-Planned roadmap details should be promoted from historical plans under `docs/archive/feature-plans/` once scope, status, and sequencing are confirmed.
-
-TBD: maintain a stable public roadmap format (themes, milestones, release windows).
+The public extension repo keeps only this pointer.
