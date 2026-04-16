@@ -232,6 +232,12 @@ Current implementation note:
 - the shipped UI locale set is `en`, `fa`, `ar`, `es`, `fr`, `de`, `pt`, `ru`, `hi`, `zh`, `ja`, and `ko`
 - English fallback remains available at lookup time, but incomplete locale overlays are not shipped
 
+Localization sync rule:
+
+- any user-facing key change in `entrypoints/shared/i18n/messages/*.ts` must update all shipped locale catalogs in the same change
+- do not treat `en` and `fa` as the only required authored catalogs now that the repository ships 12 reviewed UI locales
+- if a temporary exception is unavoidable, record it explicitly in an active Execution Plan and make the partial rollout visible to reviewers
+
 Settings-help authoring rule:
 
 - shared click-triggered settings help surfaces should keep chrome under `common.helpPopover.*`

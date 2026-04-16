@@ -4,7 +4,7 @@
 
 Submission text must clearly state:
 
-- governed browser targets (Chrome and Firefox)
+- governed distribution targets (Chromium-family package and Firefox package)
 - supported web providers (Google Meet, Teams Web, Zoom Web App)
 - desktop-native apps are not supported
 - any browser-gated optional capability that remains intentionally limited at submission time

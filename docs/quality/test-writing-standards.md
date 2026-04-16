@@ -115,6 +115,7 @@ Always report classification with command + key error evidence.
 - keep live diagnostics enabled during smoke by default
 - use logs to validate runtime decisions, not just final UI state
 - when runtime-sensitive code is changed, ensure logger coverage includes all levels (`trace/debug/info/warn/error`) or document rationale for intentionally missing levels
+- when DLS runs against the Windows Chrome debug profile, audit the extension error page in `chrome://extensions` before and after the scenario, clear observed errors after reading them, and fail the run if new post-scenario errors remain unexplained
 
 ## Anti-Flake Guidelines
 

@@ -80,7 +80,7 @@ Choose all that apply:
 
 For runtime-sensitive or browser-sensitive work that affects governed browser behavior, also:
 
-- run `pnpm build:firefox:production`
+- run `pnpm build:target:firefox:production`
 - execute [../quality/firefox-manual-verification-checklist.md](../quality/firefox-manual-verification-checklist.md)
 - record the Firefox evidence alongside Chrome DLS evidence
 
@@ -121,6 +121,10 @@ If a change affects both pre-join and in-session behaviors, run both `lobby` and
 - `DETERMINISTIC_TEST_MODE=1` (do not disable unless diagnosing harness issues)
 5. Keep live diagnostics stream enabled (default):
 - `SMOKE_LIVE_DIAGNOSTICS=1`
+6. Audit extension errors in `chrome://extensions` before and after DLS:
+- capture the current error entries for CaptionArc
+- clear them after reading so stale entries do not contaminate the next run
+- treat new post-run errors as blocking until classified
 
 ## Standard Execution Profiles
 
@@ -162,7 +166,7 @@ pnpm chrome:smoke:live:matrix
 - Chrome DLS remains the canonical automated runtime path in this repository.
 - Firefox is still a governed browser target, so runtime-sensitive changes must include Firefox verification evidence even when the runtime flow is manual.
 - Until a canonical Firefox smoke workflow is documented, use [../quality/firefox-manual-verification-checklist.md](../quality/firefox-manual-verification-checklist.md) after producing the Firefox artifact.
-- For packaging or release work, also run `pnpm zip:firefox:production` when the change affects distributable assets.
+- For packaging or release work, also run `pnpm package:target:firefox` when the change affects distributable assets.
 
 ## Runtime Stability Rules
 
@@ -180,7 +184,7 @@ pnpm chrome:smoke:live:matrix
 - uncertainty after targeted runs
  - do not run matrix for module-scoped requests unless explicitly required
 4. Default smoke/runtime path is intentionally single-path:
-- Chrome runtime: `cft-only`
+- Chrome runtime: `system-only`
 - extension load mode: `auto`
 - manual-mode fallback: disabled
 - extension reload fallback hopping: disabled in deterministic mode
@@ -209,6 +213,7 @@ When a test fails:
 - `test-harness` (selector/order/timing/prompt handling)
 - `product regression` (real behavior mismatch)
 3. Report classification explicitly with evidence.
+4. For DLS runs, include whether `chrome://extensions` reported any CaptionArc errors before or after the scenario and whether they were cleared.
 
 ## Reporting Template (Use In Every Thread)
 

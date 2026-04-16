@@ -15,6 +15,7 @@ const ALLOWED_ROOT_MARKDOWN = new Set([
 const ALLOWED_NON_DOC_MARKDOWN_PATTERNS = [
   /^\.github\/copilot-instructions\.md$/u,
   /^\.github\/instructions\/[a-z0-9-]+\.instructions\.md$/u,
+  /^\.secrets\/README\.md$/u,
 ];
 
 const REQUIRED_SECTION_INDEXES = [

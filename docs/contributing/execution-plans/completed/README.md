@@ -9,6 +9,8 @@ Default behavior:
 
 ## Completed Plans
 
+- [2026-04-15-compact-overlay-warning-slot-stability.md](./2026-04-15-compact-overlay-warning-slot-stability.md)
+- [2026-04-15-assistant-instructions-limit-expansion.md](./2026-04-15-assistant-instructions-limit-expansion.md)
 - [2026-04-14-environment-specific-chrome-extension-identity.md](./2026-04-14-environment-specific-chrome-extension-identity.md)
 - [2026-04-14-chrome-keypair-governance-and-secrets-alignment.md](./2026-04-14-chrome-keypair-governance-and-secrets-alignment.md)
 - [2026-04-14-chrome-extension-id-rotation.md](./2026-04-14-chrome-extension-id-rotation.md)

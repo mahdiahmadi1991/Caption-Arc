@@ -7,11 +7,13 @@ START_URL="${2:-about:blank}"
 ADDRESS="${3:-0.0.0.0}"
 CFT_DOWNLOAD_TIMEOUT_MS="${CFT_DOWNLOAD_TIMEOUT_MS:-180000}"
 DETERMINISTIC_TEST_MODE="${DETERMINISTIC_TEST_MODE:-1}"
-AUTO_PROVISION_CFT_BOOL="true"
+AUTO_PROVISION_CFT_BOOL="false"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/chrome/production}"
+EXTENSION_BUILD_MODE="${EXTENSION_BUILD_MODE:-development}"
+EXTENSION_VERSION="${EXTENSION_VERSION:-$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).version)" "$REPO_ROOT/package.json")}"
+EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/v$EXTENSION_VERSION/$EXTENSION_BUILD_MODE/chrome}"
 PS_SCRIPT="$SCRIPT_DIR/windows/start-chrome-remote-debug.ps1"
 
 if [[ -f "$REPO_ROOT/scripts/manual-smoke/load-secrets-env.sh" ]]; then
@@ -23,11 +25,11 @@ fi
 
 if [[ "$DETERMINISTIC_TEST_MODE" != "1" ]]; then
   echo "WARNING: Non-deterministic launch is disabled in this repository."
-  echo "Forcing deterministic single-path launch (cft-only + auto extension load)."
+  echo "Forcing deterministic single-path launch (system-only + auto extension load)."
 fi
 
 EXTENSION_LOAD_MODE="auto"
-CHROME_RUNTIME_MODE="cft-only"
+CHROME_RUNTIME_MODE="system-only"
 
 if ! command -v powershell.exe >/dev/null 2>&1; then
   echo "powershell.exe not found. This script must run from WSL on Windows."
@@ -36,7 +38,7 @@ fi
 
 if [[ ! -d "$EXTENSION_DIR" ]]; then
   echo "Extension build was not found at: $EXTENSION_DIR"
-  echo "Run 'pnpm build:chrome:production' first."
+  echo "Run 'pnpm build:target:chrome:${EXTENSION_BUILD_MODE}' first."
   exit 1
 fi
 

@@ -12,12 +12,14 @@ RELOAD_EXTENSION_IF_RUNNING="${RELOAD_EXTENSION_IF_RUNNING:-0}"
 RELOAD_PROVIDER_TABS="${RELOAD_PROVIDER_TABS:-0}"
 RELOAD_EXTENSION_STRICT="${RELOAD_EXTENSION_STRICT:-0}"
 DETERMINISTIC_TEST_MODE="${DETERMINISTIC_TEST_MODE:-1}"
-DEFAULT_CHROME_RUNTIME_MODE="${CHROME_RUNTIME_MODE:-cft-only}"
-DEFAULT_AUTO_PROVISION_CFT="${AUTO_PROVISION_CFT:-1}"
+DEFAULT_CHROME_RUNTIME_MODE="${CHROME_RUNTIME_MODE:-system-only}"
+DEFAULT_AUTO_PROVISION_CFT="${AUTO_PROVISION_CFT:-0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/chrome/production}"
+EXTENSION_BUILD_MODE="${EXTENSION_BUILD_MODE:-development}"
+EXTENSION_VERSION="${EXTENSION_VERSION:-$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).version)" "$REPO_ROOT/package.json")}"
+EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/v$EXTENSION_VERSION/$EXTENSION_BUILD_MODE/chrome}"
 RELOAD_SCRIPT="$SCRIPT_DIR/reload-extension-runtime.mjs"
 
 check_cdp() {
@@ -32,17 +34,17 @@ launch_runtime() {
 }
 
 if [[ "$DETERMINISTIC_TEST_MODE" == "1" ]]; then
-  DEFAULT_CHROME_RUNTIME_MODE="cft-only"
-  DEFAULT_AUTO_PROVISION_CFT="1"
+  DEFAULT_CHROME_RUNTIME_MODE="system-only"
+  DEFAULT_AUTO_PROVISION_CFT="0"
   RELOAD_EXTENSION_STRICT="1"
 fi
 
 ensure_extension_build() {
   if [[ "$AUTO_BUILD_EXTENSION_ALWAYS" == "1" ]]; then
-    echo "Running Chrome production extension build (AUTO_BUILD_EXTENSION_ALWAYS=1)..."
+    echo "Running Chrome ${EXTENSION_BUILD_MODE} extension build (AUTO_BUILD_EXTENSION_ALWAYS=1)..."
     (
       cd "$REPO_ROOT"
-      pnpm build:chrome:production
+      "pnpm" "build:target:chrome:${EXTENSION_BUILD_MODE}"
     )
     return
   fi
@@ -53,14 +55,14 @@ ensure_extension_build() {
 
   if [[ "$AUTO_BUILD_EXTENSION" != "1" ]]; then
     echo "Extension build missing at: $EXTENSION_DIR"
-    echo "Set AUTO_BUILD_EXTENSION=1 or run: pnpm build:chrome:production"
+    echo "Set AUTO_BUILD_EXTENSION=1 or run: pnpm build:target:chrome:${EXTENSION_BUILD_MODE}"
     return 1
   fi
 
-  echo "Extension build missing. Running pnpm build:chrome:production..."
+  echo "Extension build missing. Running pnpm build:target:chrome:${EXTENSION_BUILD_MODE}..."
   (
     cd "$REPO_ROOT"
-    pnpm build:chrome:production
+    "pnpm" "build:target:chrome:${EXTENSION_BUILD_MODE}"
   )
 }
 
@@ -77,7 +79,7 @@ resolve_staged_extension_dir() {
     return 1
   fi
 
-  printf "%s/CaptionArc/extension/production" "$localappdata_wsl"
+  printf "%s/CaptionArc/extension/%s" "$localappdata_wsl" "$EXTENSION_BUILD_MODE"
 }
 
 sync_staged_extension() {
@@ -171,7 +173,7 @@ if ! command -v powershell.exe >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Auto-starting Chrome debug runtime (single-path: cft-only + auto extension load)..."
+echo "Auto-starting Chrome debug runtime (single-path: system-only + auto extension load)..."
 launch_runtime
 
 if check_cdp; then

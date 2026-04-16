@@ -63,12 +63,13 @@ Rationale:
 
 ### Strict Markdown Boundary Hardening
 
-- removed `.secrets/README.md` to eliminate non-`docs/` markdown exceptions
-- moved local smoke-secret guidance to:
+- local smoke-secret guidance remains canonical in:
   - `docs/setup/local-smoke-secrets.md`
-- updated policy and guardrails so markdown is limited to:
-  - `docs/`
-  - approved root entry docs
+- one targeted non-`docs/` markdown exception is allowed:
+  - `.secrets/README.md`
+- rationale:
+  - the secrets folder now has mode-aware env files and local key material
+  - colocated onboarding reduces accidental mishandling by new threads and local contributors
 
 ### Execution Planning Governance
 

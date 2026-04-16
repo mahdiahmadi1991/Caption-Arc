@@ -17,7 +17,7 @@ Owner approval gate:
 ## Preconditions
 
 1. Project dependencies installed.
-2. Chrome extension build exists at `.release/chrome/production`.
+2. Chromium extension build exists. For Codex-led debugging, prefer `.release/v<version>/development/chrome` by default.
 3. You are running commands from WSL.
 4. Optional but recommended: create `.secrets/smoke.env` from `.secrets/.env.example`.
 
@@ -43,7 +43,7 @@ Template:
 
 Smoke wrappers auto-load this file. If it contains `OPENAI_API_KEY`, it is mapped to `SMOKE_OPENAI_API_KEY` automatically.
 `pnpm chrome:debug` and `scripts/start-windows-chrome-debug.sh` also load this file.
-In deterministic mode (`DETERMINISTIC_TEST_MODE=1`, default), runtime path is forced to a stable single path (`cft-only` + `auto` extension load), so runtime fallback env overrides are ignored.
+In deterministic mode (`DETERMINISTIC_TEST_MODE=1`, default), runtime path is forced to a stable single path (`system-only` + `auto` extension load), so runtime fallback env overrides are ignored.
 
 For policy and security rules, see [local-smoke-secrets.md](./local-smoke-secrets.md).
 
@@ -55,14 +55,27 @@ pnpm chrome:secrets:check
 
 ## Build And Reload Model (Current Default)
 
+Codex debug rule:
+
+1. for normal agent-led UI debugging, build `development`
+2. only use `production` when the task explicitly needs production packaging behavior
+3. never run build and extension reload in parallel
+4. required order is: build -> confirm success -> reload runtime
+
+Preferred debug build command:
+
+```bash
+pnpm build:target:chrome:development
+```
+
 Smoke wrappers now run in stability mode by default:
 
-1. run `pnpm build:chrome:production`
-2. sync build output to `%LOCALAPPDATA%\CaptionArc\extension\production`
+1. run `pnpm build:target:chrome:development`
+2. sync build output to `%LOCALAPPDATA%\CaptionArc\extension\development`
 3. if debug Chrome is already running, reload CaptionArc runtime in-place
 4. if in-place reload is inconclusive, restart runtime in the same deterministic path (`RELOAD_EXTENSION_STRICT=1` in deterministic mode)
 
-Manual command for in-place runtime reload:
+Manual command for in-place runtime reload after a successful build:
 
 ```bash
 pnpm chrome:debug:reload-extension
@@ -76,6 +89,14 @@ Start Windows Chrome from WSL with a dedicated debug profile and extension loade
 pnpm chrome:debug
 ```
 
+If Chrome is not already running in remote-debug mode and you need the equivalent manual Windows launch command, use a placeholder user profile path in docs and examples:
+
+```powershell
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\Users\<windows-user>\.google\ChromeDebugProfile"
+```
+
+Keep the `<windows-user>` segment as a placeholder in committed documentation.
+
 For explicit `reload` semantics (same behavior, clearer intent):
 
 ```bash
@@ -86,30 +107,18 @@ Default behavior:
 
 - remote debugging port: `9222`
 - isolated profile: `%LOCALAPPDATA%\CaptionArc\chrome-cdp-profile`
-- extension source path: `.release/chrome/production`
-- extension staged path (Windows local): `%LOCALAPPDATA%\CaptionArc\extension\production`
+- extension source path: `.release/v<version>/development/chrome`
+- extension staged path (Windows local): `%LOCALAPPDATA%\CaptionArc\extension\development`
 - extension load mode: `auto` (command-line load)
-- chrome runtime mode: `cft-only` (skip unstable system-chrome fallback chain)
+- chrome runtime mode: `system-only` (use Windows Google Chrome directly)
 - deterministic mode: enabled (`DETERMINISTIC_TEST_MODE=1`)
+- launch policy: reuse the existing healthy debug instance first when the expected CDP port is already live; do not open a second Chrome debug browser on top of an already-running debug session
 
-If you need to test the Chrome development artifact instead, build with `pnpm build:chrome:development` and override `EXTENSION_DIR=<repo-root>/.release/chrome/development`.
+For Codex validation work, treat this development artifact as the default choice unless the user explicitly asks for production packaging behavior.
 
 Launch behavior is intentionally single-path and deterministic in this repository.
 Do not use alternative runtime/load fallback modes for acceptance flows.
-
-Automatic provisioning (default):
-
-1. launcher uses Chrome for Testing path
-2. if binary is missing, it is auto-provisioned once
-
-First run can take longer because Chrome for Testing may be downloaded.
-
-Control flags:
-
-```bash
-AUTO_PROVISION_CFT=0 pnpm chrome:debug
-CFT_DOWNLOAD_TIMEOUT_MS=240000 pnpm chrome:debug
-```
+The canonical runtime is the user-owned Windows Google Chrome installation launched with remote debugging enabled.
 
 If extension card is not visible in `chrome://extensions`, relaunch with deterministic defaults:
 
@@ -179,13 +188,13 @@ Expected output includes:
   - `Start an instant meeting`
 - if no real URL is produced, smoke fails with guidance (no synthetic placeholder URL)
 4. verifies content-script injection marker on final page
-5. uses deterministic runtime path (`cft-only` + `auto` extension load) without manual-mode fallback hopping
+5. uses deterministic runtime path (`system-only` + `auto` extension load) without manual-mode fallback hopping
 
 `chrome:smoke:live` behavior:
 
 1. supports all providers: `google-meet`, `microsoft-teams`, `zoom-web`
 2. supports scenarios: `lobby` (`prejoin`), `meeting` (`in-meeting`), and `continuation`
-3. uses existing build by default for speed; stages extension to `%LOCALAPPDATA%\CaptionArc\extension\production`, reloads extension runtime, then runs CDP check
+3. uses existing build by default for speed; stages extension to `%LOCALAPPDATA%\CaptionArc\extension\development`, reloads extension runtime, then runs CDP check
 4. forced rebuild is opt-in with `AUTO_BUILD_EXTENSION_ALWAYS=1` (or `pnpm chrome:smoke:live:fresh`)
 4. deterministic mode keeps a single runtime path (no manual extension-mode rerun)
 5. allows explicit real URLs:
@@ -226,7 +235,7 @@ Google helper commands:
 ```bash
 pnpm chrome:meet:url          # meeting URL helper
 pnpm chrome:meet:url:lobby    # lobby URL helper via landing flow
-pnpm chrome:seed:google:continuation https://meet.google.com/xxx-xxxx-xxx
+pnpm chrome:seed:google:continuation "$GOOGLE_MEET_URL"
 ```
 
 Google overlay settings smoke (visual + asserted):
@@ -276,16 +285,10 @@ Standalone live stream (without running smoke):
 pnpm chrome:debug:diagnostics:stream
 ```
 
-Legacy fallback (not recommended):
-
-```bash
-MEET_ALLOW_SYNTHETIC_FALLBACK=1 pnpm chrome:smoke:live google-meet lobby
-```
-
 Build vs smoke separation:
 
 ```bash
-pnpm build:extension                         # build Chrome production only
+pnpm build:extension                         # build the Chromium production target only
 pnpm chrome:smoke:live google-meet lobby # smoke using current build (fast path)
 pnpm chrome:smoke:live:fresh google-meet lobby # force rebuild + smoke
 pnpm chrome:smoke:google:continuation              # continuation prompt smoke
@@ -328,13 +331,11 @@ Provider-specific defaults:
   - system clipboard fallback (`meet-system-clipboard-fallback`) if it contains a valid Meet URL
 
 2. Microsoft Teams:
-- default fallback URL:
-  - `https://teams.live.com/meet/9365261740667?p=wW30AeA8vzUtAkZRmM`
 - the smoke runner now applies Teams reliability handling automatically:
   - longer wait window
   - controlled auto-refresh retries
   - auto-click for `Continue on this browser` when visible
-- for your own environment, still prefer `TEAMS_URL` override
+- Teams lobby/meeting runs should use `TEAMS_URL` from `.secrets/smoke.env` unless an authenticated Teams target is already open in the debug session
 
 3. Zoom Web:
 - `meeting` flow tries `https://app.zoom.us/wc/home` then clicks `New Meeting`
@@ -345,8 +346,8 @@ Examples:
 ```bash
 pnpm chrome:smoke:live google-meet lobby
 pnpm chrome:smoke:live zoom-web meeting
-TEAMS_URL="https://teams.live.com/meet/9365261740667?p=wW30AeA8vzUtAkZRmM" pnpm chrome:smoke:live microsoft-teams lobby
-ZOOM_URL="https://us05web.zoom.us/j/..." pnpm chrome:smoke:live zoom-web lobby
+TEAMS_URL="$TEAMS_URL" pnpm chrome:smoke:live microsoft-teams lobby
+ZOOM_URL="$ZOOM_URL" pnpm chrome:smoke:live zoom-web lobby
 ```
 
 ## Stop Debug Chrome
@@ -443,7 +444,7 @@ Smoke commands now auto-heal CDP by default:
 
 1. check CDP from WSL
 2. if unavailable, auto-start Windows Chrome debug runtime
-3. enforce deterministic runtime path (`cft-only` + `auto` extension load)
+3. enforce deterministic runtime path (`system-only` + `auto` extension load)
 4. rerun CDP checks and continue smoke
 
 This means manual `pnpm chrome:debug` is usually not required.
@@ -453,3 +454,7 @@ Extension runtime targeting is also automated:
 1. launch script caches resolved extension ID at:
  - `%LOCALAPPDATA%\\CaptionArc\\chrome-cdp-extension-id.txt`
 2. overlay-settings smoke uses cached ID (and deterministic discovery) to open extension UI target automatically.
+
+For direct Windows Chrome data access and read-only storage inspection from WSL, use:
+
+- [windows-chrome-extension-data-access.md](./windows-chrome-extension-data-access.md)

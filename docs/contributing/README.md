@@ -15,4 +15,7 @@
 - [../quality/testing-quality-gate.md](../quality/testing-quality-gate.md)
 - [../quality/testing-onboarding.md](../quality/testing-onboarding.md)
 
+Shared workspace-owned governance standards now live canonically in `CaptionArc-Workspace/docs/contributing/`.
+The local files `execution-plans.md`, `documentation-standards.md`, and `business-documentation-governance.md` remain here as discovery and tooling pointers.
+
 Before PR updates that touch docs, run: `pnpm docs:check` and any required sync checks (`pnpm docs:check:business`, `pnpm docs:check:behavior`).

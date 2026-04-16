@@ -197,6 +197,8 @@ Shipped locale policy:
 
 - do not add a locale to `SupportedUiLocale` until every shipped user-facing namespace has reviewed authored copy
 - parity alone is not sufficient; exact-English leakage in shipped `common.*`, `options.*`, `history.*`, `content.*`, and `popup.*` copy must fail contract tests
+- once a locale is part of the shipped set, any new or changed user-facing key must be updated in every shipped locale catalog in the same change
+- do not treat English and Persian as a privileged subset for routine localization work; they are only two members of the current 12-locale shipped set
 
 ## Suggested API Contract
 
@@ -225,6 +227,11 @@ For settings help popovers:
 - keep field markdown in `options.help.*`
 - write markdown for compact popovers first: short paragraphs, short bullets, and at most one small example
 - when adding a new help entry, add it for every shipped locale in the same change instead of relying on partial follow-up translation
+
+For Cloud Sync and other stateful UI feedback:
+
+- treat success, loading, warning, and recovery copy as user-facing localization work, not as debug-only strings
+- update those state-feedback keys across all shipped locale catalogs whenever the UX wording changes
 
 Non-default locale catalogs may load asynchronously before a surface swaps locale. The surface should keep its previous locale active until the new catalog is ready, then apply `lang`, `dir`, and translated chrome in one transition.
 

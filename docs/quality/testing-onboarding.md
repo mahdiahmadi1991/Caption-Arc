@@ -91,6 +91,12 @@ Detailed runtime onboarding:
 - [references/agent-onboarding-cdp-runtime.md](./references/agent-onboarding-cdp-runtime.md)
 - [../setup/wsl-windows-chrome-cdp-quickstart.md](../setup/wsl-windows-chrome-cdp-quickstart.md)
 
+Before and after every DLS run:
+
+- inspect CaptionArc errors in `chrome://extensions`
+- clear the observed entries after reading them
+- treat new post-run errors as blocking until they are classified and fixed or explicitly owner-approved
+
 ## Step 5: Record Evidence In The Implementation Summary
 
 Required summary content:
@@ -100,6 +106,7 @@ Required summary content:
 3. coverage command execution result for code changes
 4. unresolved test gaps (if any) with explicit owner approval
 5. explicit owner approval for each DLS acceptance run
+6. explicit pre-run and post-run extension-error audit status for each DLS acceptance run
 
 ## CI Enforcement
 

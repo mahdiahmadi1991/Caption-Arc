@@ -19,12 +19,12 @@ The repository now carries a linear `main` history with annotated release tags, 
 
 - This bootstrap was executed locally; hosted pull requests and GitHub Releases were intentionally not created in this workflow.
 - Two early local tag/version mismatches were corrected immediately before any remote publication as part of documented incident recovery during the bootstrap process.
-- Chrome and Firefox production builds remain the governed packaging targets for the repository.
+- Chromium-family and Firefox production targets remain the governed packaging targets for the repository, with Chrome preserved as the canonical automated smoke browser for the Chrome package.
 
 ## Recommended QA Before Release
 
 - `pnpm docs:check`
 - `pnpm test:google`
 - `pnpm test:google:coverage`
-- `pnpm build:chrome:production`
+- `pnpm build:target:chrome:production`
 - `pnpm build:firefox:production`

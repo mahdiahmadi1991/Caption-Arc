@@ -7,6 +7,10 @@ pnpm dev
 pnpm build
 pnpm build:development
 pnpm build:production
+pnpm build:target:chrome:development
+pnpm build:target:chrome:production
+pnpm build:target:firefox:development
+pnpm build:target:firefox:production
 pnpm build:chrome:development
 pnpm build:chrome:production
 pnpm build:firefox:development
@@ -14,21 +18,30 @@ pnpm build:firefox:production
 pnpm build:all:development
 pnpm build:all:production
 pnpm build:extension
+pnpm package
+pnpm package:production
+pnpm package:target:chrome
+pnpm package:target:firefox
 pnpm zip
 pnpm zip:production
 pnpm zip:chrome:production
 pnpm zip:firefox:production
 pnpm zip:all:production
+pnpm release:validate
+pnpm release:prepare
+pnpm release:publish
 ```
 
 Alias notes:
 
-- `pnpm build` -> `pnpm build:all:production`
-- `pnpm build:development` -> `pnpm build:all:development`
-- `pnpm build:production` -> `pnpm build:all:production`
-- `pnpm build:extension` -> `pnpm build:chrome:production`
-- `pnpm zip` -> `pnpm zip:all:production`
-- `pnpm zip:production` -> `pnpm zip:all:production`
+- canonical target commands are `build:target:chrome:*`, `build:target:firefox:*`, `package:target:chrome`, and `package:target:firefox`
+- `pnpm build` -> `pnpm build:targets:production`
+- `pnpm build:development` -> `pnpm build:targets:development`
+- `pnpm build:production` -> `pnpm build:targets:production`
+- `pnpm build:extension` -> `pnpm build:target:chrome:production`
+- `pnpm build:chrome:*` remains as the short-form family of Chrome-target aliases
+- `pnpm package` and `pnpm zip` -> `pnpm package:targets:production`
+- `pnpm release:validate` checks production identity/OAuth config and tag-version alignment before a governed release build
 
 ## Test Commands
 

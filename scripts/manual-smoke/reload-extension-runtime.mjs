@@ -28,6 +28,15 @@ function sleep(ms) {
 }
 
 function readExtensionIdFromCache() {
+  const envCandidate = String(
+    process.env.SMOKE_EXTENSION_ID ||
+      process.env.CAPTIONARC_EXTENSION_ID ||
+      ""
+  ).trim();
+  if (/^[a-z]{32}$/i.test(envCandidate)) {
+    return envCandidate;
+  }
+
   try {
     const result = execSync(
       `powershell.exe -NoProfile -Command "$p='$env:LOCALAPPDATA\\CaptionArc\\chrome-cdp-extension-id.txt'; if (Test-Path $p) { (Get-Content -Path $p -Raw).Trim() }"`,
@@ -250,31 +259,109 @@ async function reloadProviderPages(baseUrl) {
   return providerPages.length;
 }
 
+async function resolveChromeExtensionsTarget(baseUrl) {
+  const targets = await listTargets(baseUrl);
+  return (
+    targets.find(
+      (target) =>
+        target?.type === "page" &&
+        typeof target?.url === "string" &&
+        target.url.startsWith("chrome://extensions")
+    ) || null
+  );
+}
+
+async function reloadFromChromeExtensionsPage({
+  baseUrl,
+  expectedId = null,
+} = {}) {
+  const extensionsPage = await resolveChromeExtensionsTarget(baseUrl);
+  if (!extensionsPage?.webSocketDebuggerUrl) {
+    return null;
+  }
+
+  const result = await evaluateInTarget({
+    webSocketDebuggerUrl: extensionsPage.webSocketDebuggerUrl,
+    awaitPromise: false,
+    delayMs: 120,
+    expression: `(() => {
+      const manager = document.querySelector('extensions-manager');
+      const managerRoot = manager?.shadowRoot || null;
+      const itemList = managerRoot?.querySelector('extensions-item-list');
+      const listRoot = itemList?.shadowRoot || null;
+      const items = Array.from(listRoot?.querySelectorAll('extensions-item') || []);
+      const expectedId = ${JSON.stringify(expectedId)};
+      const pattern = ${extensionNamePattern};
+
+      const normalizedItems = items.map((item) => {
+        const root = item.shadowRoot;
+        return {
+          id: item.getAttribute('id') || null,
+          name: root?.querySelector('#name')?.textContent?.trim() || '',
+          reloadButton:
+            root?.querySelector('#dev-reload-button, [id="dev-reload-button"]') || null,
+        };
+      });
+
+      const matched =
+        normalizedItems.find((item) => expectedId && item.id === expectedId) ||
+        normalizedItems.find((item) => pattern.test(item.name)) ||
+        null;
+
+      if (!matched) {
+        return { ok: false, reason: 'extension-item-not-found' };
+      }
+
+      if (!(matched.reloadButton instanceof HTMLElement)) {
+        return {
+          ok: false,
+          reason: 'reload-button-not-found',
+          id: matched.id,
+          name: matched.name,
+        };
+      }
+
+      matched.reloadButton.click();
+      return {
+        ok: true,
+        id: matched.id,
+        name: matched.name,
+        via: 'chrome://extensions',
+      };
+    })()`,
+  });
+
+  return result?.ok ? result : null;
+}
+
 try {
   const resolved = await resolveCdpEndpoint({ port, waitMs });
   const expectedId = readExtensionIdFromCache();
   const runtime = await resolveRuntimeTarget(resolved.baseUrl, expectedId);
 
-  if (!runtime) {
-    throw new Error(
-      "Could not resolve CaptionArc extension runtime target for reload."
-    );
-  }
-
-  const reloadResult = await evaluateInExtensionTarget({
-    webSocketDebuggerUrl: runtime.target.webSocketDebuggerUrl,
-    expression: `(() => {
-      const id = chrome?.runtime?.id || null;
-      if (!chrome?.runtime?.reload) {
-        return { ok: false, id, error: "chrome.runtime.reload unavailable" };
-      }
-      setTimeout(() => chrome.runtime.reload(), 0);
-      return { ok: true, id };
-    })()`,
-  });
+  const reloadResult = runtime
+    ? await evaluateInExtensionTarget({
+        webSocketDebuggerUrl: runtime.target.webSocketDebuggerUrl,
+        expression: `(() => {
+          const id = chrome?.runtime?.id || null;
+          if (!chrome?.runtime?.reload) {
+            return { ok: false, id, error: "chrome.runtime.reload unavailable" };
+          }
+          setTimeout(() => chrome.runtime.reload(), 0);
+          return { ok: true, id, via: "extension-runtime" };
+        })()`,
+      })
+    : await reloadFromChromeExtensionsPage({
+        baseUrl: resolved.baseUrl,
+        expectedId,
+      });
 
   if (!reloadResult?.ok) {
-    throw new Error(`Extension reload evaluate failed: ${JSON.stringify(reloadResult)}`);
+    throw new Error(
+      runtime
+        ? `Extension reload evaluate failed: ${JSON.stringify(reloadResult)}`
+        : "Could not resolve CaptionArc extension runtime target for reload."
+    );
   }
 
   await sleep(1200);
@@ -283,7 +370,8 @@ try {
   console.log("Extension runtime reload: PASS");
   console.log(`CDP base URL: ${resolved.baseUrl}`);
   console.log(`Extension ID: ${reloadResult.id || runtime.runtimeId || "unknown"}`);
-  console.log(`Manifest: ${runtime.manifestName || "unknown"}`);
+  console.log(`Manifest: ${runtime?.manifestName || reloadResult.name || "unknown"}`);
+  console.log(`Reload path: ${reloadResult.via || "unknown"}`);
   console.log(`Provider tabs reloaded: ${pageReloadCount}`);
 } catch (error) {
   console.error(
