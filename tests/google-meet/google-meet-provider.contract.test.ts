@@ -86,7 +86,7 @@ describe("Google Meet provider contract: URL and context", () => {
 
   test("GM-URL-002: classify meeting code path as meeting", () => {
     const kind = googleMeetProviderInternals.getGoogleMeetPageKind(
-      new URL("https://meet.google.com/abc-defg-hij/")
+      new URL("https://meet.google.com/xxx-xxxx-xxx/")
     );
     expect(kind).toBe("meeting");
   });
@@ -101,7 +101,7 @@ describe("Google Meet provider contract: URL and context", () => {
   test("GM-URL-004: provider URL matcher true for /new and meeting path", () => {
     expect(googleMeetProvider.matchesUrl(new URL("https://meet.google.com/new"))).toBe(true);
     expect(
-      googleMeetProvider.matchesUrl(new URL("https://meet.google.com/abc-defg-hij"))
+      googleMeetProvider.matchesUrl(new URL("https://meet.google.com/xxx-xxxx-xxx"))
     ).toBe(true);
   });
 
@@ -123,7 +123,7 @@ describe("Google Meet provider contract: URL and context", () => {
     setBodyText("ordinary page text");
 
     const value = googleMeetProviderInternals.hasGoogleMeetPageContext(
-      new URL("https://meet.google.com/abc-defg-hij")
+      new URL("https://meet.google.com/xxx-xxxx-xxx")
     );
     expect(value).toBe(false);
   });
@@ -132,7 +132,7 @@ describe("Google Meet provider contract: URL and context", () => {
     document.title = "Meet - Team sync";
 
     const value = googleMeetProviderInternals.hasGoogleMeetPageContext(
-      new URL("https://meet.google.com/abc-defg-hij")
+      new URL("https://meet.google.com/xxx-xxxx-xxx")
     );
     expect(value).toBe(true);
   });
@@ -192,14 +192,14 @@ describe("Google Meet provider contract: presence", () => {
   });
 
   test("GM-PRES-003: joined when leave-call control exists", () => {
-    setPath("/abc-defg-hij");
+    setPath("/xxx-xxxx-xxx");
     addButton({ ariaLabel: "Leave call" });
 
     expect(googleMeetProviderInternals.getGoogleMeetPresence()).toBe("joined");
   });
 
   test("GM-PRES-004: prejoin when context exists without leave-call", () => {
-    setPath("/abc-defg-hij");
+    setPath("/xxx-xxxx-xxx");
     addButton({ text: "Join now" });
 
     expect(googleMeetProviderInternals.getGoogleMeetPresence()).toBe("prejoin");
@@ -321,7 +321,7 @@ describe("Google Meet provider contract: auto-enable captions", () => {
 
 describe("Google Meet provider contract: session metadata", () => {
   test("GM-META-001: metadata includes meeting code, title, source url and provider", () => {
-    setPath("/abc-defg-hij");
+    setPath("/xxx-xxxx-xxx");
 
     const title = document.createElement("div");
     title.setAttribute("data-meeting-title", "Weekly product review");
@@ -331,8 +331,8 @@ describe("Google Meet provider contract: session metadata", () => {
 
     expect(metadata.platform).toBe("google-meet");
     expect(metadata.providerLabel).toBe("Google Meet");
-    expect(metadata.identifiers.meetingCode).toBe("abc-defg-hij");
+    expect(metadata.identifiers.meetingCode).toBe("xxx-xxxx-xxx");
     expect(metadata.title).toBe("Weekly product review");
-    expect(metadata.sourceUrl).toContain("/abc-defg-hij");
+    expect(metadata.sourceUrl).toContain("/xxx-xxxx-xxx");
   });
 });

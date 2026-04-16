@@ -838,9 +838,13 @@ function createCaptionElement(c: Caption): HTMLElement {
   return createElement(
     "div",
     {
-      className: "mc-caption" + (c.source === "chat" ? " mc-chat-caption" : ""),
+      className:
+        "mc-caption" +
+        (c.source === "chat" ? " mc-chat-caption" : "") +
+        (c.own ? " mc-own-caption" : " mc-participant-caption"),
       "data-caption-id": c.id,
       "data-caption-source": c.source || "caption",
+      "data-caption-owner": c.own ? "self" : "participant",
       "data-chat-owner": c.source === "chat" && c.own ? "self" : "participant",
     },
     [metaRow, contentRow, footer]

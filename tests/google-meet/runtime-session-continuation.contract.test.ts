@@ -91,7 +91,7 @@ function createSession(
     schemaVersion: 3,
     platform: "google-meet",
     providerLabel: "Google Meet",
-    meetingUrl: "https://meet.google.com/abc-defg-hij",
+    meetingUrl: "https://meet.google.com/xxx-xxxx-xxx",
     title: "Daily Sync",
     starred: false,
     identifiers: {
@@ -119,7 +119,7 @@ function createContinuationRequest(
   return {
     platform: "google-meet",
     providerLabel: "Google Meet",
-    sourceUrl: "https://meet.google.com/abc-defg-hij",
+    sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
     title: "Daily Sync",
     identifiers: { meetingId: "shared-42" },
     ...overrides,
@@ -132,7 +132,7 @@ function createResolveRequest(
   return {
     platform: "google-meet",
     providerLabel: "Google Meet",
-    sourceUrl: "https://meet.google.com/abc-defg-hij",
+    sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
     title: "Daily Sync",
     identifiers: { meetingId: "shared-42" },
     reusePolicy: "default",
@@ -151,7 +151,7 @@ function createRuntimeProvider(
   const metadata = {
     platform: "google-meet" as const,
     providerLabel: "Google Meet",
-    sourceUrl: "https://meet.google.com/abc-defg-hij",
+    sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
     title: "Daily Sync",
     identifiers: {
       meetingId: "shared-42",
@@ -278,7 +278,7 @@ describe("Runtime session continuation contract", () => {
     const sameUrlFallback = createSession({
       id: "session-url-fallback",
       identifiers: {},
-      meetingUrl: "https://meet.google.com/abc-defg-hij",
+      meetingUrl: "https://meet.google.com/xxx-xxxx-xxx",
       title: "Daily Sync",
       startTime: now - 300_000,
       endTime: now - 120_000,

@@ -24,7 +24,7 @@ Source: `getGoogleMeetPageKind`, `googleMeetProvider.matchesUrl` in [../../entry
 Rules:
 
 1. `getGoogleMeetPageKind(url)` returns `new` only when `url.pathname === "/new"`.
-2. `getGoogleMeetPageKind(url)` returns `meeting` only when the path matches `/<aaa-bbbb-ccc>` with an optional trailing slash.
+2. `getGoogleMeetPageKind(url)` returns `meeting` only when the path matches `/<meeting-code>` with an optional trailing slash.
 3. All other pathnames return `null`.
 4. `googleMeetProvider.matchesUrl(url)` returns `true` only when `getGoogleMeetPageKind(url) !== null`.
 
@@ -137,7 +137,7 @@ Rules:
 2. `providerLabel` is resolved through `getProviderLabel("google-meet")`.
 3. `sourceUrl` is always `window.location.href`.
 4. `title` is read from `[data-meeting-title]` when present.
-5. `identifiers.meetingCode` is extracted only from the `<aaa-bbbb-ccc>` path pattern.
+5. `identifiers.meetingCode` is extracted only from the `<meeting-code>` path pattern.
 
 ## Test Traceability
 

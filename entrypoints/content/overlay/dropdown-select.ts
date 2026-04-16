@@ -24,7 +24,11 @@ type OverlayDropdownConfig = {
 export type OverlayDropdownHandle = {
   element: HTMLElement;
   close: () => void;
-  setValue: (value: string) => void;
+  isOpen: () => boolean;
+  setValue: (
+    value: string,
+    options?: { preserveOpen?: boolean }
+  ) => void;
   setDisabled: (disabled: boolean) => void;
 };
 
@@ -40,6 +44,7 @@ export function createOverlayDropdownSelect(
 
   const label = createElement("span", {
     className: "mc-dropdown-label",
+    dir: "auto",
     textContent:
       config.options.find((option) => option.id === selectedValue)?.name || "",
   });
@@ -72,6 +77,7 @@ export function createOverlayDropdownSelect(
   const close = () => {
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
+    removeOutsidePointerListener();
   };
 
   const open = () => {
@@ -172,6 +178,7 @@ export function createOverlayDropdownSelect(
   config.options.forEach((option) => {
     const optionLabel = createElement("span", {
       className: "mc-dropdown-option-label",
+      dir: "auto",
       textContent: option.name,
     });
 
@@ -196,6 +203,7 @@ export function createOverlayDropdownSelect(
       optionChildren.push(
         createElement("span", {
           className: "mc-dropdown-option-description",
+          dir: "auto",
           textContent: option.description,
         })
       );
@@ -228,9 +236,12 @@ export function createOverlayDropdownSelect(
   return {
     element: root,
     close,
-    setValue: (value: string) => {
+    isOpen: () => root.classList.contains("is-open"),
+    setValue: (value: string, options) => {
       selectedValue = value;
-      close();
+      if (!options?.preserveOpen) {
+        close();
+      }
       syncSelectedState();
     },
     setDisabled: (nextDisabled: boolean) => {

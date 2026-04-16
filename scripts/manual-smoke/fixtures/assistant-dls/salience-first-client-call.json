@@ -1,0 +1,46 @@
+{
+  "id": "salience-first-client-call",
+  "description": "Salience-first profiles react to a risk statement even when it is not phrased as a direct question.",
+  "initialDefaultProfileId": "client_call",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "client_call",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "surface_risks",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "responseTone": "analytical",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "salience_first",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "salience-risk-1",
+      "speaker": "Client",
+      "text": "There is a serious risk that the budget approval slips into next quarter.",
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "serious risk that the budget approval slips into next quarter.",
+    "latestOutputProfileId": "client_call",
+    "latestOutputResponseIntent": "surface_risks",
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

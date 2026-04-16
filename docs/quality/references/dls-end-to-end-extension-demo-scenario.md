@@ -22,8 +22,8 @@ Provide one canonical **Deterministic Live Smoke (DLS)** flow that demonstrates 
 ## Canonical Scenario (Install -> Exit)
 
 1. Build and prepare runtime artifacts:
-   - `pnpm build:chrome:development`
-   - `pnpm build:firefox:development`
+   - `pnpm build:target:chrome:development`
+   - `pnpm build:target:firefox:development`
 2. Reload extension runtime in Chrome:
    - `pnpm chrome:debug:reload`
 3. Run provider DLS scenario:

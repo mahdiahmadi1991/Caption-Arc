@@ -17,8 +17,10 @@ import {
   getOpenAiVerificationSuccessMessage,
 } from "../shared/openai-service";
 import {
+  classifyOpenAiFailure,
   generateChunkWithOpenAI,
   generateWithOpenAI,
+  truncateForDiagnostics,
   type GeneratedTextChunk,
   translateWithOpenAI,
 } from "./providers/openai";
@@ -62,7 +64,8 @@ async function runPromptWithConfiguredProvider(
       lastError = error as Error;
       await translationDiagnosticsLogger.warn("generation_attempt_failed", {
         model,
-        error,
+        failureKind: classifyOpenAiFailure(error),
+        errorMessage: truncateForDiagnostics(String(error), 220),
         retrying: error instanceof RateLimitError,
       });
       if (error instanceof RateLimitError) {
@@ -109,7 +112,8 @@ async function runPromptChunkWithConfiguredProvider(
       lastError = error as Error;
       await translationDiagnosticsLogger.warn("generation_chunk_attempt_failed", {
         model,
-        error,
+        failureKind: classifyOpenAiFailure(error),
+        errorMessage: truncateForDiagnostics(String(error), 220),
         retrying: error instanceof RateLimitError,
       });
       if (error instanceof RateLimitError) {
@@ -164,6 +168,8 @@ export async function generateText(
     await translationDiagnosticsLogger.warn("generation_blocked_configuration", {
       model: settings.model,
       configurationError,
+      verificationStatus: settings.verificationSnapshot?.status || null,
+      verificationMessage: settings.verificationSnapshot?.message || null,
     });
     return {
       success: false,
@@ -190,6 +196,10 @@ export async function generateText(
   } catch (error) {
     void translationDiagnosticsLogger.error("generation_failed", {
       model: settings.model,
+      failureKind: classifyOpenAiFailure(error),
+      verificationStatus: settings.verificationSnapshot?.status || null,
+      verificationMessage: settings.verificationSnapshot?.message || null,
+      errorMessage: truncateForDiagnostics(String(error), 260),
       error,
     });
     await recordOpenAiVerificationFailure(
@@ -226,6 +236,8 @@ export async function generateTextChunk(
     await translationDiagnosticsLogger.warn("generation_chunk_blocked_configuration", {
       model: settings.model,
       configurationError,
+      verificationStatus: settings.verificationSnapshot?.status || null,
+      verificationMessage: settings.verificationSnapshot?.message || null,
     });
     return {
       success: false,
@@ -252,6 +264,10 @@ export async function generateTextChunk(
   } catch (error) {
     await translationDiagnosticsLogger.error("generation_chunk_failed", {
       model: settings.model,
+      failureKind: classifyOpenAiFailure(error),
+      verificationStatus: settings.verificationSnapshot?.status || null,
+      verificationMessage: settings.verificationSnapshot?.message || null,
+      errorMessage: truncateForDiagnostics(String(error), 260),
       error,
     });
     await recordOpenAiVerificationFailure(
@@ -286,6 +302,8 @@ export async function translate(
       requestId: request.id,
       model: settings.model,
       configurationError,
+      verificationStatus: settings.verificationSnapshot?.status || null,
+      verificationMessage: settings.verificationSnapshot?.message || null,
     }, {
       requestId: String(request.id),
     });
@@ -351,7 +369,8 @@ export async function translate(
         requestId: request.id,
         model,
         mode: request.mode,
-        error,
+        failureKind: classifyOpenAiFailure(error),
+        errorMessage: truncateForDiagnostics(String(error), 220),
         retrying: error instanceof RateLimitError,
       }, {
         requestId: String(request.id),
@@ -371,6 +390,10 @@ export async function translate(
   void translationDiagnosticsLogger.error("translation_failed", {
     model: settings.model,
     mode: request.mode,
+    failureKind: classifyOpenAiFailure(lastError),
+    verificationStatus: settings.verificationSnapshot?.status || null,
+    verificationMessage: settings.verificationSnapshot?.message || null,
+    errorMessage: truncateForDiagnostics(String(lastError), 260),
     error: lastError,
   });
 

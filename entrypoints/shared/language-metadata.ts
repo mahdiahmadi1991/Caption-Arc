@@ -3,37 +3,38 @@ export type LanguageDirection = "ltr" | "rtl";
 export type LanguageOption = {
   code: string;
   name: string;
+  nativeName?: string;
   direction: LanguageDirection;
 };
 
 export const LANGUAGE_OPTIONS = [
-  { code: "en", name: "English", direction: "ltr" },
-  { code: "vi", name: "Vietnamese", direction: "ltr" },
-  { code: "fa", name: "Persian", direction: "rtl" },
-  { code: "zh", name: "Chinese", direction: "ltr" },
-  { code: "ja", name: "Japanese", direction: "ltr" },
-  { code: "ko", name: "Korean", direction: "ltr" },
-  { code: "es", name: "Spanish", direction: "ltr" },
-  { code: "fr", name: "French", direction: "ltr" },
-  { code: "de", name: "German", direction: "ltr" },
-  { code: "pt", name: "Portuguese", direction: "ltr" },
-  { code: "ru", name: "Russian", direction: "ltr" },
-  { code: "ar", name: "Arabic", direction: "rtl" },
-  { code: "hi", name: "Hindi", direction: "ltr" },
-  { code: "bn", name: "Bengali", direction: "ltr" },
-  { code: "ur", name: "Urdu", direction: "rtl" },
-  { code: "tl", name: "Filipino", direction: "ltr" },
-  { code: "ta", name: "Tamil", direction: "ltr" },
-  { code: "uk", name: "Ukrainian", direction: "ltr" },
-  { code: "ms", name: "Malay", direction: "ltr" },
-  { code: "sw", name: "Swahili", direction: "ltr" },
-  { code: "te", name: "Telugu", direction: "ltr" },
-  { code: "it", name: "Italian", direction: "ltr" },
-  { code: "th", name: "Thai", direction: "ltr" },
-  { code: "id", name: "Indonesian", direction: "ltr" },
-  { code: "nl", name: "Dutch", direction: "ltr" },
-  { code: "pl", name: "Polish", direction: "ltr" },
-  { code: "tr", name: "Turkish", direction: "ltr" },
+  { code: "en", name: "English", nativeName: "English", direction: "ltr" },
+  { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", direction: "ltr" },
+  { code: "fa", name: "Persian", nativeName: "فارسی", direction: "rtl" },
+  { code: "zh", name: "Chinese", nativeName: "中文", direction: "ltr" },
+  { code: "ja", name: "Japanese", nativeName: "日本語", direction: "ltr" },
+  { code: "ko", name: "Korean", nativeName: "한국어", direction: "ltr" },
+  { code: "es", name: "Spanish", nativeName: "Español", direction: "ltr" },
+  { code: "fr", name: "French", nativeName: "Français", direction: "ltr" },
+  { code: "de", name: "German", nativeName: "Deutsch", direction: "ltr" },
+  { code: "pt", name: "Portuguese", nativeName: "Português", direction: "ltr" },
+  { code: "ru", name: "Russian", nativeName: "Русский", direction: "ltr" },
+  { code: "ar", name: "Arabic", nativeName: "العربية", direction: "rtl" },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी", direction: "ltr" },
+  { code: "bn", name: "Bengali", nativeName: "বাংলা", direction: "ltr" },
+  { code: "ur", name: "Urdu", nativeName: "اردو", direction: "rtl" },
+  { code: "tl", name: "Filipino", nativeName: "Filipino", direction: "ltr" },
+  { code: "ta", name: "Tamil", nativeName: "தமிழ்", direction: "ltr" },
+  { code: "uk", name: "Ukrainian", nativeName: "Українська", direction: "ltr" },
+  { code: "ms", name: "Malay", nativeName: "Bahasa Melayu", direction: "ltr" },
+  { code: "sw", name: "Swahili", nativeName: "Kiswahili", direction: "ltr" },
+  { code: "te", name: "Telugu", nativeName: "తెలుగు", direction: "ltr" },
+  { code: "it", name: "Italian", nativeName: "Italiano", direction: "ltr" },
+  { code: "th", name: "Thai", nativeName: "ไทย", direction: "ltr" },
+  { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", direction: "ltr" },
+  { code: "nl", name: "Dutch", nativeName: "Nederlands", direction: "ltr" },
+  { code: "pl", name: "Polish", nativeName: "Polski", direction: "ltr" },
+  { code: "tr", name: "Turkish", nativeName: "Türkçe", direction: "ltr" },
 ] as const satisfies readonly LanguageOption[];
 
 export type LanguageCode = (typeof LANGUAGE_OPTIONS)[number]["code"];
@@ -63,6 +64,24 @@ export const normalizeLanguageCode = (
 
 export const getLanguageName = (code: string): string => {
   return getLanguageByCode(code)?.name ?? code;
+};
+
+export const getLanguageNativeName = (code: string): string => {
+  const language = getLanguageByCode(code);
+  return language?.nativeName ?? language?.name ?? code;
+};
+
+export const getLanguagePickerDescription = (code: string): string | undefined => {
+  const language = getLanguageByCode(code);
+  if (!language) {
+    return undefined;
+  }
+
+  if (!language.nativeName || language.nativeName === language.name) {
+    return undefined;
+  }
+
+  return language.name;
 };
 
 export const getLanguageDirection = (code: string): LanguageDirection => {

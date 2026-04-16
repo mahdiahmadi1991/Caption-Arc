@@ -55,7 +55,7 @@ function createRuntimeProvider(
     getSessionMetadata: () => ({
       platform: "google-meet",
       providerLabel: "Google Meet",
-      sourceUrl: "https://meet.google.com/abc-defg-hij",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
       identifiers: { meetingId: "shared-42" },
     }),
     getEmptyState: () => ({ waitingTitle: "", waitingBody: "" }),
@@ -371,7 +371,7 @@ describe("Runtime lifecycle contract", () => {
       getSessionMetadata: () => ({
         platform: "google-meet",
         providerLabel: "Google Meet",
-        sourceUrl: "https://meet.google.com/abc-defg-hij",
+        sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
         identifiers: {},
       }),
       getEmptyState: () => ({ waitingTitle: "", waitingBody: "" }),
@@ -379,7 +379,7 @@ describe("Runtime lifecycle contract", () => {
       isCaptioningCurrentlyAvailable: () => false,
     };
 
-    const url = new URL("https://meet.google.com/abc-defg-hij");
+    const url = new URL("https://meet.google.com/xxx-xxxx-xxx");
     expect(platformRuntimeInternals.observeResetPageState(provider, url)).toBe("pending");
     expect(platformRuntimeInternals.observeResetPageState(provider, url)).toBe("pending");
 

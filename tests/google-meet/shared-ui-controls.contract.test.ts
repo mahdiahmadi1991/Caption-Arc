@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { Select } from "../../entrypoints/options/components/select";
+import { TextArea } from "../../entrypoints/options/components/text-area";
 import { Toggle } from "../../entrypoints/options/components/toggle";
 import { DropdownSelect } from "../../entrypoints/shared/dropdown-select";
 import {
@@ -388,6 +389,49 @@ describe("Shared UI controls", () => {
     });
 
     expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+
+    await harness.cleanup();
+  });
+
+  test("UI-CTRL-007: assistant-style textareas enforce and display an 8000 character ceiling", async () => {
+    function Harness() {
+      const [value, setValue] = React.useState("");
+
+      return React.createElement(
+        I18nProvider,
+        { locale: "en" },
+        React.createElement(TextArea, {
+          label: "Assistant instructions",
+          value,
+          onChange: setValue,
+          maxLength: 8000,
+          showCharacterCount: true,
+        })
+      );
+    }
+
+    const harness = await mount(React.createElement(Harness));
+    const textarea = harness.container.querySelector("textarea") as
+      | HTMLTextAreaElement
+      | null;
+
+    expect(textarea).toBeTruthy();
+    expect(textarea?.maxLength).toBe(8000);
+    expect(harness.container.textContent).toContain("0/8000");
+
+    await act(async () => {
+      const nextValue = "a".repeat(8050);
+      const valueSetter = Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value"
+      )?.set;
+      valueSetter?.call(textarea, nextValue);
+      textarea!.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(textarea?.value).toHaveLength(8000);
+    expect(harness.container.textContent).toContain("8000/8000");
 
     await harness.cleanup();
   });

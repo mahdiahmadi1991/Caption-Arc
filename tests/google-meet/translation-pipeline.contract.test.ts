@@ -24,11 +24,15 @@ vi.mock("../../entrypoints/background/settings", () => ({
   recordOpenAiVerificationFailure: recordFailureMock,
 }));
 
-vi.mock("../../entrypoints/background/providers/openai", () => ({
-  generateWithOpenAI: generateWithOpenAIMock,
-  generateChunkWithOpenAI: generateChunkWithOpenAIMock,
-  translateWithOpenAI: translateWithOpenAIMock,
-}));
+vi.mock("../../entrypoints/background/providers/openai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../entrypoints/background/providers/openai")>();
+  return {
+    ...actual,
+    generateWithOpenAI: generateWithOpenAIMock,
+    generateChunkWithOpenAI: generateChunkWithOpenAIMock,
+    translateWithOpenAI: translateWithOpenAIMock,
+  };
+});
 
 import {
   buildTranslationPrompt,

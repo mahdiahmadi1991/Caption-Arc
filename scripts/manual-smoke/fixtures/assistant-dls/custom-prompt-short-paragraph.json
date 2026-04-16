@@ -1,0 +1,53 @@
+{
+  "id": "custom-prompt-short-paragraph",
+  "description": "A custom assistant prompt and short-paragraph format are both honored in the live DLS flow.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "prompt": "Act as a live interview support assistant. Start every answer with the exact prefix 'Sentinel:' and then continue in one short paragraph. Return only the answer content for the rail.",
+          "responseIntent": "answer_for_me",
+          "responseFormat": "short_paragraph",
+          "responseDepth": "standard",
+          "responseTone": "neutral",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "short-q1",
+      "speaker": "Interviewer",
+      "text": "Why do you want to join this company?",
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerText": "Why do you want to join this company?",
+    "latestOutputProfileId": "interview",
+    "latestOutputResponseIntent": "answer_for_me",
+    "latestOutputResponseFormat": "short_paragraph",
+    "latestOutputResponseDepth": "standard",
+    "latestOutputResponseTone": "neutral",
+    "latestOutputDeliveryBias": "balanced",
+    "latestOutputContentIncludes": "Sentinel:",
+    "latestOverlayMinParagraphCount": 1,
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

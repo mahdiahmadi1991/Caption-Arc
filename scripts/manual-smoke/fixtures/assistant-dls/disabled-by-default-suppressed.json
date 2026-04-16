@@ -1,0 +1,44 @@
+{
+  "id": "disabled-by-default-suppressed",
+  "description": "When the active default profile keeps assistant disabled by default, direct interviewer questions do not produce assistant output.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": false,
+          "responseIntent": "answer_for_me",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "responseTone": "confident",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "disabled-q1",
+      "speaker": "Interviewer",
+      "text": "Can you explain your experience with distributed systems?",
+      "settleMs": 2600
+    }
+  ],
+  "expectations": {
+    "outputCount": 0,
+    "overlayCardCount": 0,
+    "liveState": "suppressed",
+    "requireNoOutputs": true,
+    "diagnosticsMessages": [
+      "assistant_pass_suppressed"
+    ],
+    "settleTimeoutMs": 14000
+  }
+}

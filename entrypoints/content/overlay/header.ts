@@ -32,6 +32,10 @@ import {
   resolveThemePreference,
 } from "../../shared/theme";
 import {
+  getLanguageNativeName,
+  getLanguagePickerDescription,
+} from "../../shared/language-metadata";
+import {
   ensurePendingSessionProfileSelection,
   getCurrentSessionSnapshot,
   getPendingSessionPreviewSnapshot,
@@ -74,6 +78,9 @@ const PROFILE_CONTROL_OPEN_MIN_WIDTH = 220;
 const PROFILE_CONTROL_OPEN_MAX_WIDTH = 350;
 let isOverlayTransitioning = false;
 let sessionProfileSelectHandle:
+  | ReturnType<typeof createOverlayDropdownSelect>
+  | null = null;
+let languageSelectHandle:
   | ReturnType<typeof createOverlayDropdownSelect>
   | null = null;
 let sessionProfileRailOpen = false;
@@ -666,7 +673,9 @@ export function syncCompactStatus(): void {
   if (issueEl instanceof HTMLElement) {
     const showIssue = !aiAvailability.operational;
     issueEl.hidden = !showIssue;
-    issueEl.style.display = showIssue ? "" : "none";
+    issueEl.style.removeProperty("display");
+    issueEl.setAttribute("aria-hidden", showIssue ? "false" : "true");
+    issueEl.tabIndex = showIssue ? 0 : -1;
     issueEl.setAttribute(
       "data-tooltip",
       aiAvailability.state === "setup"
@@ -744,28 +753,17 @@ export function syncTranslationDock(): void {
   }
 
   if (langSelect) {
-    langSelect.setAttribute("data-value", settings.targetLanguage);
-    langSelect.classList.remove("is-open");
-    langSelect
-      .querySelector(".mc-dropdown-trigger")
-      ?.setAttribute("aria-expanded", "false");
-
-    const label = langSelect.querySelector(".mc-dropdown-label");
-    if (label) {
-      label.textContent = getLanguageName(settings.targetLanguage);
+    if (languageSelectHandle) {
+      languageSelectHandle.setValue(settings.targetLanguage, {
+        preserveOpen: languageSelectHandle.isOpen(),
+      });
+    } else {
+      langSelect.setAttribute("data-value", settings.targetLanguage);
+      const label = langSelect.querySelector(".mc-dropdown-label");
+      if (label) {
+        label.textContent = getLanguageNativeName(settings.targetLanguage);
+      }
     }
-
-    const options = langSelect.querySelectorAll(".mc-dropdown-option");
-    options.forEach((option) => {
-      option.classList.toggle(
-        "is-selected",
-        option.getAttribute("data-value") === settings.targetLanguage
-      );
-      option.setAttribute(
-        "aria-selected",
-        String(option.getAttribute("data-value") === settings.targetLanguage)
-      );
-    });
   }
 
   if (translateToggle) {
@@ -794,7 +792,7 @@ export function syncTranslationDock(): void {
   }
 }
 
-function createLanguageSelect(): HTMLElement {
+function createLanguageSelect(): ReturnType<typeof createOverlayDropdownSelect> {
   const sortedLanguages = [...LANGUAGES].sort((left, right) =>
     left.name.localeCompare(right.name, "en", { sensitivity: "base" })
   );
@@ -836,11 +834,14 @@ function createLanguageSelect(): HTMLElement {
     value: settings.targetLanguage,
     options: sortedLanguages.map((language) => ({
       id: language.code,
-      name: language.name,
+      name: getLanguageNativeName(language.code),
+      description: getLanguagePickerDescription(language.code),
+      badgeLabel: language.code.toUpperCase(),
+      badgeTone: "neutral",
     })),
     className: "mc-lang-select",
     onChange: (value) => selectLanguage(value),
-  }).element;
+  });
 }
 
 function createTranslationToggle(): HTMLButtonElement {
@@ -1196,6 +1197,7 @@ export function createHeader(): {
           id: "mc-minimized-ai-warning",
           className: "mc-minimized-ai-warning",
           tabindex: "0",
+          "aria-hidden": "true",
           hidden: true,
         },
         [
@@ -1257,7 +1259,7 @@ export function createHeader(): {
       ]),
       createElement("div", { className: "mc-translation-dock-controls" }, [
         createElement("div", { className: "mc-translation-dock-actions" }, [
-          createLanguageSelect(),
+          (languageSelectHandle = createLanguageSelect()).element,
           createTranslationToggle(),
         ]),
       ]),

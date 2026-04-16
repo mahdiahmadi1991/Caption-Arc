@@ -78,6 +78,37 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+.mc-caption.mc-own-caption {
+  border-color: color-mix(in srgb, var(--mc-accent) 26%, var(--mc-border));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--mc-accent-soft) 18%, var(--mc-surface) 82%),
+      color-mix(in srgb, var(--mc-surface) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 26%, transparent),
+    0 10px 28px color-mix(in srgb, var(--mc-accent-soft) 12%, transparent);
+}
+
+.mc-caption.mc-own-caption .mc-speaker {
+  color: color-mix(in srgb, var(--mc-accent) 82%, var(--mc-text));
+}
+
+.mc-caption.mc-own-caption .mc-original {
+  background: color-mix(in srgb, var(--mc-surface) 70%, var(--mc-accent-soft) 30%);
+  border-color: color-mix(in srgb, var(--mc-accent) 16%, transparent);
+}
+
+.mc-caption.mc-own-caption .mc-time,
+.mc-caption.mc-own-caption .mc-session-offset {
+  color: color-mix(in srgb, var(--mc-text-faint) 76%, var(--mc-accent));
+}
+
+.mc-caption.mc-participant-caption {
+  background: color-mix(in srgb, var(--mc-surface) 82%, transparent);
+}
+
 .mc-caption.mc-new {
   animation: mcFadeIn 0.2s ease;
 }

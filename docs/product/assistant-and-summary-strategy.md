@@ -43,6 +43,7 @@ Assistant evaluation is event-driven and policy-aware:
 Primary reference:
 
 - `entrypoints/background/assistant.ts`
+- `docs/quality/assistant-test-strategy.md`
 
 ## Summary Execution Strategy
 
