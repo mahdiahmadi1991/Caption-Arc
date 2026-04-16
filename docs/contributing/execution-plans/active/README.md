@@ -16,3 +16,5 @@ Current plans:
 - [2026-04-14-cross-browser-cloud-sync-parity.md](./2026-04-14-cross-browser-cloud-sync-parity.md)
 - [2026-04-14-license-release-and-public-repo-hardening.md](./2026-04-14-license-release-and-public-repo-hardening.md)
 - [2026-04-14-monetization-readiness-foundation.md](./2026-04-14-monetization-readiness-foundation.md)
+- [2026-04-16-cloud-sync-redesign-and-hardening.md](./2026-04-16-cloud-sync-redesign-and-hardening.md)
+- [2026-04-15-meta-workspace-separate-repos-migration.md](./2026-04-15-meta-workspace-separate-repos-migration.md)

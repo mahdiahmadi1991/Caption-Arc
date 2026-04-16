@@ -81,5 +81,6 @@ Do not localize:
 ## Guardrails Required By This Inventory
 
 - `tests/google-meet/ui-i18n.contract.test.ts`: shipped locale inventory, fallback, catalog-shape parity, representative deep-key localization, and suspicious-English leakage detection
+- Cloud Sync runtime feedback such as connect, disconnect, retry, reconnect, and refresh success or hint copy must remain explicitly authored across the full shipped locale set instead of silently falling back to English
 - `tests/google-meet/diagnostics-i18n-boundary.contract.test.ts`: explicit logger-only runtime module boundary for background and content diagnostics producers
 - `tests/google-meet/popup-i18n-runtime-detail.contract.test.ts`: runtime-detail preservation in popup UI

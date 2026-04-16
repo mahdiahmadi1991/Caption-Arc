@@ -895,14 +895,6 @@ async function resolveFromMeetLanding(baseUrl, probeDelayMs) {
   return null;
 }
 
-function fallbackSyntheticMeetingUrl() {
-  return {
-    url: "https://meet.google.com/aaa-bbbb-ccc",
-    source: "synthetic-meeting-shape",
-    note: "Fallback to a valid Meet meeting URL shape for content-script smoke checks.",
-  };
-}
-
 export async function resolveGoogleMeetUrl({
   baseUrl,
   targets = [],
@@ -955,10 +947,6 @@ export async function resolveGoogleMeetUrl({
     }
   } catch {
     // Continue to fallback strategy.
-  }
-
-  if (process.env.MEET_ALLOW_SYNTHETIC_FALLBACK === "1") {
-    return fallbackSyntheticMeetingUrl();
   }
 
   throw new Error(
@@ -1016,14 +1004,6 @@ export async function resolveGoogleMeetLobbyUrl({
     } catch {
       // Continue to next attempt.
     }
-  }
-
-  if (process.env.MEET_ALLOW_SYNTHETIC_FALLBACK === "1") {
-    return {
-      url: "https://meet.google.com/aaa-bbbb-ccc",
-      source: "meet-landing-fallback-shape",
-      note: "Landing flow did not return a concrete URL. Falling back to meeting URL shape.",
-    };
   }
 
   const clipboardCandidate = extractMeetingUrlFromText(readSystemClipboardRaw());

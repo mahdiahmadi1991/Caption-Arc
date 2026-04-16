@@ -44,9 +44,11 @@ Desktop-native meeting clients are not supported.
 
 ### Browser Support Notes
 
-- Chrome and Firefox are the governed browser builds for CaptionArc.
-- Core caption capture, translation, summaries, history, and settings surfaces are supported on both browser builds.
-- Optional Google Drive App Data and OneDrive App Folder sync are currently available on Chrome builds and intentionally unavailable on Firefox builds until the required browser identity flows are verified.
+- CaptionArc ships a Chromium-family package and a Firefox package.
+- The Chromium-family package is intended for Chrome and compatible Chromium browsers such as Edge, Brave, Opera, and Vivaldi when their extension-store or unpacked-install policies allow it.
+- Chrome remains the canonical automated verification browser for the Chromium-family package.
+- Core caption capture, translation, summaries, history, and settings surfaces are supported on both release targets.
+- Optional Google Drive App Data and OneDrive App Folder sync require the correct browser-targeted OAuth and extension identity configuration for the submitted build.
 
 ### Data And Privacy Summary
 

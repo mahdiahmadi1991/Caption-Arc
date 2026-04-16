@@ -14,6 +14,7 @@
 - [event-ingestion-behavior-contract.md](./event-ingestion-behavior-contract.md)
 - [overlay-behavior-contract.md](./overlay-behavior-contract.md)
 - [assistant-runtime-behavior-contract.md](./assistant-runtime-behavior-contract.md)
+- [assistant-generation-behavior-contract.md](./assistant-generation-behavior-contract.md)
 - [meeting-summary-pipeline-behavior-contract.md](./meeting-summary-pipeline-behavior-contract.md)
 - [translation-pipeline-behavior-contract.md](./translation-pipeline-behavior-contract.md)
 - [cloud-sync-behavior-contract.md](./cloud-sync-behavior-contract.md)

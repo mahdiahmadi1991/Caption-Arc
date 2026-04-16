@@ -5,7 +5,8 @@
 - Treat this repository as public. Never add secrets, tokens, private URLs, local machine details, personal usernames, or absolute system paths to code comments, docs, examples, screenshots, logs, or generated files.
 - Use repository evidence as the source of truth. Derive commands, architecture notes, feature descriptions, and workflows from the actual codebase, config, and CI scripts.
 - Keep documentation changes scoped, reviewable, and consistent with the existing repository style.
-- High-priority UI validation rule: after any code change that needs user visual/UI verification, always produce fresh development builds for both governed browsers without waiting for the user to ask. The expected handoff is that the user only needs to reload the Chrome and Firefox extension builds in the browser and test the updated UI.
+- High-priority no-migration rule: this repository has no real release/deployment history yet, so do not introduce migration code, compatibility fallbacks, dual-write storage, legacy aliases, legacy-path discovery, or backward-compatibility scaffolding unless the repository owner explicitly asks for that mechanism in the current thread.
+- High-priority UI validation rule: after any code change that needs user visual/UI verification, always produce fresh development builds for both governed release targets without waiting for the user to ask. The expected handoff is that the user only needs to reload the Chromium and Firefox extension builds in the browser and test the updated UI.
 
 ## Repository governance
 
@@ -41,12 +42,14 @@ When adding or changing dependencies, check `package.json` first and prefer exis
 - The canonical location for project documentation is `docs/`.
 - Do not create ad hoc markdown files in random directories unless the document must live next to code for a strong repo-specific reason.
 - Keep root-level markdown limited to repository entry-point files such as `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and this `AGENTS.md`.
+- The only approved non-`docs/` folder-level markdown exception is `.secrets/README.md` for local secret-handling onboarding.
 - Every documentation section under `docs/` must have a `README.md` index file.
 - Use lowercase kebab-case file names for docs.
 - Use relative links and fix broken links when moving or editing docs.
 - Prefer one canonical document per topic. Merge duplicates instead of preserving competing sources of truth.
 - Keep `docs/features/plans/` lightweight (pointer/index only). Move long plans to `docs/archive/feature-plans/`.
 - When behavior, architecture, setup, permissions, storage, messaging, release flow, or testing changes, update the relevant docs in the same change.
+- When user-facing localization changes land under `entrypoints/shared/i18n/messages/`, update every shipped locale catalog in the same change. Do not stop at `en` and `fa` unless a temporary exception is explicitly documented in an active Execution Plan.
 - Follow detailed standards in `docs/contributing/documentation-standards.md`.
 - Follow business-doc update governance in `docs/contributing/business-documentation-governance.md`.
 - Follow behavior-contract governance in `docs/contributing/behavior-contract-governance.md`.
@@ -65,7 +68,7 @@ When adding or changing dependencies, check `package.json` first and prefer exis
 - Completed or superseded plans move to `docs/contributing/execution-plans/completed/`.
 - Docs-only updates do not require an Execution Plan by default unless explicitly requested by the repository owner or required by the planning standard.
 - Do not start meaningful implementation on plan-required code/behavior work before the relevant plan exists.
-- Plans that touch browser APIs, runtime behavior, permissions, packaging, or release flow must explicitly state Chrome and Firefox impact, any intentional browser gating, and the verification evidence required for both browsers.
+- Plans that touch browser APIs, runtime behavior, permissions, packaging, or release flow must explicitly state Chromium-family and Firefox impact, any intentional browser gating, and the verification evidence required for both release targets.
 
 ## Required `docs/` layout
 
@@ -139,11 +142,12 @@ For changes affecting overlay behavior, provider detection, runtime lifecycle, o
 - reload runtime before smoke passes: `pnpm chrome:debug:reload`
 - use the canonical smoke convention: **Deterministic Live Smoke (DLS)**
 - DLS command shape: `pnpm chrome:smoke:live <provider> <scenario>`
-- launch/runtime path is single-path only: `cft-only + auto` (no runtime/load fallback hopping)
+- launch/runtime path is single-path only: `system-only + auto` (no runtime/load fallback hopping)
 - prefer runtime-resolved smoke flow: `pnpm chrome:smoke:meet`
 - run provider-level validation when shared behavior may be impacted: `pnpm chrome:smoke:live <provider> <scenario>` or `pnpm chrome:smoke:live:matrix`
 - follow deterministic test protocol: `DETERMINISTIC_TEST_MODE=1` (single runtime path, no fallback hopping)
 - follow thread protocol from `docs/setup/agent-testing-onboarding.md`
+- in DLS flows, audit CaptionArc errors from `chrome://extensions` before and after the smoke run, clear them after reading, and treat newly introduced post-run errors as blocking until classified or fixed
 
 For implementation work that adds or changes logging or diagnostics:
 
@@ -158,7 +162,7 @@ For implementation work that adds or changes logging or diagnostics:
 ## Testing completion gate
 
 - A feature, fix, or improvement is not complete until required tests are added or updated and validation commands pass.
-- For UI-affecting changes that require user visual verification, always run both governed browser development builds as part of completion so the extension is ready to reload locally in Chrome and Firefox without an extra user prompt.
+- For UI-affecting changes that require user visual verification, always run both governed development builds as part of completion so the extension is ready to reload locally in a Chromium-based browser and Firefox without an extra user prompt.
 - For code changes, run:
   - `pnpm test:google`
   - `pnpm test:google:coverage`

@@ -4,18 +4,52 @@ import tailwindcss from "@tailwindcss/vite";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+const packageJson = JSON.parse(
+  readFileSync(path.resolve(process.cwd(), "package.json"), "utf8")
+) as {
+  version?: string;
+};
+const packageVersion = String(packageJson.version || "0.0.0").trim() || "0.0.0";
+
+const resolveBuildMode = (): "development" | "production" => {
+  const modeFromEnv = process.env.WXT_BUILD_MODE?.trim().toLowerCase();
+  if (modeFromEnv === "development" || modeFromEnv === "production") {
+    return modeFromEnv;
+  }
+
+  const modeFlagIndex = process.argv.findIndex((entry) => entry === "--mode");
+  const modeFromArg = process.argv[modeFlagIndex + 1]?.trim().toLowerCase();
+  if (modeFromArg === "development" || modeFromArg === "production") {
+    return modeFromArg;
+  }
+
+  const commandArgs = process.argv.slice(2).map((entry) => entry.trim().toLowerCase());
+  if (commandArgs.includes("build") || commandArgs.includes("zip")) {
+    return "production";
+  }
+
+  return "development";
+};
+
+const buildMode = resolveBuildMode();
+
+const getConfigEnvFiles = (mode: "development" | "production") =>
+  Array.from(
+    new Set([
+      `.secrets/.env.${mode}.local`,
+      ".secrets/.env.local",
+      `.secrets/.env.${mode}`,
+      ".secrets/.env",
+    ])
+  );
+
 const readConfigEnv = (name: string) => {
   const existingValue = process.env[name]?.trim();
   if (existingValue) {
     return existingValue;
   }
 
-  for (const fileName of [
-    ".secrets/.env.local",
-    ".secrets/.env",
-    ".env.local",
-    ".env",
-  ]) {
+  for (const fileName of getConfigEnvFiles(buildMode)) {
     const filePath = path.resolve(process.cwd(), fileName);
     if (!existsSync(filePath)) {
       continue;
@@ -44,33 +78,113 @@ const readConfigEnv = (name: string) => {
   return undefined;
 };
 
-const resolveBuildMode = (): "development" | "production" => {
-  const modeFromEnv = process.env.WXT_BUILD_MODE?.trim().toLowerCase();
-  if (modeFromEnv === "development" || modeFromEnv === "production") {
-    return modeFromEnv;
+const readFirstConfigEnv = (...names: string[]): string | undefined => {
+  for (const name of names) {
+    const value = readConfigEnv(name);
+    if (value) {
+      return value;
+    }
   }
 
-  const modeFlagIndex = process.argv.findIndex((entry) => entry === "--mode");
-  const modeFromArg = process.argv[modeFlagIndex + 1]?.trim().toLowerCase();
-  if (modeFromArg === "development" || modeFromArg === "production") {
-    return modeFromArg;
-  }
-
-  const commandArgs = process.argv.slice(2).map((entry) => entry.trim().toLowerCase());
-  if (commandArgs.includes("build") || commandArgs.includes("zip")) {
-    return "production";
-  }
-
-  return "development";
+  return undefined;
 };
 
-const buildMode = resolveBuildMode();
-const googleOauthClientId = readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID");
+const resolveBrowserTarget = (): "chrome" | "firefox" => {
+  const browserFlagIndexes = process.argv.flatMap((entry, index) =>
+    entry === "--browser" || entry === "-b" ? [index] : []
+  );
+
+  for (const index of browserFlagIndexes) {
+    const browserFromArg = process.argv[index + 1]?.trim().toLowerCase();
+    if (browserFromArg === "chrome" || browserFromArg === "firefox") {
+      return browserFromArg;
+    }
+  }
+
+  return "chrome";
+};
+const browserTarget = resolveBrowserTarget();
+const defaultFirefoxExtensionId =
+  buildMode === "development"
+    ? "development@captionarc.invalid"
+    : "production@captionarc.invalid";
+const resolveBrowserScopedConfig = (options: {
+  chrome?: string;
+  firefox?: string;
+  fallback?: string;
+}) =>
+  browserTarget === "firefox"
+    ? options.firefox || options.fallback
+    : options.chrome || options.fallback;
+const googleOauthClientId = resolveBrowserScopedConfig({
+  chrome: readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME"),
+  firefox: readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX"),
+  fallback: readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID"),
+});
+const googleOauthClientIdChrome =
+  readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME") || "";
+const googleOauthClientIdFirefox =
+  readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX") || "";
+const googleOauthClientSecretShared =
+  readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_SECRET") || "";
+const googleOauthClientSecretChrome =
+  readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_SECRET_CHROME") || "";
+const googleOauthClientSecretFirefox =
+  readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_SECRET_FIREFOX") || "";
+const microsoftOauthClientIdShared =
+  readConfigEnv("WXT_MICROSOFT_OAUTH_CLIENT_ID") || "";
+const microsoftOauthClientIdChrome =
+  readConfigEnv("WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME") || "";
+const microsoftOauthClientIdFirefox =
+  readConfigEnv("WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX") || "";
+const microsoftOauthTenant =
+  readConfigEnv("WXT_MICROSOFT_OAUTH_TENANT") || "";
+const cloudSyncRuntimeEnvDefine = {
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID": JSON.stringify(
+    readConfigEnv("WXT_GOOGLE_OAUTH_CLIENT_ID") || ""
+  ),
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME": JSON.stringify(
+    googleOauthClientIdChrome
+  ),
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX": JSON.stringify(
+    googleOauthClientIdFirefox
+  ),
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_SECRET": JSON.stringify(
+    googleOauthClientSecretShared
+  ),
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_SECRET_CHROME": JSON.stringify(
+    googleOauthClientSecretChrome
+  ),
+  "import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_SECRET_FIREFOX": JSON.stringify(
+    googleOauthClientSecretFirefox
+  ),
+  "import.meta.env.WXT_MICROSOFT_OAUTH_CLIENT_ID": JSON.stringify(
+    microsoftOauthClientIdShared
+  ),
+  "import.meta.env.WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME": JSON.stringify(
+    microsoftOauthClientIdChrome
+  ),
+  "import.meta.env.WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX": JSON.stringify(
+    microsoftOauthClientIdFirefox
+  ),
+  "import.meta.env.WXT_MICROSOFT_OAUTH_TENANT": JSON.stringify(
+    microsoftOauthTenant
+  ),
+};
 const chromeExtensionManifestKey =
   (buildMode === "development"
     ? readConfigEnv("WXT_CHROME_EXTENSION_KEY_DEVELOPMENT")
     : readConfigEnv("WXT_CHROME_EXTENSION_KEY_PRODUCTION")) ||
   readConfigEnv("WXT_CHROME_EXTENSION_KEY");
+const firefoxExtensionId = resolveBrowserScopedConfig({
+  chrome: undefined,
+  firefox:
+    (buildMode === "development"
+      ? readConfigEnv("WXT_FIREFOX_EXTENSION_ID_DEVELOPMENT")
+      : readConfigEnv("WXT_FIREFOX_EXTENSION_ID_PRODUCTION")) ||
+    readConfigEnv("WXT_FIREFOX_EXTENSION_ID") ||
+    defaultFirefoxExtensionId,
+});
 const meetingHostPermissions = [
   "https://meet.google.com/*",
   "https://teams.microsoft.com/l/meetup-join/*",
@@ -98,24 +212,35 @@ const meetingWebAccessibleMatches = [
 ] as const;
 
 export default defineConfig({
-  outDir: ".release",
-  outDirTemplate: "{{browser}}/{{mode}}",
+  outDir: `.release/v${packageVersion}`,
+  outDirTemplate: `${buildMode}/${browserTarget}`,
   zip: {
-    artifactTemplate:
-      "{{browser}}/{{mode}}/{{name}}-{{version}}-{{browser}}.zip",
-    sourcesTemplate:
-      "{{browser}}/{{mode}}/{{name}}-{{version}}-{{browser}}-sources.zip",
+    artifactTemplate: `{{name}}-{{version}}-${browserTarget}.zip`,
+    sourcesTemplate: `{{name}}-{{version}}-${browserTarget}-sources.zip`,
   },
   vite: () => ({
     plugins: [react(), tailwindcss()],
+    define: cloudSyncRuntimeEnvDefine,
+    build: {
+      chunkSizeWarningLimit: 600,
+    },
   }),
   manifest: {
     name: "CaptionArc",
     description: "Capture and translate browser meeting captions in real-time",
-    version: "1.3.0",
-    ...(chromeExtensionManifestKey
+    version: packageVersion,
+    ...(browserTarget === "chrome" && chromeExtensionManifestKey
       ? {
           key: chromeExtensionManifestKey,
+        }
+      : {}),
+    ...(browserTarget === "firefox" && firefoxExtensionId
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: firefoxExtensionId,
+            },
+          },
         }
       : {}),
     permissions: ["storage", "identity", "alarms", "notifications"],
@@ -127,7 +252,7 @@ export default defineConfig({
       "https://graph.microsoft.com/*",
       "https://login.microsoftonline.com/*",
     ],
-    ...(googleOauthClientId
+    ...(browserTarget === "chrome" && googleOauthClientId
       ? {
           oauth2: {
             client_id: googleOauthClientId,

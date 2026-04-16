@@ -30,20 +30,20 @@ Diagnostics notes:
 ## Environment Build Commands
 
 ```bash
-pnpm build:chrome:development
-pnpm build:chrome:production
-pnpm build:firefox:development
-pnpm build:firefox:production
-pnpm zip:chrome:production
-pnpm zip:firefox:production
+pnpm build:target:chrome:development
+pnpm build:target:chrome:production
+pnpm build:target:firefox:development
+pnpm build:target:firefox:production
+pnpm package:target:chrome
+pnpm package:target:firefox
 ```
 
 Build notes:
 
-- `pnpm build` and `pnpm zip` now resolve to the all-browser production flow
+- `pnpm build` and `pnpm package` / `pnpm zip` now resolve to the all-target production flow
 - `pnpm build:extension` remains the Chrome production alias used by Chrome runtime tooling
-- build artifacts now coexist under `.release/chrome/<mode>` and `.release/firefox/<mode>` so browser and environment builds do not overwrite each other
-- Chrome debug and smoke scripts default to `.release/chrome/production` unless `EXTENSION_DIR` is overridden explicitly
+- build artifacts now coexist under `.release/v<version>/<mode>/chrome` and `.release/v<version>/<mode>/firefox` so target and environment builds do not overwrite each other
+- Chrome debug and smoke scripts default to `.release/v<version>/production/chrome` unless `EXTENSION_DIR` is overridden explicitly
 - production builds use the production environment diagnostics policy, so captured diagnostics stay off unless the production environment config is intentionally changed
 
 ## Smoke Commands

@@ -1,6 +1,6 @@
 # Extension Runtime Model
 
-CaptionArc runs as a browser extension with Chrome and Firefox build targets plus distinct runtime surfaces:
+CaptionArc runs as a browser extension with Chromium-family and Firefox governed release targets plus distinct runtime surfaces:
 
 - `entrypoints/background/*`: background service worker orchestration.
 - `entrypoints/content/*`: in-page capture, overlay, and provider adapters.
@@ -38,5 +38,6 @@ Shared runtime chooses provider behavior through the provider registry and platf
 
 - extension-page runtime detection recognizes both `chrome-extension:` and `moz-extension:` protocols when resolving shared UI runtime context.
 - diagnostics persistence prefers `chrome.storage.session` and falls back to `chrome.storage.local` when session storage is unavailable on the current browser target.
-- optional cloud sync providers are browser-gated at runtime; Google Drive and OneDrive remain enabled on Chrome-family builds and are explicitly blocked on Firefox until the required identity flows are browser-verified.
-- removing a temporary Firefox capability gate requires browser-specific verification evidence and corresponding documentation updates to the compatibility and release guidance.
+- optional cloud sync providers are gated by browser-targeted OAuth configuration and runtime verification evidence, not by a simplistic product-version split.
+- Chromium-family packaging is intended for Chrome and compatible Chromium browsers, while Chrome remains the canonical automated smoke/runtime-validation browser for that package.
+- removing or tightening a browser-targeted capability gate requires corresponding verification evidence and matching compatibility and release-doc updates.

@@ -17,6 +17,15 @@ export function parseTargetExtensionId(urlValue) {
 }
 
 export function readExtensionIdFromCache() {
+  const envCandidate = String(
+    process.env.SMOKE_EXTENSION_ID ||
+      process.env.CAPTIONARC_EXTENSION_ID ||
+      ""
+  ).trim();
+  if (/^[a-z]{32}$/i.test(envCandidate)) {
+    return envCandidate;
+  }
+
   try {
     const result = execSync(
       `powershell.exe -NoProfile -Command "$p='$env:LOCALAPPDATA\\CaptionArc\\chrome-cdp-extension-id.txt'; if (Test-Path $p) { (Get-Content -Path $p -Raw).Trim() }"`,

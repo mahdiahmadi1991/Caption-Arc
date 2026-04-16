@@ -14,6 +14,7 @@
 - [event-ingestion-traceability-matrix.md](./event-ingestion-traceability-matrix.md)
 - [overlay-traceability-matrix.md](./overlay-traceability-matrix.md)
 - [assistant-runtime-traceability-matrix.md](./assistant-runtime-traceability-matrix.md)
+- [assistant-generation-traceability-matrix.md](./assistant-generation-traceability-matrix.md)
 - [meeting-summary-pipeline-traceability-matrix.md](./meeting-summary-pipeline-traceability-matrix.md)
 - [translation-pipeline-traceability-matrix.md](./translation-pipeline-traceability-matrix.md)
 - [cloud-sync-traceability-matrix.md](./cloud-sync-traceability-matrix.md)

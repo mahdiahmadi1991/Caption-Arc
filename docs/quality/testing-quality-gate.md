@@ -77,6 +77,9 @@ Deterministic execution policy:
 - keep `DETERMINISTIC_TEST_MODE=1` for default smoke execution
 - avoid multi-fallback runtime chains for acceptance runs
 - if deterministic mode is disabled for diagnosis, restore it before final acceptance evidence
+- every DLS run must audit CaptionArc errors in `chrome://extensions` before and after the scenario
+- clear observed extension errors after reading them so stale entries do not contaminate the next run
+- treat newly introduced post-run extension errors as blocking until classified and fixed or explicitly owner-approved as environment noise
 
 ### Documentation-Only Changes
 
@@ -142,3 +145,4 @@ For runtime-sensitive module work, done means:
 4. evidence is recorded with exact commands and outcomes
 5. runtime-sensitive acceptance evidence uses DLS (`chrome:smoke:live*`) unless an explicit diagnostic exception is recorded
 6. each DLS acceptance run includes explicit repository-owner visual approval in the same thread
+7. each DLS acceptance run records the pre-run and post-run `chrome://extensions` error audit result and whether entries were cleared

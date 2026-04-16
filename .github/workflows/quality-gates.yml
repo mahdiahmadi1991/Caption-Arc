@@ -64,7 +64,7 @@ jobs:
         run: pnpm test:google:coverage
 
       - name: Build Chrome production artifact
-        run: pnpm build:chrome:production
+        run: pnpm build:target:chrome:production
 
       - name: Build Firefox production artifact
-        run: pnpm build:firefox:production
+        run: pnpm build:target:firefox:production

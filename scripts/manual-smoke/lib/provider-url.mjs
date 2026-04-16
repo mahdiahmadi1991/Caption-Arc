@@ -16,8 +16,6 @@ const SUPPORTED_SCENARIOS = [
   "journey",
   "lifecycle",
 ];
-const DEFAULT_TEAMS_URL =
-  "https://teams.live.com/meet/9365261740667?p=wW30AeA8vzUtAkZRmM";
 const ZOOM_RESOLVE_DEBUG = process.env.SMOKE_VERBOSE_ZOOM_RESOLVE === "1";
 
 function logZoomResolve(stage, data = null) {
@@ -173,14 +171,11 @@ function pickExistingTarget(provider, targets) {
 }
 
 function resolveTeamsFallbackUrl(scenario) {
-  return {
-    url: DEFAULT_TEAMS_URL,
-    source: "teams-default-live-url",
-    note:
-      scenario === "meeting"
-        ? "Using default Teams live meeting URL. Override with TEAMS_URL for your own meeting context."
-        : "Using default Teams live URL for lobby/prejoin checks. Override with TEAMS_URL for your own lobby URL.",
-  };
+  throw new Error(
+    scenario === "meeting"
+      ? "Teams smoke requires a real meeting URL from .secrets/smoke.env or the active debug session. Set TEAMS_URL or open an authenticated Teams meeting tab first."
+      : "Teams smoke requires a real prejoin URL from .secrets/smoke.env or the active debug session. Set TEAMS_URL or open an authenticated Teams lobby tab first."
+  );
 }
 
 function resolveZoomFallbackUrl(scenario) {
@@ -1024,22 +1019,6 @@ function resolveExplicitUrlForProvider(provider) {
   };
 }
 
-function resolveGoogleFallbackUrl(scenario) {
-  if (scenario === "lobby") {
-    return {
-      url: "https://meet.google.com/new",
-      source: "google-lobby-route",
-      note: "Using Google Meet prejoin route.",
-    };
-  }
-
-  return {
-    url: "https://meet.google.com/aaa-bbbb-ccc",
-    source: "google-fallback-meeting-shape",
-    note: "Fallback to Google Meet meeting URL shape.",
-  };
-}
-
 export async function resolveProviderScenarioUrl({
   provider,
   scenario,
@@ -1201,10 +1180,14 @@ export async function resolveProviderScenarioUrl({
       };
     }
 
+    const meet = await resolveGoogleMeetUrl({
+      baseUrl,
+      targets,
+    });
     return {
       provider: normalizedProvider,
       scenario: normalizedScenario,
-      ...resolveGoogleFallbackUrl(normalizedScenario),
+      ...meet,
     };
   }
 

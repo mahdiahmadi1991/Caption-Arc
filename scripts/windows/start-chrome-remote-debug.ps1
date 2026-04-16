@@ -8,13 +8,13 @@ param(
 
   [string]$ProfileDir = "$env:LOCALAPPDATA\CaptionArc\chrome-cdp-profile",
 
-  [string]$StagedExtensionDir = "$env:LOCALAPPDATA\CaptionArc\extension\production",
+  [string]$StagedExtensionDir = "$env:LOCALAPPDATA\CaptionArc\extension\development",
 
   [ValidateSet("auto", "manual")]
   [string]$ExtensionLoadMode = "auto",
 
   [ValidateSet("auto", "cft-only", "system-only")]
-  [string]$ChromeRuntimeMode = "cft-only",
+  [string]$ChromeRuntimeMode = "system-only",
 
   [string]$ChromeExecutablePath = "",
 
@@ -158,6 +158,15 @@ function Stop-DebugChromeProcesses {
   }
 }
 
+function Get-DebugChromeProcesses {
+  param([string]$ProfileDirectory)
+
+  return @(
+    Get-CimInstance Win32_Process -Filter "name='chrome.exe'" |
+      Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDirectory) }
+  )
+}
+
 function Build-ChromeArguments {
   param(
     [int]$Port,
@@ -212,6 +221,18 @@ function Wait-ForCdpReady {
   }
 
   throw "Chrome launch verification failed. CDP endpoint is not reachable at $baseUrl. Last error: $lastError"
+}
+
+function Test-CdpReady {
+  param([int]$Port)
+
+  $baseUrl = "http://127.0.0.1:$Port/json/version"
+  try {
+    $null = Invoke-RestMethod -Method Get -Uri $baseUrl -TimeoutSec 2
+    return $true
+  } catch {
+    return $false
+  }
 }
 
 function Resolve-LoadedExtensionId {
@@ -451,9 +472,29 @@ function Launch-DebugChrome {
     [int]$StartupWaitMs
   )
 
-  Stop-DebugChromeProcesses -ProfileDirectory $ProfileDirectory
+  if (Test-CdpReady -Port $Port) {
+    return @{
+      ReusedExisting = $true
+      Relaunched = $false
+      ExistingProcessCount = (Get-DebugChromeProcesses -ProfileDirectory $ProfileDirectory).Count
+      ReuseReason = "cdp-port-already-ready"
+    }
+  }
+
+  $existingProcesses = Get-DebugChromeProcesses -ProfileDirectory $ProfileDirectory
+
+  if ($existingProcesses.Count -gt 0) {
+    Stop-DebugChromeProcesses -ProfileDirectory $ProfileDirectory
+  }
+
   Start-Process -FilePath $ExecutablePath -ArgumentList $Arguments | Out-Null
   Wait-ForCdpReady -Port $Port -TimeoutMs $StartupWaitMs
+  return @{
+    ReusedExisting = $false
+    Relaunched = $true
+    ExistingProcessCount = $existingProcesses.Count
+    ReuseReason = $null
+  }
 }
 
 if (-not (Test-Path $ExtensionPath)) {
@@ -465,33 +506,20 @@ $resolvedExtensionPath = $staged.Source
 $resolvedStagedExtensionDir = $staged.Destination
 Ensure-Directory $ProfileDir
 
-$autoProvisionCftEnabled = Parse-BoolLike -Value $AutoProvisionChromeForTesting -Default $true
-$runtimeMode = "cft-only"
-if ($ChromeRuntimeMode -ne "cft-only") {
-  Write-Warning "ChromeRuntimeMode='$ChromeRuntimeMode' is ignored. Forcing single-path mode: cft-only."
+$autoProvisionCftEnabled = Parse-BoolLike -Value $AutoProvisionChromeForTesting -Default $false
+$runtimeMode = "system-only"
+if ($ChromeRuntimeMode -ne "system-only") {
+  Write-Warning "ChromeRuntimeMode='$ChromeRuntimeMode' is ignored. Forcing single-path mode: system-only."
 }
 if ($ExtensionLoadMode -ne "auto") {
   Write-Warning "ExtensionLoadMode='$ExtensionLoadMode' is ignored. Forcing single-path mode: auto."
   $ExtensionLoadMode = "auto"
 }
-if ($ChromeExecutablePath) {
-  Write-Warning "ChromeExecutablePath override is ignored in single-path mode."
+if ($autoProvisionCftEnabled) {
+  Write-Warning "AutoProvisionChromeForTesting is ignored. Deterministic runtime now uses Windows Google Chrome directly."
 }
-
-if (-not $autoProvisionCftEnabled) {
-  $existingCft = Join-Path $ChromeForTestingRoot "chrome-win64\chrome.exe"
-  if (-not (Test-Path $existingCft)) {
-    throw "Single-path mode requires Chrome-for-Testing at $existingCft when AutoProvisionChromeForTesting is disabled."
-  }
-  $effectiveChromePath = (Resolve-Path $existingCft).ProviderPath
-} else {
-  $cftExecutable = Ensure-ChromeForTesting `
-    -InstallRoot $ChromeForTestingRoot `
-    -VersionUrl $ChromeForTestingMetadataUrl `
-    -DownloadTimeoutMs $ChromeForTestingDownloadTimeoutMs
-  $effectiveChromePath = (Resolve-Path $cftExecutable).ProviderPath
-}
-$usingCft = $true
+$effectiveChromePath = Resolve-ChromePath -OverridePath $ChromeExecutablePath
+$usingCft = $false
 
 $chromeArgs = Build-ChromeArguments `
   -Port $RemoteDebuggingPort `
@@ -502,7 +530,7 @@ $chromeArgs = Build-ChromeArguments `
   -InitialUrl $StartUrl `
   -UseDisableExtensionsExcept $true
 
-Launch-DebugChrome `
+$launchResult = Launch-DebugChrome `
   -ExecutablePath $effectiveChromePath `
   -Arguments $chromeArgs `
   -ProfileDirectory $ProfileDir `
@@ -514,7 +542,11 @@ if (-not $resolvedExtensionId) {
   $resolvedExtensionId = Resolve-LoadedExtensionIdFromCdp -Port $RemoteDebuggingPort
 }
 
-Write-Host "Chrome started with remote debugging."
+if ($launchResult.ReusedExisting) {
+  Write-Host "Chrome debug instance reused."
+} else {
+  Write-Host "Chrome started with remote debugging."
+}
 Write-Host "Port: $RemoteDebuggingPort"
 Write-Host "Address: $RemoteDebuggingAddress"
 Write-Host "Chrome executable: $effectiveChromePath"
@@ -524,6 +556,10 @@ Write-Host "Extension staged: $resolvedStagedExtensionDir"
 Write-Host "Extension load mode: $ExtensionLoadMode"
 Write-Host "Chrome runtime mode: $runtimeMode"
 Write-Host "Profile: $ProfileDir"
+Write-Host "Launch mode: $(if ($launchResult.ReusedExisting) { 'reuse-existing' } else { 'fresh-launch' })"
+if ($launchResult.ReusedExisting -and $launchResult.ReuseReason) {
+  Write-Host "Reuse reason: $($launchResult.ReuseReason)"
+}
 
 if ($resolvedExtensionId) {
   try {

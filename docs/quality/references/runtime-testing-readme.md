@@ -11,7 +11,7 @@ Testing completion gate:
   mandatory onboarding for runtime-sensitive agent threads
 
 - [wsl-windows-chrome-cdp-quickstart.md](../../setup/wsl-windows-chrome-cdp-quickstart.md)
-  fast command-oriented quickstart for WSL + Windows Chrome CDP setup
+  fast command-oriented quickstart for WSL + the user-owned Windows Chrome CDP setup
 
 - [dls-end-to-end-extension-demo-scenario.md](./dls-end-to-end-extension-demo-scenario.md)
   canonical install-to-exit DLS demo flow with mandatory owner approval checkpoint
@@ -84,7 +84,11 @@ pnpm chrome:meet:url
 pnpm chrome:meet:url:lobby
 pnpm chrome:smoke:meet
 pnpm chrome:smoke:meet:raw
+pnpm chrome:smoke:assistant <scenario>
+pnpm chrome:smoke:assistant:fresh <scenario>
 pnpm chrome:smoke:live <provider> <scenario>
+pnpm chrome:smoke:live:assistant <scenario>
+pnpm chrome:smoke:live:assistant:matrix
 pnpm chrome:smoke:live:fresh <provider> <scenario>
 pnpm chrome:smoke:live:google:settings <scenario>
 pnpm chrome:smoke:live:matrix [cases]
@@ -94,3 +98,26 @@ pnpm chrome:debug:bridge:setup
 pnpm chrome:debug:bridge:show
 pnpm chrome:debug:bridge:remove
 ```
+
+## Windows Debug Launch Note
+
+When runtime docs need to show the manual Windows Chrome remote-debug launch command, keep the user profile path sanitized. Use:
+
+```powershell
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\Users\<windows-user>\.google\ChromeDebugProfile"
+```
+
+Do not commit a real Windows username or machine-specific profile path.
+
+Runtime launch policy:
+
+- if the expected Windows Chrome debug instance is already running and CDP is healthy, reuse it
+- do not spawn a second debug browser instance on top of the existing one
+- only relaunch when the existing instance for the expected profile is stale or CDP is unavailable
+
+Extension error audit policy:
+
+- every DLS run must inspect CaptionArc errors from `chrome://extensions`
+- pre-existing errors must be captured and then cleared before the scenario continues
+- post-run errors must also be captured and cleared
+- newly introduced post-run errors are blocking until classified and fixed or explicitly owner-approved as an environment artifact

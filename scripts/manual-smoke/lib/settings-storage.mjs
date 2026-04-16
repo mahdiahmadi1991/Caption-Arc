@@ -3,7 +3,6 @@
 import { evaluateInExtensionTarget } from "./extension-target.mjs";
 
 export function flattenSettingsFromSnapshot(snapshot) {
-  const settings = snapshot?.settings ?? null;
   const state = snapshot?.settingsState ?? null;
   const shared = state?.shared ?? {};
   const secrets = state?.secrets ?? {};
@@ -13,7 +12,6 @@ export function flattenSettingsFromSnapshot(snapshot) {
     ...shared,
     ...secrets,
     ...local,
-    ...(settings && typeof settings === "object" ? settings : {}),
   };
 }
 
@@ -23,9 +21,8 @@ export async function readSettingsSnapshot(webSocketDebuggerUrl) {
     awaitPromise: true,
     expression: `(
       async () => {
-        const current = await chrome.storage.local.get(["settings", "settingsState"]);
+        const current = await chrome.storage.local.get("settingsState");
         return {
-          settings: current.settings ?? null,
           settingsState: current.settingsState ?? null,
         };
       }
@@ -40,7 +37,7 @@ export async function patchSettings(webSocketDebuggerUrl, patch) {
     expression: `(
       async () => {
         const patch = ${JSON.stringify(patch)};
-        const current = await chrome.storage.local.get(["settings", "settingsState"]);
+        const current = await chrome.storage.local.get("settingsState");
 
         const sharedKeys = new Set([
           "model",
@@ -51,9 +48,6 @@ export async function patchSettings(webSocketDebuggerUrl, patch) {
           "meetingArchiveRetentionDays",
           "meetingProfiles",
           "defaultMeetingProfileId",
-          "summaryLanguage",
-          "summaryProfiles",
-          "defaultSummaryProfileId",
           "appearance",
           "overlayVisible",
           "captureStartupBehavior",
@@ -86,12 +80,7 @@ export async function patchSettings(webSocketDebuggerUrl, patch) {
           ...currentLocal,
         };
 
-        const baseSettings = {
-          ...flattened,
-          ...(current.settings && typeof current.settings === "object" ? current.settings : {}),
-        };
-
-        const nextSettings = { ...baseSettings, ...patch };
+        const nextSettings = { ...flattened, ...patch };
         const nextShared = { ...currentShared };
         const nextSecrets = { ...currentSecrets };
         const nextLocal = { ...currentLocal };
@@ -123,16 +112,13 @@ export async function patchSettings(webSocketDebuggerUrl, patch) {
           local: nextLocal,
         };
 
-        await chrome.storage.local.set({
-          settings: nextSettings,
-          settingsState: nextState,
-        });
+        await chrome.storage.local.set({ settingsState: nextState });
 
-        const verify = await chrome.storage.local.get(["settings", "settingsState"]);
+        const verify = await chrome.storage.local.get("settingsState");
         return {
           ok: true,
           applied: patch,
-          settings: verify?.settings ?? null,
+          settings: nextSettings,
           settingsState: verify?.settingsState ?? null,
         };
       }
@@ -147,12 +133,6 @@ export async function restoreSettingsSnapshot(webSocketDebuggerUrl, snapshot) {
     expression: `(
       async () => {
         const snapshot = ${JSON.stringify(snapshot)};
-        if (snapshot.settings === null) {
-          await chrome.storage.local.remove("settings");
-        } else {
-          await chrome.storage.local.set({ settings: snapshot.settings });
-        }
-
         if (snapshot.settingsState === null) {
           await chrome.storage.local.remove("settingsState");
         } else {

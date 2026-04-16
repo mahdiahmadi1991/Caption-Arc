@@ -69,7 +69,7 @@ run_smoke() {
     RELOAD_EXTENSION_IF_RUNNING="$RELOAD_EXTENSION_IF_RUNNING" \
     RELOAD_PROVIDER_TABS="$RELOAD_PROVIDER_TABS" \
     EXTENSION_LOAD_MODE="auto" \
-    CHROME_RUNTIME_MODE="cft-only" \
+    CHROME_RUNTIME_MODE="system-only" \
     DETERMINISTIC_TEST_MODE="$DETERMINISTIC_TEST_MODE" \
     bash "$REPO_ROOT/scripts/manual-smoke/ensure-cdp-ready.sh" "$PORT" "about:blank"
 

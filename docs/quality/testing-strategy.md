@@ -9,6 +9,7 @@ This repository uses a layered testing model:
 ## Canonical Testing Policies
 
 - quality gate (required for completion): [testing-quality-gate.md](./testing-quality-gate.md)
+- assistant module playbook: [assistant-test-strategy.md](./assistant-test-strategy.md)
 - onboarding flow: [testing-onboarding.md](./testing-onboarding.md)
 - test authoring rules: [test-writing-standards.md](./test-writing-standards.md)
 - runtime onboarding reference: [references/agent-onboarding-cdp-runtime.md](./references/agent-onboarding-cdp-runtime.md)

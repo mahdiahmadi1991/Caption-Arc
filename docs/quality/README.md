@@ -1,6 +1,9 @@
 # Quality Docs
 
 - [testing-strategy.md](./testing-strategy.md)
+- [assistant-test-strategy.md](./assistant-test-strategy.md)
+- [assistant-test-backlog.md](./assistant-test-backlog.md)
+- [assistant-dls-implementation-plan.md](./assistant-dls-implementation-plan.md)
 - [testing-quality-gate.md](./testing-quality-gate.md)
 - [testing-onboarding.md](./testing-onboarding.md)
 - [test-writing-standards.md](./test-writing-standards.md)

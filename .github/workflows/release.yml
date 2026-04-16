@@ -11,6 +11,20 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      WXT_CHROME_EXTENSION_KEY_PRODUCTION: ${{ secrets.WXT_CHROME_EXTENSION_KEY_PRODUCTION }}
+      WXT_FIREFOX_EXTENSION_ID_PRODUCTION: ${{ secrets.WXT_FIREFOX_EXTENSION_ID_PRODUCTION }}
+      WXT_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_ID }}
+      WXT_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_SECRET }}
+      WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_ID_CHROME }}
+      WXT_GOOGLE_OAUTH_CLIENT_SECRET_CHROME: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_SECRET_CHROME }}
+      WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_ID_FIREFOX }}
+      WXT_GOOGLE_OAUTH_CLIENT_SECRET_FIREFOX: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_SECRET_FIREFOX }}
+      WXT_MICROSOFT_OAUTH_CLIENT_ID: ${{ secrets.WXT_MICROSOFT_OAUTH_CLIENT_ID }}
+      WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME: ${{ secrets.WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME }}
+      WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX: ${{ secrets.WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX }}
+      WXT_MICROSOFT_OAUTH_TENANT: ${{ secrets.WXT_MICROSOFT_OAUTH_TENANT }}
 
     steps:
       - name: Checkout
@@ -26,19 +40,20 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build Chrome production artifact
-        run: pnpm build:chrome:production
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Build Firefox production artifact
-        run: pnpm build:firefox:production
+      - name: Validate release configuration
+        run: pnpm release:validate
 
       - name: Package Chrome production artifact
-        run: pnpm zip:chrome:production
+        run: pnpm package:target:chrome
 
       - name: Package Firefox production artifact
-        run: pnpm zip:firefox:production
+        run: pnpm package:target:firefox
 
       - name: List output files
         run: |
@@ -47,12 +62,8 @@ jobs:
           ls -la .release/ || echo "No .release directory"
           echo "=== Find all zip files ==="
           find .release -name "*.zip" -type f
-          test -n "$(find .release/chrome/production -name '*.zip' -type f -print -quit)"
-          test -n "$(find .release/firefox/production -name '*.zip' -type f -print -quit)"
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          test -n "$(find ".release/v${{ steps.version.outputs.VERSION }}/production/chrome" -name '*.zip' -type f -print -quit)"
+          test -n "$(find ".release/v${{ steps.version.outputs.VERSION }}/production/firefox" -name '*.zip' -type f -print -quit)"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -61,8 +72,8 @@ jobs:
           generate_release_notes: true
           append_body: false
           files: |
-            .release/chrome/production/*.zip
-            .release/firefox/production/*.zip
+            .release/v${{ steps.version.outputs.VERSION }}/production/chrome/*.zip
+            .release/v${{ steps.version.outputs.VERSION }}/production/firefox/*.zip
           draft: false
           prerelease: false
         env:

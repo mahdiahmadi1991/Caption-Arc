@@ -7,6 +7,11 @@
 
 This document defines the governance model for this repository when development is performed by a single human developer with AI agents assisting implementation.
 
+High-priority implementation rule for all future threads:
+- This repository has no real release/deployment history yet.
+- AI agents must not add migration code, compatibility fallbacks, dual-write storage, legacy aliases, legacy-path discovery, or backward-compatibility shims unless the human owner explicitly requests that mechanism in the active thread.
+- In the absence of that explicit request, touched systems must converge on one canonical shape, path, and contract; obsolete alternatives must be removed instead of preserved.
+
 It is the canonical policy for:
 - Git workflow
 - branch model
@@ -28,6 +33,7 @@ This repository must remain:
 - **traceable from feature branch -> develope -> main -> tag -> release**
 - **safe for AI-assisted development**
 - **consistent in versioning and release semantics**
+- **free of speculative migration scaffolding unless the owner explicitly requests it**
 
 For this repository, Git history is treated as a first-class project artifact.
 The graph should communicate how work flowed, not hide it.
@@ -57,6 +63,7 @@ This policy explicitly prefers preserving branch topology.
 - There is one human owner/developer.
 - AI agents may assist with research, planning, implementation, documentation, testing, and release preparation.
 - AI agents are not the source of truth for repository policy. They must follow repository governance.
+- AI agents must not add migration code, compatibility fallbacks, dual-write storage, legacy aliases, or backward-compatibility shims unless the human owner explicitly requests that mechanism in the active thread.
 
 ### 3.2 Long-lived branches
 

@@ -4,7 +4,7 @@
 
 Turn browser meeting captions into live translation, AI guidance, searchable history, and usable follow-up.
 
-![Chrome supported](https://img.shields.io/badge/Chrome-supported-1f6feb?logo=googlechrome&logoColor=white)
+![Chromium-family supported](https://img.shields.io/badge/Chromium--family-supported-1f6feb)
 ![Firefox supported](https://img.shields.io/badge/Firefox-supported-E66000?logo=firefoxbrowser&logoColor=white)
 ![License AGPL v3+](https://img.shields.io/badge/license-AGPL--3.0--or--later-111827)
 ![Quality Gates](https://img.shields.io/github/actions/workflow/status/mahdiahmadi1991/caption-arc/quality-gates.yml?branch=develope&label=quality%20gates)
@@ -131,7 +131,7 @@ Prerequisites:
 
 - Node.js 20+
 - `pnpm`
-- Chrome or Firefox for unpacked extension loading
+- a Chromium-based browser or Firefox for unpacked extension loading
 
 Install dependencies:
 
@@ -139,21 +139,21 @@ Install dependencies:
 pnpm install
 ```
 
-Build for Chrome:
+Build the Chrome package:
 
 ```bash
-pnpm build:chrome:production
+pnpm build:target:chrome:production
 ```
 
-Then load the unpacked extension from `.release/chrome/production` in `chrome://extensions`.
+Then load the unpacked extension from `.release/v<version>/production/chrome` in `chrome://extensions`, `edge://extensions`, or another Chromium-based browser that accepts unpacked MV3 extensions.
 
 Build for Firefox:
 
 ```bash
-pnpm build:firefox:production
+pnpm build:target:firefox:production
 ```
 
-Then load the unpacked extension from `.release/firefox/production` in `about:debugging#/runtime/this-firefox`.
+Then load the unpacked extension from `.release/v<version>/production/firefox` in `about:debugging#/runtime/this-firefox`.
 
 To iterate locally during development:
 
@@ -195,11 +195,11 @@ Desktop-native meeting clients are out of scope.
 
 ### Browser support
 
-| Capability | Chrome | Firefox | Notes |
+| Capability | Chromium-family | Firefox | Notes |
 | --- | --- | --- | --- |
-| Caption capture, translation, summaries, history, and settings | Yes | Yes | Governed browser builds exist for both targets. |
-| Google Drive App Data sync | Yes | No | Intentionally gated on Firefox until browser identity support is verified. |
-| OneDrive App Folder sync | Yes | No | Intentionally gated on Firefox until browser identity support is verified. |
+| Caption capture, translation, summaries, history, and settings | Yes | Yes | Governed release packages exist for Chromium-family browsers and Firefox. Chrome remains the canonical automated smoke browser for the Chrome package. |
+| Google Drive App Data sync | Yes | Yes* | Requires the browser-targeted OAuth registration and extension identity to be configured for the loaded build. |
+| OneDrive App Folder sync | Yes | Yes* | Requires the browser-targeted OAuth registration and extension identity to be configured for the loaded build. |
 
 For repository-level compatibility details, see [docs/quality/compatibility-matrix.md](./docs/quality/compatibility-matrix.md).
 
@@ -212,7 +212,8 @@ For repository-level compatibility details, see [docs/quality/compatibility-matr
 - **Does CaptionArc include an AI assistant?** Yes. The live assistant can use recent caption context and supported chat triggers to generate guidance during meetings, and its behavior can be tuned per meeting profile.
 - **Do I need an OpenAI API key?** Yes for translation, assistant, and summary features.
 - **Does all meeting data stay on my device?** No. The archive is local-first, but OpenAI-backed features and optional cloud sync send data outside the device.
-- **Is cloud sync available on Firefox?** Not yet. Google Drive and OneDrive sync remain intentionally gated on Firefox until browser identity support is verified.
+- **Can I use the same package on Edge or other Chromium browsers?** Usually yes. The repository now ships a Chrome package intended for Chrome and compatible Chromium browsers such as Edge, Brave, Opera, and Vivaldi when their MV3 policies allow it.
+- **Is cloud sync available on Firefox?** The source build now includes Firefox cloud-sync support paths for Google Drive and OneDrive, but each Firefox build still needs the correct browser-targeted OAuth registration and manual verification evidence before you should treat that provider flow as release-ready.
 - **Are browser-store install links available in this repository yet?** Not in the root README today. Use GitHub release artifacts or build from source.
 
 ---
@@ -231,8 +232,8 @@ pnpm zip
 Useful commands:
 
 ```bash
-pnpm build:chrome:development
-pnpm build:firefox:development
+pnpm build:target:chrome:development
+pnpm build:target:firefox:development
 pnpm test
 pnpm test:google
 pnpm test:google:coverage
@@ -251,12 +252,12 @@ pnpm docs:check
 
 ### Build outputs
 
-Browser-specific artifacts are produced under `.release/`:
+Versioned release artifacts are produced under `.release/`:
 
-- `.release/chrome/development`
-- `.release/chrome/production`
-- `.release/firefox/development`
-- `.release/firefox/production`
+- `.release/v<version>/development/chrome`
+- `.release/v<version>/production/chrome`
+- `.release/v<version>/development/firefox`
+- `.release/v<version>/production/firefox`
 
 If you are evaluating runtime behavior, architecture, or setup details, start with [docs/README.md](./docs/README.md), [docs/architecture/overview.md](./docs/architecture/overview.md), and [docs/setup/local-development.md](./docs/setup/local-development.md).
 

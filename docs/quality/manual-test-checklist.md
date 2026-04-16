@@ -22,10 +22,26 @@ Use this checklist together with:
 - summary-ready notification behavior, same-session suppression, and notification click routing to expanded summary detail
 - overlay visibility/click-through/opacity behavior
 
+## AI Assistant Checks
+
+- baseline answer-for-me path from a real joined Meet session produces one attached assistant output
+- repeated question handling: `q1` followed by `q1 + q2` only answers the unresolved question
+- `others_only` suppresses self-authored speech in the same live session
+- output language changes mid-session affect new assistant outputs without requiring a new session
+- switching profiles mid-session changes or suppresses assistant behavior as expected
+- `salience_first` reacts to risk/blocker statements without a question mark
+- `proactive` + `coach_me` can react to a longer self-authored statement when participant scope allows it
+- assistant outputs in meeting history render readable markdown structure and stay attached to the triggering timeline item
+- generation failures or provider truncation surface diagnostics without persisting a fake completed answer
+
 ## Commands
 
 ```bash
 pnpm chrome:debug:reload
+pnpm chrome:smoke:live:assistant baseline
+pnpm chrome:smoke:live:assistant q1-then-q1-plus-q2
+pnpm chrome:smoke:live:assistant language-switch-en-to-fa
+pnpm chrome:smoke:live:assistant:matrix
 pnpm chrome:smoke:live google-meet lobby
 pnpm chrome:smoke:live microsoft-teams meeting
 pnpm chrome:smoke:live zoom-web meeting

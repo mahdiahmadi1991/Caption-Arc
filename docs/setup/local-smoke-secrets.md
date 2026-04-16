@@ -2,12 +2,19 @@
 
 Use `.secrets/` for machine-local secrets and identity material that must never be committed, including manual smoke credentials and any retained browser-extension private keys.
 
+Folder-level onboarding for `.secrets/` is documented in:
+
+- [.secrets/README.md](../../.secrets/README.md)
+
 ## Files
 
 1. `.secrets/.env.example` is the template.
-2. Create `.secrets/smoke.env` (or `.secrets/.env`) for real local values.
-3. You can override the file path with `SMOKE_SECRETS_FILE=<local-path-to-file>`.
-4. Legacy `secrets/` path discovery is disabled by default to prevent ambiguity. Enable only for migration diagnostics with `ALLOW_LEGACY_SECRETS_PATH=1`.
+2. Put shared machine-local values in `.secrets/.env.local`.
+3. Put development-only values in `.secrets/.env.development.local`.
+4. Put production-only values in `.secrets/.env.production.local`.
+5. Create `.secrets/smoke.env` for smoke-only overrides like meeting URLs or temporary API keys.
+6. You can override the file path with `SMOKE_SECRETS_FILE=<local-path-to-file>`.
+7. Smoke tooling only reads the canonical `.secrets/` paths. The old unhidden `secrets/` directory is not part of the supported local contract.
 
 For Chrome extension identity continuity, keep separate private keys for:
 
@@ -24,8 +31,18 @@ Smoke wrappers load secrets from the local file through:
 - `pnpm chrome:smoke:live:google:settings ...`
 - `pnpm chrome:smoke:live:matrix ...`
 
+By default, smoke wrappers layer local env files in this order before applying `smoke.env` overrides:
+
+- `.secrets/.env`
+- `.secrets/.env.local`
+- `.secrets/.env.development`
+- `.secrets/.env.development.local`
+- `.secrets/smoke.env`
+
+Set `SMOKE_ENV_MODE=production` if you intentionally want the smoke wrappers to layer `.env.production*` instead of `.env.development*`.
+
 When `OPENAI_API_KEY` exists, wrappers export `SMOKE_OPENAI_API_KEY` automatically.
-Deterministic runtime mode (`DETERMINISTIC_TEST_MODE=1`) enforces stable defaults (`cft-only + auto`) for smoke flows.
+Deterministic runtime mode (`DETERMINISTIC_TEST_MODE=1`) enforces stable defaults (`system-only + auto`) for smoke flows.
 Live diagnostics tuning vars may also live in `.secrets/smoke.env`:
 
 - `SMOKE_LIVE_DIAGNOSTICS`
