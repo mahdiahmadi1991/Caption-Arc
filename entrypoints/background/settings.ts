@@ -26,6 +26,10 @@ import {
 import { normalizeUiLanguageSetting } from "../shared/ui-language";
 import type { TermsAcceptance, TermsDecline } from "../shared/legal";
 import { noteCloudSyncSettingsSaved } from "./cloud-sync";
+import {
+  classifyOpenAiFailure,
+  truncateForDiagnostics,
+} from "./providers/openai";
 
 import { createBackgroundDiagnosticsLogger } from "./diagnostics";
 
@@ -34,16 +38,7 @@ const settingsDiagnostics = createBackgroundDiagnosticsLogger({
   feature: "settings-store",
 });
 
-const SETTINGS_STORAGE_KEY = "settings";
 const SETTINGS_STATE_STORAGE_KEY = "settingsState";
-
-type LegacySettingsAliases = {
-  summaryLanguage?: unknown;
-  summaryProfiles?: unknown;
-  defaultSummaryProfileId?: unknown;
-};
-
-type RawSettingsInput = Partial<Settings> & LegacySettingsAliases;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -334,31 +329,18 @@ function splitSettings(settings: Settings): SettingsState {
 }
 
 function sanitizeSettingsShape(
-  input: RawSettingsInput,
+  input: Partial<Settings>,
   fallback: Settings = DEFAULT_SETTINGS
 ): Settings {
-  const legacyAutoSummarizeOnMeetingEnd =
-    typeof (input as Partial<Settings> & { autoSummarizeOnMeetingEnd?: unknown })
-      .autoSummarizeOnMeetingEnd === "boolean"
-      ? Boolean(
-          (input as Partial<Settings> & { autoSummarizeOnMeetingEnd?: unknown })
-            .autoSummarizeOnMeetingEnd
-        )
-      : false;
-
   let meetingProfiles = normalizeMeetingProfiles(
     Array.isArray(input.meetingProfiles)
       ? input.meetingProfiles
-      : Array.isArray(input.summaryProfiles)
-        ? input.summaryProfiles
       : fallback.meetingProfiles
   );
 
   const requestedDefaultMeetingProfileId =
     typeof input.defaultMeetingProfileId === "string"
       ? input.defaultMeetingProfileId
-      : typeof input.defaultSummaryProfileId === "string"
-        ? input.defaultSummaryProfileId
       : fallback.defaultMeetingProfileId;
 
   const resolvedDefaultMeetingProfileId =
@@ -367,17 +349,6 @@ function sanitizeSettingsShape(
     meetingProfiles.find((profile) => !isProtectedMeetingProfile(profile.id))?.id ||
     meetingProfiles[0]?.id ||
     PROTECTED_MEETING_PROFILE_ID;
-
-  if (
-    legacyAutoSummarizeOnMeetingEnd &&
-    !meetingProfiles.some((profile) => profile.autoSummarizeOnMeetingEnd)
-  ) {
-    meetingProfiles = meetingProfiles.map((profile) =>
-      profile.id === resolvedDefaultMeetingProfileId
-        ? { ...profile, autoSummarizeOnMeetingEnd: true }
-        : profile
-    );
-  }
 
   const normalized: Settings = {
     openaiApiKey:
@@ -399,7 +370,7 @@ function sanitizeSettingsShape(
         : fallback.customPrompt
     ),
     meetingOutputLanguage: normalizeLanguageCode(
-      input.meetingOutputLanguage ?? input.summaryLanguage,
+      input.meetingOutputLanguage,
       fallback.meetingOutputLanguage
     ),
     meetingArchiveRetentionDays: normalizeMeetingArchiveRetentionDays(
@@ -491,25 +462,18 @@ async function loadSettingsState(): Promise<{
   needsPersistence: boolean;
 }> {
   await settingsDiagnostics.trace("settings_load_started");
-  const result = await chrome.storage.local.get([
-    SETTINGS_STORAGE_KEY,
-    SETTINGS_STATE_STORAGE_KEY,
-  ]);
+  const result = await chrome.storage.local.get(SETTINGS_STATE_STORAGE_KEY);
 
   const storedState = result[SETTINGS_STATE_STORAGE_KEY];
-  const storedLegacy = result[SETTINGS_STORAGE_KEY] as RawSettingsInput | undefined;
-
-  const mergedInput = {
-    ...storedLegacy,
-    ...flattenSettingsState(storedState),
-  };
-  const settings = sanitizeSettingsShape(mergedInput, DEFAULT_SETTINGS);
+  const settings = sanitizeSettingsShape(
+    flattenSettingsState(storedState),
+    DEFAULT_SETTINGS
+  );
   const state = splitSettings(settings);
-  const needsPersistence = !storedState;
+  const needsPersistence = !storedState || typeof storedState !== "object";
 
   await settingsDiagnostics.debug("settings_load_completed", {
     needsPersistence,
-    hasLegacySettings: Boolean(storedLegacy),
     hasStateSettings: Boolean(storedState),
     connectedCloudProviders: settings.connectedCloudProviders.length,
   });
@@ -524,7 +488,6 @@ async function persistSettingsState(settings: Settings): Promise<void> {
     translationEnabled: settings.translationEnabled,
   });
   await chrome.storage.local.set({
-    [SETTINGS_STORAGE_KEY]: settings,
     [SETTINGS_STATE_STORAGE_KEY]: splitSettings(settings),
   });
   await settingsDiagnostics.info("settings_persist_completed", {
@@ -559,6 +522,20 @@ async function persistOpenAiVerificationSnapshot(
   if (!currentSnapshot && !nextSnapshot) {
     return;
   }
+
+  await settingsDiagnostics.info("openai_verification_snapshot_updating", {
+    model: updated.model,
+    previousStatus: currentSnapshot?.status || null,
+    nextStatus: nextSnapshot?.status || null,
+    previousMessage:
+      currentSnapshot?.message ? truncateForDiagnostics(currentSnapshot.message, 180) : null,
+    nextMessage:
+      nextSnapshot?.message ? truncateForDiagnostics(nextSnapshot.message, 180) : null,
+    signatureChanged:
+      (currentSnapshot?.signature || "") !== (nextSnapshot?.signature || ""),
+    previousVerifiedAt: currentSnapshot?.verifiedAt || null,
+    nextVerifiedAt: nextSnapshot?.verifiedAt || null,
+  });
 
   await persistSettingsState(updated);
 }
@@ -614,6 +591,8 @@ export async function recordOpenAiVerificationSuccess(
 
   await settingsDiagnostics.info("openai_verification_succeeded", {
     model: settings.model,
+    previousStatus: settings.verificationSnapshot?.status || null,
+    message: truncateForDiagnostics(message, 180),
   });
 
   await persistOpenAiVerificationSnapshot(settings, {
@@ -637,7 +616,9 @@ export async function recordOpenAiVerificationFailure(
 
   await settingsDiagnostics.warn("openai_verification_failed", {
     model: settings.model,
-    message,
+    previousStatus: settings.verificationSnapshot?.status || null,
+    failureKind: classifyOpenAiFailure(message),
+    message: truncateForDiagnostics(message, 220),
   });
 
   await persistOpenAiVerificationSnapshot(settings, {

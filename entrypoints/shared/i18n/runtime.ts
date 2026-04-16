@@ -23,7 +23,7 @@ import type {
 
 type LocaleListener = (locale: SupportedUiLocale) => void;
 
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 
 void initializeDiagnosticsClient();
 

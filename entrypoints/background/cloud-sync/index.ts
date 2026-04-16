@@ -24,6 +24,11 @@ import {
 } from "./providers";
 import { filterSupportedCloudSyncProviders } from "../../shared/browser-capabilities";
 import { createBackgroundDiagnosticsLogger } from "../diagnostics";
+import { getMeetingSessionSyncDelayMs } from "./policy";
+import {
+  getSessionArtifactsSyncContentHash,
+  getSessionEventsSyncContentHash,
+} from "./serialization";
 
 const cloudSyncDiagnostics = createBackgroundDiagnosticsLogger({
   domain: "cloud-sync",
@@ -96,29 +101,51 @@ export async function noteMeetingSessionSaved(
 ): Promise<void> {
   const providerTargets = buildProviderTargets(connectedProviders);
   const sessionSyncId = session.sessionSyncId || session.id;
+  const syncDelayMs = getMeetingSessionSyncDelayMs(session);
+  const scheduledAt = Date.now() + syncDelayMs;
   await cloudSyncDiagnostics.trace("cloud_sync_session_saved", {
     sessionId: session.id,
     sessionSyncId,
     providerTargets,
     eventCount: (session.events || []).length,
+    syncDelayMs,
   }, {
     sessionId: session.id,
   });
-  await enqueueCloudSyncTask({
-    dedupeKey: `session-meta:${sessionSyncId}`,
-    kind: "sync-session-meta",
-    entityId: sessionSyncId,
-    contentHash: session.syncContentHash,
-    providerTargets,
-  });
-  await enqueueCloudSyncTask({
-    dedupeKey: `session-events:${sessionSyncId}`,
-    kind: "sync-session-events",
-    entityId: sessionSyncId,
-    contentHash: `${session.syncContentHash || ""}:${(session.events || []).length}`,
-    providerTargets,
-  });
-  scheduleCloudSyncRun("meeting-session-saved", 2_000);
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-meta:${sessionSyncId}`,
+      kind: "sync-session-meta",
+      entityId: sessionSyncId,
+      contentHash: session.syncContentHash,
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-events:${sessionSyncId}`,
+      kind: "sync-session-events",
+      entityId: sessionSyncId,
+      contentHash: getSessionEventsSyncContentHash(session),
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  await enqueueCloudSyncTask(
+    {
+      dedupeKey: `session-artifacts:${sessionSyncId}`,
+      kind: "sync-session-artifacts",
+      entityId: sessionSyncId,
+      contentHash: getSessionArtifactsSyncContentHash(session),
+      providerTargets,
+      schedulingStrategy: "latest",
+    },
+    scheduledAt
+  );
+  scheduleCloudSyncRun("meeting-session-saved", syncDelayMs);
 }
 
 export async function noteMeetingSessionDeleted(

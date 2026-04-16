@@ -14,16 +14,43 @@ type OneDriveItem = {
   eTag?: string;
   lastModifiedDateTime?: string;
   size?: number;
+  deleted?: Record<string, unknown>;
   folder?: {
     childCount?: number;
+  };
+  parentReference?: {
+    path?: string;
   };
 };
 
 type OneDriveUser = {
   id?: string;
+  email?: string;
   userPrincipalName?: string;
   mail?: string;
   displayName?: string;
+};
+
+type OneDriveDrive = {
+  owner?: {
+    user?: {
+      id?: string;
+      displayName?: string;
+      email?: string;
+      userPrincipalName?: string;
+    };
+  };
+};
+
+type OneDriveDeltaResponse = {
+  value?: OneDriveItem[];
+  "@odata.nextLink"?: string;
+  "@odata.deltaLink"?: string;
+};
+
+type OneDriveDeltaListing = {
+  files: CloudSyncFileRecord[];
+  cursor?: string;
 };
 
 function formatOneDriveTimestamp(value?: string): number {
@@ -50,6 +77,24 @@ function encodeGraphPath(path: string): string {
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+}
+
+function createAppRootPathAddress(path: string, suffix = ""): string {
+  const normalizedPath = encodeGraphPath(path);
+  return `/me/drive/special/approot:/${normalizedPath}:${suffix}`;
+}
+
+function deriveDeltaRelativePath(item: OneDriveItem): string | null {
+  if (!item.name || item.deleted) {
+    return null;
+  }
+
+  const parentPath = item.parentReference?.path || "";
+  const relativeParent = parentPath.includes(":")
+    ? parentPath.split(":").pop() || ""
+    : "";
+  const trimmedParent = relativeParent.replace(/^\/+|\/+$/g, "");
+  return trimmedParent ? `${trimmedParent}/${item.name}` : item.name;
 }
 
 async function oneDriveRequest(
@@ -83,10 +128,12 @@ async function findOneDriveItem(
   token: string,
   path: string
 ): Promise<OneDriveItem | null> {
-  const normalizedPath = encodeGraphPath(path);
   const response = await oneDriveRequest(
     token,
-    `/me/drive/special/approot:/${normalizedPath}?$select=id,name,eTag,lastModifiedDateTime,size,folder`
+    createAppRootPathAddress(
+      path,
+      "?$select=id,name,eTag,lastModifiedDateTime,size,folder"
+    )
   );
 
   if (response.status === 404) {
@@ -199,24 +246,74 @@ async function listChildrenRecursively(
   return files;
 }
 
+async function listScopedOneDriveFiles(
+  token: string,
+  pathPrefix: string
+): Promise<CloudSyncFileRecord[]> {
+  if (!pathPrefix) {
+    const appRoot = await getApproot(token);
+    return listChildrenRecursively(token, appRoot.id);
+  }
+
+  const trimmedPrefix = pathPrefix.replace(/^\/+|\/+$/g, "");
+  const scopedItem = await findOneDriveItem(token, trimmedPrefix);
+  if (scopedItem?.folder) {
+    return listChildrenRecursively(token, scopedItem.id, trimmedPrefix);
+  }
+
+  if (scopedItem) {
+    return [toCloudFileRecord(trimmedPrefix, scopedItem)];
+  }
+
+  const folderPath = trimmedPrefix.split("/").slice(0, -1).join("/");
+  const folderItem = folderPath ? await findOneDriveItem(token, folderPath) : await getApproot(token);
+  if (!folderItem?.id) {
+    return [];
+  }
+
+  const siblings = await listChildrenRecursively(token, folderItem.id, folderPath);
+  return siblings.filter((file) => file.path.startsWith(trimmedPrefix));
+}
+
+async function fetchMicrosoftDriveOwner(token: string): Promise<OneDriveUser> {
+  const response = await oneDriveRequest(token, "/me/drive?$select=id,owner");
+
+  if (!response.ok) {
+    return {};
+  }
+
+  const drive = (await response.json()) as OneDriveDrive;
+  return {
+    id: drive.owner?.user?.id,
+    email: drive.owner?.user?.email,
+    userPrincipalName: drive.owner?.user?.userPrincipalName,
+    displayName: drive.owner?.user?.displayName,
+  };
+}
+
 async function fetchMicrosoftUser(token: string): Promise<OneDriveUser> {
   const response = await oneDriveRequest(
     token,
     "/me?$select=id,displayName,mail,userPrincipalName"
   );
 
-  if (!response.ok) {
-    return {};
+  if (response.ok) {
+    return (await response.json()) as OneDriveUser;
   }
 
-  return (await response.json()) as OneDriveUser;
+  return fetchMicrosoftDriveOwner(token);
 }
 
 export async function connectOneDrive(): Promise<CloudSyncProviderCheckpoint> {
   const token = await requestMicrosoftAccessTokenInteractive();
   await getApproot(token);
   const user = await fetchMicrosoftUser(token);
-  const accountLabel = user.mail || user.userPrincipalName || user.displayName || "OneDrive";
+  const accountLabel =
+    user.mail ||
+    user.email ||
+    user.userPrincipalName ||
+    user.displayName ||
+    "OneDrive";
 
   return {
     provider: ONEDRIVE_PROVIDER,
@@ -245,17 +342,78 @@ export async function ensureOneDriveAppFolder(): Promise<void> {
 
 export async function listOneDriveFiles(pathPrefix: string): Promise<CloudSyncFileRecord[]> {
   const token = await getMicrosoftAccessToken();
+  const files = await listScopedOneDriveFiles(token, pathPrefix);
+  return pathPrefix
+    ? files.filter((file) => file.path.startsWith(pathPrefix))
+    : files;
+}
+
+export async function getOneDriveChangesCursor(): Promise<string | undefined> {
+  const token = await getMicrosoftAccessToken();
   const appRoot = await getApproot(token);
-  const files = await listChildrenRecursively(token, appRoot.id);
-  return files.filter((file) => file.path.startsWith(pathPrefix));
+  const response = await oneDriveRequest(
+    token,
+    `/me/drive/items/${appRoot.id}/delta?token=latest`
+  );
+
+  if (!response.ok) {
+    throw new Error(`OneDrive delta cursor failed with ${response.status}.`);
+  }
+
+  const payload = (await response.json()) as OneDriveDeltaResponse;
+  return payload["@odata.deltaLink"];
+}
+
+export async function listOneDriveChangedFiles(
+  cursor: string
+): Promise<OneDriveDeltaListing> {
+  const token = await getMicrosoftAccessToken();
+  const files = new Map<string, CloudSyncFileRecord>();
+  let nextUrl = cursor;
+  let nextCursor: string | undefined = cursor;
+
+  while (nextUrl) {
+    const response = await oneDriveRequest(token, nextUrl);
+    if (response.status === 410) {
+      throw new Error("OneDrive delta cursor is no longer valid and requires rescan.");
+    }
+    if (!response.ok) {
+      throw new Error(`OneDrive delta listing failed with ${response.status}.`);
+    }
+
+    const payload = (await response.json()) as OneDriveDeltaResponse;
+    for (const item of payload.value || []) {
+      if (item.folder || item.deleted) {
+        continue;
+      }
+
+      const path = deriveDeltaRelativePath(item);
+      if (!path) {
+        continue;
+      }
+
+      files.set(path, toCloudFileRecord(path, item));
+    }
+
+    nextUrl = payload["@odata.nextLink"] || "";
+    if (payload["@odata.deltaLink"]) {
+      nextCursor = payload["@odata.deltaLink"];
+    } else if (nextUrl) {
+      nextCursor = nextUrl;
+    }
+  }
+
+  return {
+    files: [...files.values()],
+    cursor: nextCursor,
+  };
 }
 
 export async function readOneDriveFile(path: string): Promise<Uint8Array> {
   const token = await getMicrosoftAccessToken();
-  const normalizedPath = encodeGraphPath(path);
   const response = await oneDriveRequest(
     token,
-    `/me/drive/special/approot:/${normalizedPath}:/content`
+    createAppRootPathAddress(path, "/content")
   );
 
   if (response.status === 404) {
@@ -288,10 +446,9 @@ export async function writeOneDriveFile(
   const folderPath = path.split("/").slice(0, -1).join("/");
   await ensureFolderPath(token, folderPath);
 
-  const normalizedPath = encodeGraphPath(path);
   const response = await oneDriveRequest(
     token,
-    `/me/drive/special/approot:/${normalizedPath}:/content`,
+    createAppRootPathAddress(path, "/content"),
     {
       method: "PUT",
       headers: {

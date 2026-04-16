@@ -15,12 +15,49 @@ import {
 } from "../shared/i18n";
 import { AppLoadingScreen } from "../shared/loading-screen";
 import { TermsGate } from "../shared/terms-gate";
+import {
+  applyThemePreference,
+  type ThemePreference,
+} from "../shared/theme";
 import "./styles.css";
 
 const optionsRootElement = document.getElementById("root");
 
 if (!optionsRootElement) {
   throw new Error("Options root element was not found.");
+}
+
+function getInitialThemePreferenceFromStorage(
+  snapshot: Record<string, unknown>
+): ThemePreference {
+  const settingsState =
+    snapshot.settingsState && typeof snapshot.settingsState === "object"
+      ? (snapshot.settingsState as {
+          shared?: { appearance?: unknown };
+        })
+      : null;
+  const sharedAppearance = settingsState?.shared?.appearance;
+  if (
+    sharedAppearance === "light" ||
+    sharedAppearance === "dark" ||
+    sharedAppearance === "system"
+  ) {
+    return sharedAppearance;
+  }
+
+  return "system";
+}
+
+async function bootstrapOptionsTheme(): Promise<void> {
+  try {
+    const snapshot = await chrome.storage.local.get("settingsState");
+    applyThemePreference(
+      document.documentElement,
+      getInitialThemePreferenceFromStorage(snapshot)
+    );
+  } catch {
+    applyThemePreference(document.documentElement, "system");
+  }
 }
 
 function OptionsRoot() {
@@ -127,4 +164,6 @@ function OptionsRoot() {
   );
 }
 
-ReactDOM.createRoot(optionsRootElement).render(<OptionsRoot />);
+void bootstrapOptionsTheme().finally(() => {
+  ReactDOM.createRoot(optionsRootElement).render(<OptionsRoot />);
+});

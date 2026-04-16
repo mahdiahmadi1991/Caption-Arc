@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { DEFAULT_SETTINGS } from "../background/constants";
 import type { Settings } from "../background/types";
 
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 
 export function useExtensionPageSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);

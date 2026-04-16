@@ -42,16 +42,17 @@ Rules:
 3. When writable session storage is unavailable, diagnostics storage falls back to local storage.
 4. The fallback response reports `usesFallback: true`.
 
-## C-BCAP-003: Browser-governed cloud sync is available only on Chrome-family runtimes
+## C-BCAP-003: Browser-governed cloud sync is available only when the current browser target has the required OAuth configuration
 
 Source: `getBrowserProductLabel`, `getCloudSyncProviderSupport`, `filterSupportedCloudSyncProviders`, `BROWSER_GOVERNED_CLOUD_SYNC_PROVIDERS` in [../../entrypoints/shared/browser-capabilities.ts](../../entrypoints/shared/browser-capabilities.ts)
 
 Rules:
 
 1. Browser-governed cloud sync currently applies only to `google-drive` and `onedrive`.
-2. Both governed providers are fully supported on the Chrome runtime family.
-3. Firefox and unknown runtimes mark governed providers unsupported and return a browser-specific reason string.
-4. `filterSupportedCloudSyncProviders(...)` removes unsupported governed providers while preserving unrelated provider strings.
+2. Chrome and Firefox can both mark `onedrive` supported when the current browser target resolves the required provider-specific OAuth client ID.
+3. Chrome and Firefox can both mark `google-drive` supported only when the current browser target resolves both the provider-specific OAuth client ID and client secret.
+4. Chrome and Firefox mark a governed provider unsupported when its required browser-targeted OAuth configuration is missing, and return a browser-specific reason string that identifies the missing configuration for that browser target.
+5. `filterSupportedCloudSyncProviders(...)` removes unsupported governed providers while preserving unrelated provider strings.
 
 ## C-BCAP-004: Default device labels combine resolved browser product and platform labels
 

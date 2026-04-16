@@ -78,10 +78,10 @@ function createSession(overrides: Partial<MeetingSession> = {}): MeetingSession 
     schemaVersion: 3,
     platform: "google-meet",
     providerLabel: "Google Meet",
-    meetingUrl: "https://meet.google.com/abc-defg-hij",
+    meetingUrl: "https://meet.google.com/xxx-xxxx-xxx",
     title: "Daily Sync",
     starred: false,
-    identifiers: { meetingCode: "abc-defg-hij" },
+    identifiers: { meetingCode: "xxx-xxxx-xxx" },
     sessionFingerprint: "fp-1",
     lifecycleState: "ended",
     startTime: now - 10_000,
@@ -150,8 +150,14 @@ describe("Meeting history retention contract", () => {
     await saveMeetingSession(session);
 
     expect(enforceMeetingHistoryRetentionPolicyMock).toHaveBeenCalledWith(90);
-    expect(clearMeetingAssistantRuntimeStateMock).toHaveBeenCalledWith("old-1");
-    expect(clearMeetingAssistantRuntimeStateMock).toHaveBeenCalledWith("old-2");
+    expect(clearMeetingAssistantRuntimeStateMock).toHaveBeenCalledWith(
+      "old-1",
+      "retention-policy-delete"
+    );
+    expect(clearMeetingAssistantRuntimeStateMock).toHaveBeenCalledWith(
+      "old-2",
+      "retention-policy-delete"
+    );
     expect(noteMeetingSessionDeletedMock).toHaveBeenCalledWith("old-1", [
       "google-drive",
     ]);

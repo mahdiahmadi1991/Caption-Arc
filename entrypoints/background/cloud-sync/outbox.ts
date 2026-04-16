@@ -1,6 +1,11 @@
 import type { CloudSyncTask, CloudSyncTaskInput } from "./types";
+import { createBackgroundDiagnosticsLogger } from "../diagnostics";
 
 const CLOUD_SYNC_OUTBOX_STORAGE_KEY = "cloudSyncOutbox";
+const cloudSyncOutboxDiagnostics = createBackgroundDiagnosticsLogger({
+  domain: "cloud-sync",
+  feature: "outbox",
+});
 
 function createId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -22,6 +27,11 @@ async function loadOutbox(): Promise<CloudSyncTask[]> {
   const tasks = result[CLOUD_SYNC_OUTBOX_STORAGE_KEY];
 
   if (!Array.isArray(tasks)) {
+    if (tasks !== undefined) {
+      await cloudSyncOutboxDiagnostics.warn("cloud_sync_outbox_invalid_state", {
+        storedType: typeof tasks,
+      });
+    }
     return [];
   }
 
@@ -44,6 +54,7 @@ export async function enqueueCloudSyncTask(
 ): Promise<CloudSyncTask> {
   const tasks = await loadOutbox();
   const existing = tasks.find((task) => task.dedupeKey === input.dedupeKey);
+  const schedulingStrategy = input.schedulingStrategy || existing?.schedulingStrategy || "earliest";
 
   if (existing) {
     const updated: CloudSyncTask = {
@@ -53,11 +64,23 @@ export async function enqueueCloudSyncTask(
       providerTargets: input.providerTargets
         ? [...input.providerTargets]
         : existing.providerTargets,
+      schedulingStrategy,
       updatedAt: Date.now(),
-      nextAttemptAt: Math.min(existing.nextAttemptAt, scheduledAt),
+      nextAttemptAt:
+        schedulingStrategy === "latest"
+          ? Math.max(existing.nextAttemptAt, scheduledAt)
+          : Math.min(existing.nextAttemptAt, scheduledAt),
       lastError: undefined,
       lastErrorKind: undefined,
     };
+    await cloudSyncOutboxDiagnostics.debug("cloud_sync_outbox_task_updated", {
+      dedupeKey: updated.dedupeKey,
+      kind: updated.kind,
+      schedulingStrategy,
+      previousNextAttemptAt: existing.nextAttemptAt,
+      nextAttemptAt: updated.nextAttemptAt,
+      providerTargetCount: updated.providerTargets?.length || 0,
+    });
     await saveOutbox(
       tasks.map((task) => (task.id === updated.id ? updated : task))
     );
@@ -74,18 +97,32 @@ export async function enqueueCloudSyncTask(
     createdAt: Date.now(),
     updatedAt: Date.now(),
     nextAttemptAt: scheduledAt,
+    schedulingStrategy,
     attemptCount: 0,
     transientRetryCount: 0,
   };
 
   tasks.push(nextTask);
+  await cloudSyncOutboxDiagnostics.debug("cloud_sync_outbox_task_enqueued", {
+    dedupeKey: nextTask.dedupeKey,
+    kind: nextTask.kind,
+    schedulingStrategy,
+    nextAttemptAt: nextTask.nextAttemptAt,
+    providerTargetCount: nextTask.providerTargets?.length || 0,
+  });
   await saveOutbox(tasks);
   return nextTask;
 }
 
 export async function removeCloudSyncTask(taskId: string): Promise<void> {
   const tasks = await loadOutbox();
+  const removedTask = tasks.find((task) => task.id === taskId);
   await saveOutbox(tasks.filter((task) => task.id !== taskId));
+  await cloudSyncOutboxDiagnostics.trace("cloud_sync_outbox_task_removed", {
+    taskId,
+    dedupeKey: removedTask?.dedupeKey || null,
+    kind: removedTask?.kind || null,
+  });
 }
 
 export async function updateCloudSyncTask(task: CloudSyncTask): Promise<void> {
@@ -93,6 +130,14 @@ export async function updateCloudSyncTask(task: CloudSyncTask): Promise<void> {
   await saveOutbox(
     tasks.map((current) => (current.id === task.id ? normalizeTask(task) : current))
   );
+  await cloudSyncOutboxDiagnostics.debug("cloud_sync_outbox_task_persisted", {
+    taskId: task.id,
+    dedupeKey: task.dedupeKey,
+    kind: task.kind,
+    nextAttemptAt: task.nextAttemptAt,
+    attemptCount: task.attemptCount,
+    transientRetryCount: task.transientRetryCount,
+  });
 }
 
 export async function listDueCloudSyncTasks(
@@ -100,12 +145,20 @@ export async function listDueCloudSyncTasks(
   limit = 25
 ): Promise<CloudSyncTask[]> {
   const tasks = await loadOutbox();
-  return tasks
+  const dueTasks = tasks
     .filter((task) => task.nextAttemptAt <= now)
     .sort((left, right) => left.nextAttemptAt - right.nextAttemptAt)
     .slice(0, limit);
+  await cloudSyncOutboxDiagnostics.trace("cloud_sync_outbox_due_tasks_loaded", {
+    now,
+    limit,
+    dueTaskCount: dueTasks.length,
+    totalTaskCount: tasks.length,
+  });
+  return dueTasks;
 }
 
 export async function clearCloudSyncOutbox(): Promise<void> {
   await saveOutbox([]);
+  await cloudSyncOutboxDiagnostics.info("cloud_sync_outbox_cleared");
 }

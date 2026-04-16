@@ -193,7 +193,7 @@ describe("Diagnostics collector contract", () => {
       feature: "openai-translation-service",
       provider: "google-meet",
       message: "translation_failed",
-      data: { sourceUrl: "https://meet.google.com/abc-defg-hij?authuser=1" },
+      data: { sourceUrl: "https://meet.google.com/xxx-xxxx-xxx?authuser=1" },
     });
 
     await diagnostics.appendDiagnosticsEvent({
@@ -208,7 +208,7 @@ describe("Diagnostics collector contract", () => {
 
     await diagnostics.setDiagnosticsSnapshot("content-runtime", "content", {
       providerPlatform: "google-meet",
-      sourceUrl: "https://meet.google.com/abc-defg-hij?authuser=1",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx?authuser=1",
     });
 
     const payload = await diagnostics.getDiagnosticsPayload({
@@ -219,7 +219,7 @@ describe("Diagnostics collector contract", () => {
     expect(payload.events).toHaveLength(2);
     expect(payload.events[0]?.message).toBe("translation_failed");
     expect(payload.events[0]?.data).toEqual({
-      sourceUrl: "https://meet.google.com/abc-defg-hij",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
     });
     expect(payload.events[1]?.message).toBe("assistant_generation_failed");
     expect(payload.events[1]?.data).toEqual({
@@ -235,7 +235,7 @@ describe("Diagnostics collector contract", () => {
     expect(Object.keys(payload.snapshots)).toHaveLength(1);
     expect(payload.resolvedSnapshot?.data).toEqual({
       providerPlatform: "google-meet",
-      sourceUrl: "https://meet.google.com/abc-defg-hij",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
     });
     expect(diagnostics.session.set).toHaveBeenCalled();
 
@@ -315,7 +315,7 @@ describe("Diagnostics collector contract", () => {
       {
         frameId: 0,
         tab: { id: 17 } as ChromeTabLike,
-        url: "https://meet.google.com/abc-defg-hij",
+        url: "https://meet.google.com/xxx-xxxx-xxx",
       }
     );
     await diagnostics.setDiagnosticsSnapshot(
@@ -340,7 +340,7 @@ describe("Diagnostics collector contract", () => {
     const meetPayload = await diagnostics.getDiagnosticsPayload({
       provider: "google-meet",
       runtime: "content",
-      pageUrl: "https://meet.google.com/abc-defg-hij",
+      pageUrl: "https://meet.google.com/xxx-xxxx-xxx",
       snapshotBaseKey: "content-runtime",
     });
     expect(Object.keys(meetPayload.snapshots)).toHaveLength(1);
@@ -454,7 +454,7 @@ describe("Diagnostics collector contract", () => {
     const sender = {
       frameId: 0,
       tab: { id: 21 } as ChromeTabLike,
-      url: "https://meet.google.com/abc-defg-hij",
+      url: "https://meet.google.com/xxx-xxxx-xxx",
     };
 
     const firstSnapshot = await diagnostics.setDiagnosticsSnapshot(

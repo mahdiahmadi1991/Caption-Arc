@@ -940,10 +940,7 @@ export function normalizeMeetingSession(
     meetingProfileId:
       typeof storedSession.meetingProfileId === "string"
         ? storedSession.meetingProfileId
-        : typeof (storedSession as { summaryProfileId?: unknown }).summaryProfileId ===
-            "string"
-          ? String((storedSession as { summaryProfileId?: unknown }).summaryProfileId)
-          : undefined,
+        : undefined,
     derived: storedSession.derived
       ? {
           ...storedSession.derived,

@@ -40,11 +40,11 @@ describe("Diagnostics contract: sanitization", () => {
 
   test("DIAG-SAN-002: snapshots sanitize URLs and long strings", () => {
     const snapshot = createDiagnosticsSnapshot("content-runtime", "content", {
-      sourceUrl: "https://meet.google.com/abc-defg-hij?authuser=1",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx?authuser=1",
       note: "x".repeat(400),
     });
 
-    expect(snapshot.data.sourceUrl).toBe("https://meet.google.com/abc-defg-hij");
+    expect(snapshot.data.sourceUrl).toBe("https://meet.google.com/xxx-xxxx-xxx");
     expect(String(snapshot.data.note)).toContain("...");
   });
 });

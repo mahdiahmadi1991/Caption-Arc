@@ -32,24 +32,17 @@ function normalizePortableSettingsInput(input: unknown): PortableSettings {
     throw new Error("The data bundle settings payload is invalid.");
   }
 
-  const settings = input as Settings & {
-    summaryLanguage?: string;
-    summaryProfiles?: Settings["meetingProfiles"];
-    defaultSummaryProfileId?: string;
-  };
+  const settings = input as Settings;
 
   return {
     model: settings.model,
     targetLanguage: settings.targetLanguage,
     translationEnabled: settings.translationEnabled,
     customPrompt: settings.customPrompt,
-    meetingOutputLanguage:
-      settings.meetingOutputLanguage || settings.summaryLanguage || "en",
+    meetingOutputLanguage: settings.meetingOutputLanguage || "en",
     meetingArchiveRetentionDays: settings.meetingArchiveRetentionDays,
-    meetingProfiles:
-      settings.meetingProfiles || settings.summaryProfiles || [],
-    defaultMeetingProfileId:
-      settings.defaultMeetingProfileId || settings.defaultSummaryProfileId || "",
+    meetingProfiles: settings.meetingProfiles || [],
+    defaultMeetingProfileId: settings.defaultMeetingProfileId || "",
     appearance: settings.appearance,
     overlayVisible: settings.overlayVisible,
     captureStartupBehavior: settings.captureStartupBehavior,

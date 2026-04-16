@@ -250,6 +250,8 @@ describe("UI i18n contract", () => {
       "common.uiLanguage.system",
       "options.header.title",
       "options.sections.workspace.description",
+      "options.runtime.cloudSync.connectSuccessHint",
+      "options.runtime.cloudSync.refreshSuccessHint",
       "history.page.title",
       "history.sessionList.removeStar",
       "content.empty.captureStartingTitle",

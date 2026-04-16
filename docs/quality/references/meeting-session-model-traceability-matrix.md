@@ -21,4 +21,4 @@ This matrix maps meeting-session-model behavior-contract rules to available vali
 
 ## Notes
 
-1. Session-model coverage remains responsible for stored-session compatibility paths, including legacy `summaryProfileId` values that now normalize into `meetingProfileId`.
+1. Session-model coverage remains responsible for the canonical stored-session shape, including `meetingProfileId` and the current artifact fields.

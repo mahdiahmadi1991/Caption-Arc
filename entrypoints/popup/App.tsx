@@ -34,7 +34,7 @@ import {
 } from "../shared/i18n";
 import type { ThemeToggleLabels } from "../shared/theme-toggle";
 
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 const DASHBOARD_REFRESH_INTERVAL_MS = 1500;
 const ACTIVE_SUMMARY_STATES = new Set([
   "preflighting",

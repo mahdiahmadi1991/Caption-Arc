@@ -33,7 +33,9 @@ export function TermsGate({
 }: TermsGateProps) {
   const t = useT();
   const { settings, loading, saveSettings } = useExtensionPageSettings();
-  const resolvedTheme = useResolvedTheme(settings.appearance);
+  const resolvedTheme = useResolvedTheme(settings.appearance, {
+    deferDocumentApply: loading,
+  });
   const manifestVersion = chrome.runtime.getManifest().version;
   const compact = surface === "popup";
   const declinedCurrentTerms = hasDeclinedCurrentTerms(settings.termsDecline);

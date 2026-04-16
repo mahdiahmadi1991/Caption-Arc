@@ -4,10 +4,6 @@ import type {
   MeetingProfile,
 } from "../background/types";
 import type { CloudSyncProvider } from "../background/types";
-import type {
-  CloudSyncProviderCheckpoint,
-  CloudSyncProviderHealthState,
-} from "../background/cloud-sync/types";
 import {
   ApiKeyInput,
   getMeetingArchiveRetentionOptions,
@@ -34,6 +30,7 @@ import {
   BeakerIcon,
   CheckIcon,
   ChevronDownIcon,
+  ChevronUpIcon,
   EditIcon,
   EyeIcon,
   EyeOffIcon,
@@ -41,6 +38,7 @@ import {
   GearIcon,
   PlusIcon,
   RefreshIcon,
+  SpinnerIcon,
   SparklesIcon,
   TrashIcon,
 } from "../shared/icons";
@@ -71,6 +69,15 @@ import {
   isLegalRiskSettingActive,
   shouldPromptForLegalRiskAcknowledgement,
 } from "./legal-risk-settings";
+import {
+  buildCloudSyncProviderCardModels,
+  type CloudSyncProviderCardModel,
+  formatCloudSyncTimestampLabel,
+  getCloudSyncOverviewMeta,
+  getCloudSyncProviderDetails,
+  getCloudSyncScopeLocal,
+  getCloudSyncScopeShared,
+} from "./cloud-sync-view-model";
 
 const CAPTURE_STARTUP_OPTION_IDS = ["off", "ask", "always"] as const;
 const CAPTION_ACTIVATION_OPTION_IDS = ["guided", "automatic"] as const;
@@ -298,7 +305,7 @@ function getSummaryGenerationModeOptions(t: UiTranslator) {
 const SUMMARY_PROFILE_NAME_MAX_LENGTH = 80;
 const SUMMARY_PROFILE_DESCRIPTION_MAX_LENGTH = 160;
 const SUMMARY_PROFILE_PROMPT_MAX_LENGTH = 5000;
-const ASSISTANT_PROFILE_PROMPT_MAX_LENGTH = 3000;
+const ASSISTANT_PROFILE_PROMPT_MAX_LENGTH = 8000;
 const CUSTOM_TRANSLATION_INSTRUCTIONS_MAX_LENGTH = 1800;
 
 function getAssistantResponseIntentOptions(t: UiTranslator) {
@@ -536,21 +543,6 @@ function getAssistantParticipantScopeOptions(t: UiTranslator) {
   ] as const;
 }
 
-function getCloudSyncProviderDetails(t: UiTranslator) {
-  return [
-    {
-      id: "google-drive" as const,
-      title: t("options.cloudSync.providers.googleDrive.title"),
-      subtitle: t("options.cloudSync.providers.googleDrive.subtitle"),
-    },
-    {
-      id: "onedrive" as const,
-      title: t("options.cloudSync.providers.oneDrive.title"),
-      subtitle: t("options.cloudSync.providers.oneDrive.subtitle"),
-    },
-  ] as const;
-}
-
 const CLOUD_SYNC_PROVIDER_BADGE_CLASSNAMES: Record<
   CloudSyncProvider,
   string
@@ -630,24 +622,6 @@ const CloudSyncProviderBadge = ({
   );
 };
 
-function getCloudSyncScopeShared(t: UiTranslator) {
-  return [
-    t("options.cloudSync.scope.shared.meetingSessions"),
-    t("options.cloudSync.scope.shared.translations"),
-    t("options.cloudSync.scope.shared.summaries"),
-    t("options.cloudSync.scope.shared.meetingProfiles"),
-    t("options.cloudSync.scope.shared.sharedSettings"),
-  ];
-}
-
-function getCloudSyncScopeLocal(t: UiTranslator) {
-  return [
-    t("options.cloudSync.scope.local.apiKeys"),
-    t("options.cloudSync.scope.local.verificationStatus"),
-    t("options.cloudSync.scope.local.deviceIdentity"),
-  ];
-}
-
 type SurfacePanelProps = {
   id?: string;
   children: ReactNode;
@@ -659,7 +633,7 @@ function SurfacePanel({ id, children, className }: SurfacePanelProps) {
     <div
       id={id}
       className={[
-        "rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[0_18px_40px_var(--app-shadow)] backdrop-blur-xl sm:p-6",
+        "rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-4 shadow-[0_18px_40px_var(--app-shadow)] sm:p-6",
         className,
       ]
         .filter(Boolean)
@@ -848,11 +822,14 @@ function InlineStatus({ status, message }: InlineStatusProps) {
   );
 }
 
-type StatusPillTone = "neutral" | "accent" | "warning" | "danger";
+type StatusPillTone = "neutral" | "accent" | "success" | "warning" | "danger";
+type StatusPillMotion = "none" | "pulse" | "processing";
 
 type StatusPillProps = {
   label: string;
   tone: StatusPillTone;
+  motion?: StatusPillMotion;
+  indicator?: boolean;
 };
 
 const STATUS_PILL_CLASSNAMES: Record<StatusPillTone, string> = {
@@ -860,17 +837,47 @@ const STATUS_PILL_CLASSNAMES: Record<StatusPillTone, string> = {
     "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]",
   accent:
     "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]",
+  success:
+    "border-[var(--app-success-border)] bg-[color:color-mix(in_srgb,var(--app-success-soft)_84%,var(--app-surface))] text-[var(--app-success)] shadow-[0_10px_24px_color-mix(in_srgb,var(--app-success)_14%,transparent)]",
   warning:
     "border-[var(--app-warning-border)] bg-[var(--app-warning-soft)] text-[var(--app-warning)]",
   danger:
     "border-[var(--app-danger-border)] bg-[var(--app-danger-soft)] text-[var(--app-danger)]",
 };
 
-const StatusPill = ({ label, tone }: StatusPillProps) => {
+function StatusPillIndicator({
+  motion,
+}: {
+  motion: StatusPillMotion;
+}) {
+  if (motion === "processing") {
+    return (
+      <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
+        <span className="absolute inset-0 animate-ping rounded-full bg-current opacity-30" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-current" />
+      </span>
+    );
+  }
+
+  if (motion === "pulse") {
+    return <span className="inline-flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-current" />;
+  }
+
+  return <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-current/75" />;
+}
+
+const StatusPill = ({
+  label,
+  tone,
+  motion = "none",
+  indicator = false,
+}: StatusPillProps) => {
+  const showIndicator = indicator || motion !== "none";
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${STATUS_PILL_CLASSNAMES[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${STATUS_PILL_CLASSNAMES[tone]}`}
     >
+      {showIndicator ? <StatusPillIndicator motion={motion} /> : null}
       {label}
     </span>
   );
@@ -1102,6 +1109,7 @@ type ActionButtonProps = {
   label: string;
   onClick: () => void;
   icon?: ReactNode;
+  loadingLabel?: string;
   variant?: "default" | "accent" | "danger";
   size?: "default" | "compact";
   disabled?: boolean;
@@ -1134,6 +1142,7 @@ const ActionButton = ({
   label,
   onClick,
   icon,
+  loadingLabel,
   variant = "default",
   size = "default",
   disabled = false,
@@ -1141,6 +1150,11 @@ const ActionButton = ({
   className,
 }: ActionButtonProps) => {
   const t = useT();
+  const resolvedIcon = isLoading ? (
+    <SpinnerIcon className="h-4 w-4 animate-spin" />
+  ) : (
+    icon
+  );
 
   return (
     <button
@@ -1148,7 +1162,7 @@ const ActionButton = ({
       onClick={onClick}
       disabled={disabled || isLoading}
       className={[
-        "inline-flex items-center justify-center rounded-full border font-medium transition-colors disabled:cursor-default disabled:opacity-60",
+        "inline-flex items-center justify-center rounded-full border font-medium transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-200 ease-out hover:-translate-y-[1px] disabled:cursor-default disabled:opacity-60 disabled:hover:translate-y-0",
         ACTION_BUTTON_SIZE_CLASSNAMES[size],
         ACTION_BUTTON_CLASSNAMES[variant],
         className,
@@ -1156,214 +1170,210 @@ const ActionButton = ({
         .filter(Boolean)
         .join(" ")}
     >
-      {icon ? <span className="inline-flex h-4 w-4 items-center justify-center">{icon}</span> : null}
-      <span>{isLoading ? t("common.actions.working") : label}</span>
+      {resolvedIcon ? (
+        <span className="inline-flex h-4 w-4 items-center justify-center">
+          {resolvedIcon}
+        </span>
+      ) : null}
+      <span>{isLoading ? loadingLabel || t("common.actions.working") : label}</span>
     </button>
   );
 };
 
-const formatTimestampLabel = (value: number | undefined, t: UiTranslator) => {
-  if (!value) {
-    return t("options.cloudSync.sync.notYet");
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
-};
-
-const getProviderCheckpoint = (
-  checkpoints: CloudSyncProviderCheckpoint[],
-  provider: CloudSyncProvider
-) => {
-  return checkpoints.find((checkpoint) => checkpoint.provider === provider);
-};
-
-const getCloudSyncHealthMeta = (
-  healthState: CloudSyncProviderHealthState | undefined,
-  t: UiTranslator
-): { label: string; tone: StatusPillTone } => {
-  switch (healthState) {
-    case "syncing":
-      return { label: t("options.cloudSync.health.syncing"), tone: "accent" };
-    case "up-to-date":
-      return { label: t("options.cloudSync.health.upToDate"), tone: "accent" };
-    case "retrying-automatically":
-      return {
-        label: t("options.cloudSync.health.retryingAutomatically"),
-        tone: "warning",
-      };
-    case "needs-attention":
-      return {
-        label: t("options.cloudSync.health.needsAttention"),
-        tone: "warning",
-      };
-    case "action-required":
-      return {
-        label: t("options.cloudSync.health.actionRequired"),
-        tone: "danger",
-      };
-    default:
-      return { label: t("options.cloudSync.health.off"), tone: "neutral" };
-  }
-};
-
-const getCloudSyncOverviewMeta = (
-  checkpoints: CloudSyncProviderCheckpoint[],
-  isLoading: boolean,
-  t: UiTranslator
-): { label: string; tone: StatusPillTone; description: string } => {
-  if (isLoading) {
-    return {
-      label: t("common.actions.loading"),
-      tone: "neutral",
-      description: t("options.cloudSync.overview.loadingDescription"),
-    };
-  }
-
-  const connectedCheckpoints = checkpoints.filter(
-    (checkpoint) => checkpoint.connected
+function CloudSyncMetaChip({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface)_82%,white)] px-2.5 py-1.5 text-[11px] text-[var(--app-text-muted)]">
+      <span className="font-medium uppercase tracking-[0.12em] text-[var(--app-text-faint)]">
+        {label}
+      </span>
+      <span
+        className="max-w-[220px] truncate text-[12px] font-medium text-[var(--app-text)]"
+        style={DYNAMIC_TEXT_STYLE}
+        dir={getDynamicTextDirection(value)}
+      >
+        {value}
+      </span>
+    </div>
   );
-  if (connectedCheckpoints.length === 0) {
-    return {
-      label: t("options.cloudSync.health.off"),
-      tone: "neutral",
-      description: t("options.cloudSync.overview.offDescription"),
-    };
-  }
+}
 
-  if (
-    connectedCheckpoints.some(
-      (checkpoint) =>
-        checkpoint.healthState === "needs-attention" ||
-        checkpoint.healthState === "action-required"
-    )
-  ) {
-    return {
-      label: t("options.cloudSync.health.needsAttention"),
-      tone: "warning",
-      description: t("options.cloudSync.overview.needsAttentionDescription"),
-    };
-  }
+function CloudSyncActivityBanner({
+  status,
+  message,
+  detail,
+}: {
+  status: "loading" | "success" | "error";
+  message: string;
+  detail?: string;
+}) {
+  const toneClassName =
+    status === "error"
+      ? "border-[var(--app-danger-border)] bg-[color:color-mix(in_srgb,var(--app-danger-soft)_72%,var(--app-surface))]"
+      : status === "success"
+        ? "border-[var(--app-success-border)] bg-[color:color-mix(in_srgb,var(--app-success-soft)_74%,var(--app-surface))]"
+        : "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_62%,var(--app-surface))]";
+  const icon =
+    status === "error" ? (
+      <AlertTriangleIcon className="h-4 w-4" />
+    ) : status === "success" ? (
+      <CheckIcon className="h-4 w-4" />
+    ) : (
+      <SpinnerIcon className="h-4 w-4 animate-spin" />
+    );
+  const iconToneClassName =
+    status === "error"
+      ? "text-[var(--app-danger)]"
+      : status === "success"
+        ? "text-[var(--app-success)]"
+        : "text-[var(--app-accent)]";
 
-  if
-    (
-      connectedCheckpoints.some(
-        (checkpoint) =>
-          checkpoint.healthState === "syncing" ||
-          checkpoint.healthState === "retrying-automatically"
-      )
-    ) {
-    return {
-      label: t("options.cloudSync.health.syncing"),
-      tone: "accent",
-      description: t("options.cloudSync.overview.syncingDescription"),
-    };
-  }
+  return (
+    <div className={`rounded-[1.35rem] border px-4 py-3 ${toneClassName}`}>
+      <div className="flex items-start gap-3">
+        <span className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full border border-current/10 bg-[color:color-mix(in_srgb,var(--app-surface-strong)_84%,transparent)] ${iconToneClassName}`}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p
+            className="text-sm font-medium text-[var(--app-text)]"
+            style={DYNAMIC_TEXT_STYLE}
+            dir={getDynamicTextDirection(message)}
+          >
+            {message}
+          </p>
+          {detail ? (
+            <p
+              className="mt-1 text-sm leading-relaxed text-[var(--app-text-muted)]"
+              style={DYNAMIC_TEXT_STYLE}
+              dir={getDynamicTextDirection(detail)}
+            >
+              {detail}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  return {
-    label: t("options.cloudSync.health.upToDate"),
-    tone: "accent",
-    description: t("options.cloudSync.overview.upToDateDescription"),
-  };
-};
+function CloudSyncProcessingDots({
+  tone,
+}: {
+  tone: StatusPillTone;
+}) {
+  const dotClassName =
+    tone === "warning"
+      ? "bg-[var(--app-warning)]"
+      : tone === "danger"
+        ? "bg-[var(--app-danger)]"
+        : tone === "success"
+          ? "bg-[var(--app-success)]"
+          : "bg-[var(--app-accent)]";
 
-const getCloudSyncConnectionMeta = (
-  checkpoint: CloudSyncProviderCheckpoint | undefined,
-  t: UiTranslator
-) => {
-  if (!checkpoint?.connected) {
-    return {
-      title: t("options.cloudSync.connection.notConnectedTitle"),
-      description: t("options.cloudSync.connection.notConnectedDescription"),
-    };
-  }
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {[0, 160, 320].map((delay) => (
+        <span
+          key={delay}
+          className={`h-1.5 w-1.5 animate-pulse rounded-full ${dotClassName}`}
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
 
-  return {
-    title:
-      checkpoint.accountLabel || t("options.cloudSync.connection.connectedTitle"),
-    description: checkpoint.connectedAt
-      ? t("options.cloudSync.connection.connectedAt", {
-          time: formatTimestampLabel(checkpoint.connectedAt, t),
-        })
-      : t("options.cloudSync.connection.connectedTitle"),
-  };
-};
+function CloudSyncInlineMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "accent" | "warning";
+}) {
+  const toneClassName =
+    tone === "accent"
+      ? "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_76%,var(--app-surface))]"
+      : tone === "warning"
+        ? "border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_80%,var(--app-surface))]"
+        : "border-[var(--app-border)] bg-[var(--app-surface)]";
 
-const getCloudSyncSyncMeta = (
-  checkpoint: CloudSyncProviderCheckpoint | undefined,
-  t: UiTranslator
-) => {
-  return {
-    title: formatTimestampLabel(checkpoint?.lastSuccessfulSyncAt, t),
-    description: checkpoint?.lastScanAt
-      ? t("options.cloudSync.sync.scannedAt", {
-          time: formatTimestampLabel(checkpoint.lastScanAt, t),
-        })
-      : t("options.cloudSync.sync.noScanRecorded"),
-  };
-};
+  return (
+    <div
+      className={`rounded-full border px-3 py-2 shadow-[0_10px_24px_var(--app-shadow)] ${toneClassName}`}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--app-text-faint)]">
+        {label}
+      </span>
+      <span className="ml-2 text-sm font-medium text-[var(--app-text)]">
+        {value}
+      </span>
+    </div>
+  );
+}
 
-const getCloudSyncStatusMessage = (
-  checkpoint: CloudSyncProviderCheckpoint | undefined,
-  t: UiTranslator
-) => {
-  if (checkpoint?.lastError) {
-    return checkpoint.lastError;
-  }
-
-  if (!checkpoint?.connected) {
-    return t("options.cloudSync.statusMessage.disconnected");
-  }
-
-  if (checkpoint.manualRetryAvailable) {
-    return t("options.cloudSync.statusMessage.manualRetryAvailable");
-  }
-
-  switch (checkpoint.healthState) {
-    case "syncing":
-      return t("options.cloudSync.statusMessage.syncing");
-    case "retrying-automatically":
-      return t("options.cloudSync.statusMessage.retryingAutomatically");
-    case "needs-attention":
-      return t("options.cloudSync.statusMessage.needsAttention");
-    case "action-required":
-      return t("options.cloudSync.statusMessage.actionRequired");
-    case "up-to-date":
-      return t("options.cloudSync.statusMessage.upToDate");
-    default:
-      return checkpoint.connected
-        ? t("options.cloudSync.statusMessage.connectedWaiting")
-        : t("options.cloudSync.health.off");
-  }
-};
-
-type CloudSyncStatCardProps = {
+type CloudSyncSignalTileProps = {
   label: string;
   value: string;
   description: string;
+  tone?: "default" | "accent" | "warning";
+  valueClassName?: string;
+  descriptionClassName?: string;
 };
 
-const CloudSyncStatCard = ({
+const CLOUD_SYNC_SIGNAL_TILE_CLASSNAMES: Record<
+  NonNullable<CloudSyncSignalTileProps["tone"]>,
+  string
+> = {
+  default:
+    "border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_76%,var(--app-surface))]",
+  accent:
+    "border-[var(--app-accent-border)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-accent-soft)_76%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_94%,var(--app-surface-soft)))]",
+  warning:
+    "border-[var(--app-warning-border)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-warning-soft)_74%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_94%,var(--app-surface-soft)))]",
+};
+
+const CloudSyncSignalTile = ({
   label,
   value,
   description,
-}: CloudSyncStatCardProps) => {
+  tone = "default",
+  valueClassName,
+  descriptionClassName,
+}: CloudSyncSignalTileProps) => {
   return (
-    <div className="rounded-[1.45rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
+    <div
+      className={`rounded-[1.5rem] border px-4 py-3.5 shadow-[0_14px_30px_var(--app-shadow)] ${CLOUD_SYNC_SIGNAL_TILE_CLASSNAMES[tone]}`}
+    >
       <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
         {label}
       </p>
       <p
-        className="mt-2 text-[0.95rem] font-medium leading-snug text-[var(--app-text)]"
+        className={[
+          "mt-2 text-[0.98rem] font-medium leading-snug text-[var(--app-text)]",
+          valueClassName,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={DYNAMIC_TEXT_STYLE}
         dir={getDynamicTextDirection(value)}
       >
         {value}
       </p>
       <p
-        className="mt-1 text-[11px] leading-relaxed text-[var(--app-text-muted)]"
+        className={[
+          "mt-1 text-[11px] leading-relaxed text-[var(--app-text-muted)]",
+          descriptionClassName,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={DYNAMIC_TEXT_STYLE}
         dir={getDynamicTextDirection(description)}
       >
@@ -1372,6 +1382,214 @@ const CloudSyncStatCard = ({
     </div>
   );
 };
+
+function CloudSyncScopeList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "shared" | "local";
+}) {
+  const itemToneClassName =
+    tone === "shared"
+      ? "border-[var(--app-accent-border)] bg-[color:color-mix(in_srgb,var(--app-accent-soft)_72%,var(--app-surface-strong))] text-[var(--app-accent)]"
+      : "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]";
+
+  return (
+    <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_74%,var(--app-surface-soft))] px-4 py-4">
+      <p className="text-sm font-medium text-[var(--app-text)]">{title}</p>
+      <div className="mt-3 grid gap-2">
+        {items.map((item) => (
+          <div
+            key={item}
+            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${itemToneClassName}`}
+          >
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-[color:color-mix(in_srgb,var(--app-surface-strong)_82%,transparent)]">
+              <CheckIcon className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-medium">{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CloudSyncProviderRow({
+  providerCard,
+  t,
+  onConnect,
+  onRetry,
+  onReconnect,
+  onDisconnect,
+}: {
+  providerCard: CloudSyncProviderCardModel;
+  t: UiTranslator;
+  onConnect: (provider: CloudSyncProvider) => void;
+  onRetry: (provider: CloudSyncProvider) => void;
+  onReconnect: (provider: CloudSyncProvider) => void;
+  onDisconnect: (provider: CloudSyncProvider) => void;
+}) {
+  const providerMetaLine = providerCard.checkpoint?.connected
+    ? providerCard.connection.title
+    : providerCard.subtitle;
+  const providerActionHint = providerCard.statusDetail || providerCard.connection.description;
+  const showProcessingState =
+    providerCard.isBusy ||
+    providerCard.health.motion === "processing" ||
+    providerCard.health.motion === "pulse";
+  const rowSurfaceClassName =
+    providerCard.health.tone === "danger"
+      ? "bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-danger-soft)_34%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_88%,var(--app-danger-soft)))]"
+      : providerCard.health.tone === "warning"
+        ? "bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-warning-soft)_36%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_88%,var(--app-warning-soft)))]"
+        : providerCard.health.tone === "success"
+          ? "bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-success-soft)_34%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_88%,var(--app-success-soft)))]"
+          : providerCard.health.tone === "accent"
+            ? "bg-[linear-gradient(135deg,color-mix(in_srgb,var(--app-accent-soft)_36%,var(--app-surface-strong)),color-mix(in_srgb,var(--app-surface)_88%,var(--app-accent-soft)))]"
+            : "bg-[linear-gradient(135deg,var(--app-surface-strong),color-mix(in_srgb,var(--app-surface)_88%,var(--app-surface-soft)))]";
+  const processingLabel = providerCard.busyLabel || providerCard.health.label;
+
+  return (
+    <div
+      className={`flex flex-col gap-3 px-4 py-4 transition-[background-color,box-shadow] duration-300 ease-out sm:px-5 lg:flex-row lg:items-start lg:justify-between ${rowSurfaceClassName}`}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-start gap-3">
+          <CloudSyncProviderBadge provider={providerCard.provider} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3
+                className="text-[0.98rem] font-semibold leading-snug text-[var(--app-text)]"
+                style={DYNAMIC_TEXT_STYLE}
+              >
+                {providerCard.title}
+              </h3>
+              <StatusPill
+                label={providerCard.health.label}
+                tone={providerCard.health.tone}
+                motion={providerCard.health.motion}
+                indicator
+              />
+            </div>
+            <p
+              className="mt-1 text-sm leading-relaxed text-[var(--app-text-muted)]"
+              style={DYNAMIC_TEXT_STYLE}
+              dir={getDynamicTextDirection(providerCard.statusMessage)}
+            >
+              {providerCard.statusMessage}
+            </p>
+            {showProcessingState ? (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-current/10 bg-[color:color-mix(in_srgb,var(--app-surface-strong)_86%,transparent)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-text-muted)] shadow-[0_10px_20px_var(--app-shadow)]">
+                <CloudSyncProcessingDots tone={providerCard.health.tone} />
+                <span
+                  style={DYNAMIC_TEXT_STYLE}
+                  dir={getDynamicTextDirection(processingLabel)}
+                >
+                  {processingLabel}
+                </span>
+              </div>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <CloudSyncMetaChip
+                label={t("options.cloudSync.providerCard.account")}
+                value={providerMetaLine}
+              />
+              <CloudSyncMetaChip
+                label={t("options.cloudSync.providerCard.lastSuccessfulSync")}
+                value={providerCard.sync.title}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex min-w-[240px] flex-col gap-2 lg:items-end">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {!providerCard.checkpoint?.connected && providerCard.providerSupported ? (
+            <ActionButton
+              label={t("options.cloudSync.actions.connect")}
+              loadingLabel={providerCard.busyLabel}
+              variant="accent"
+              size="compact"
+              onClick={() => {
+                onConnect(providerCard.provider);
+              }}
+              isLoading={
+                providerCard.isBusy && providerCard.busyIntent === "connect"
+              }
+              disabled={
+                providerCard.isBusy && providerCard.busyIntent !== "connect"
+              }
+            />
+          ) : providerCard.canRetry ? (
+            <ActionButton
+              label={t("options.cloudSync.actions.retryNow")}
+              loadingLabel={providerCard.busyLabel}
+              icon={<RefreshIcon className="h-4 w-4" />}
+              variant="accent"
+              size="compact"
+              onClick={() => {
+                onRetry(providerCard.provider);
+              }}
+              isLoading={
+                providerCard.isBusy && providerCard.busyIntent === "retry"
+              }
+              disabled={
+                providerCard.isBusy && providerCard.busyIntent !== "retry"
+              }
+            />
+          ) : providerCard.needsReconnect ? (
+            <ActionButton
+              label={t("options.cloudSync.actions.reconnect")}
+              loadingLabel={providerCard.busyLabel}
+              icon={<RefreshIcon className="h-4 w-4" />}
+              variant="accent"
+              size="compact"
+              onClick={() => {
+                onReconnect(providerCard.provider);
+              }}
+              isLoading={
+                providerCard.isBusy && providerCard.busyIntent === "reconnect"
+              }
+              disabled={
+                providerCard.isBusy && providerCard.busyIntent !== "reconnect"
+              }
+            />
+          ) : null}
+
+          {providerCard.checkpoint?.connected ||
+          providerCard.canRemoveUnsupportedProvider ? (
+            <ActionButton
+              label={t("options.cloudSync.actions.disconnect")}
+              loadingLabel={providerCard.busyLabel}
+              variant="default"
+              size="compact"
+              onClick={() => {
+                onDisconnect(providerCard.provider);
+              }}
+              isLoading={
+                providerCard.isBusy && providerCard.busyIntent === "disconnect"
+              }
+              disabled={
+                providerCard.isBusy && providerCard.busyIntent !== "disconnect"
+              }
+            />
+          ) : null}
+        </div>
+        <p
+          className="text-xs leading-relaxed text-[var(--app-text-faint)] lg:max-w-[280px] lg:text-right"
+          style={DYNAMIC_TEXT_STYLE}
+          dir={getDynamicTextDirection(providerActionHint)}
+        >
+          {providerActionHint}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function AssistantProfileControls({
   profile,
@@ -1566,7 +1784,7 @@ function ProfileFieldCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] backdrop-blur-xl sm:p-4">
+    <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] sm:p-4">
       <div className="pointer-events-none mb-2.5 flex items-center gap-2 text-sm font-medium text-[var(--app-text)]">
         <span className="pointer-events-auto">{label}</span>
         {helpMarkdown ? (
@@ -2027,7 +2245,9 @@ export default function App() {
     reconnectProvider,
     resolveSettingsChoice,
   } = useCloudSync({ onSettingsChanged: reloadSettings });
-  const resolvedTheme = useResolvedTheme(settings.appearance);
+  const resolvedTheme = useResolvedTheme(settings.appearance, {
+    deferDocumentApply: loading,
+  });
   const customMeetingProfiles = settings.meetingProfiles.filter(
     (profile) => !isProtectedMeetingProfile(profile.id)
   );
@@ -2063,7 +2283,11 @@ export default function App() {
   const overallCloudSync = getCloudSyncOverviewMeta(
     cloudSyncState.checkpoints,
     cloudSyncLoading,
-    t
+    t,
+    {
+      queueSize: cloudSyncState.queueSize,
+      dueTaskCount: cloudSyncState.dueTaskCount,
+    }
   );
   const connectedCloudProviderCount = cloudSyncState.checkpoints.filter(
     (checkpoint) => checkpoint.connected
@@ -2079,10 +2303,67 @@ export default function App() {
         (provider) => provider.id === pendingSettingsDecision.provider
       )
     : null;
+  const queueSummaryLabel =
+    cloudSyncState.queueSize === 0
+      ? t("options.cloudSync.queue.noQueuedChanges")
+      : t("options.cloudSync.queue.queuedChanges", {
+          count: cloudSyncState.queueSize,
+        });
+  const queueDetailLabel = cloudSyncState.engine.running
+    ? t("options.cloudSync.queue.engineProcessing")
+    : cloudSyncState.dueTaskCount > 0
+      ? t("options.cloudSync.queue.tasksReady", {
+          count: cloudSyncState.dueTaskCount,
+        })
+      : t("options.cloudSync.queue.engineIdle");
+  const queueNeedsConnection = Boolean(
+    connectedCloudProviderCount === 0 && cloudSyncState.queueSize > 0
+  );
+  const showQueueStatusMetric = connectedCloudProviderCount > 0;
+  const protectionSummaryTitle =
+    connectedCloudProviderCount === 0
+      ? t("options.cloudSync.connection.notConnectedTitle")
+      : queueNeedsConnection || overallCloudSync.tone === "warning"
+      ? queueSummaryLabel
+      : overallCloudSync.label;
+  const protectionSummaryDescription =
+    connectedCloudProviderCount === 0
+      ? t("options.runtime.cloudSync.idleDisconnected")
+      : overallCloudSync.description;
+  const isCloudSyncRefreshing =
+    cloudSyncLoading ||
+    (cloudSyncMutationState.status === "loading" &&
+      cloudSyncMutationState.intent === "refresh");
+  const showCloudSyncActivityBanner =
+    cloudSyncMutationState.status === "loading" ||
+    cloudSyncMutationState.status === "success" ||
+    cloudSyncMutationState.status === "error";
+  const cloudSyncActivityStatus: "loading" | "success" | "error" | null =
+    cloudSyncMutationState.status === "idle"
+      ? null
+      : cloudSyncMutationState.status;
+  const cloudSyncProviderCards = useMemo(
+    () =>
+      buildCloudSyncProviderCardModels({
+        checkpoints: cloudSyncState.checkpoints,
+        providerDetails: cloudSyncProviderDetails,
+        mutationState: cloudSyncMutationState,
+        settingsConnectedCloudProviders: settings.connectedCloudProviders,
+        t,
+      }),
+    [
+      cloudSyncMutationState,
+      cloudSyncProviderDetails,
+      cloudSyncState.checkpoints,
+      settings.connectedCloudProviders,
+      t,
+    ]
+  );
   const hasConnectedCloudProviders = connectedCloudProviderCount > 0;
   const [activeSection, setActiveSection] = useState<string>(
     SETTINGS_SECTION_IDS[0]
   );
+  const [cloudSyncDetailsExpanded, setCloudSyncDetailsExpanded] = useState(false);
   const [selectedMeetingProfileId, setSelectedMeetingProfileId] = useState<string>(
     settings.defaultMeetingProfileId || settings.meetingProfiles[0]?.id || ""
   );
@@ -2450,50 +2731,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
-      <ConfirmDialog
-        open={confirmClearSessionData}
-        tone="danger"
-        title={
-          hasConnectedCloudProviders
-            ? t("options.dataRecovery.confirmDelete.syncedTitle")
-            : t("options.dataRecovery.confirmDelete.localTitle")
-        }
-        description={confirmClearSessionDescription}
-        confirmLabel={confirmClearSessionLabel}
-        onConfirm={handleConfirmClearSessionData}
-        onCancel={() => setConfirmClearSessionData(false)}
-        busy={dataTransferState.status === "clearing"}
-      />
-      <ConfirmDialog
-        open={Boolean(pendingLegalRiskChange && pendingLegalRiskCopy)}
-        tone="warning"
-        eyebrow={pendingLegalRiskCopy?.eyebrow}
-        title={pendingLegalRiskCopy?.title || ""}
-        description={
-          pendingLegalRiskCopy ? (
-            <LegalRiskDialogBody
-              body={pendingLegalRiskCopy.body}
-              points={pendingLegalRiskCopy.points}
-            />
-          ) : (
-            ""
-          )
-        }
-        confirmLabel={
-          pendingLegalRiskCopy?.confirmLabel ||
-          t("history.confirmDialog.confirmAction")
-        }
-        onConfirm={() => {
-          void acknowledgePendingLegalRiskChange();
-        }}
-        onCancel={() => {
-          if (!legalRiskDialogBusy) {
-            setPendingLegalRiskChange(null);
+      <div className="mc-options-page-shell">
+        <ConfirmDialog
+          open={confirmClearSessionData}
+          tone="danger"
+          title={
+            hasConnectedCloudProviders
+              ? t("options.dataRecovery.confirmDelete.syncedTitle")
+              : t("options.dataRecovery.confirmDelete.localTitle")
           }
-        }}
-        busy={legalRiskDialogBusy}
-      />
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 xl:px-8 xl:py-8">
+          description={confirmClearSessionDescription}
+          confirmLabel={confirmClearSessionLabel}
+          onConfirm={handleConfirmClearSessionData}
+          onCancel={() => setConfirmClearSessionData(false)}
+          busy={dataTransferState.status === "clearing"}
+        />
+        <ConfirmDialog
+          open={Boolean(pendingLegalRiskChange && pendingLegalRiskCopy)}
+          tone="warning"
+          eyebrow={pendingLegalRiskCopy?.eyebrow}
+          title={pendingLegalRiskCopy?.title || ""}
+          description={
+            pendingLegalRiskCopy ? (
+              <LegalRiskDialogBody
+                body={pendingLegalRiskCopy.body}
+                points={pendingLegalRiskCopy.points}
+              />
+            ) : (
+              ""
+            )
+          }
+          confirmLabel={
+            pendingLegalRiskCopy?.confirmLabel ||
+            t("history.confirmDialog.confirmAction")
+          }
+          onConfirm={() => {
+            void acknowledgePendingLegalRiskChange();
+          }}
+          onCancel={() => {
+            if (!legalRiskDialogBusy) {
+              setPendingLegalRiskChange(null);
+            }
+          }}
+          busy={legalRiskDialogBusy}
+        />
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 xl:px-8 xl:py-8">
         <header className="mb-5 space-y-4 xl:mb-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-2xl">
@@ -2512,7 +2794,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={openHistory}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-3.5 py-2 text-sm text-[var(--app-text-muted)] shadow-[0_10px_24px_var(--app-shadow)] backdrop-blur-xl transition-colors hover:bg-[var(--app-surface-strong)] hover:text-[var(--app-text)]"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface-strong)] px-3.5 py-2 text-sm text-[var(--app-text-muted)] shadow-[0_10px_24px_var(--app-shadow)] transition-colors hover:bg-[var(--app-surface-soft)] hover:text-[var(--app-text)]"
               >
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface-soft)] text-[var(--app-accent)]">
                   <ArchiveIcon className="h-4 w-4" />
@@ -3150,124 +3432,100 @@ export default function App() {
               title={t("options.sections.cloudSync.title")}
               description={t("options.sections.cloudSync.description")}
             >
-              <SurfacePanel className="bg-[var(--app-surface-soft)]">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="max-w-2xl">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-medium text-[var(--app-text)]">
-                        {t("options.cloudSync.overview.title")}
+              <SurfacePanel className="border-[var(--app-border-strong)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--app-surface-strong)_94%,var(--app-surface-soft)),color-mix(in_srgb,var(--app-surface)_92%,var(--app-surface-soft)))]">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-3xl">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--app-accent)]">
+                          {t("options.cloudSync.overview.title")}
+                        </p>
+                        <StatusPill
+                          label={overallCloudSync.label}
+                          tone={overallCloudSync.tone}
+                          motion={
+                            overallCloudSync.tone === "accent"
+                              ? "processing"
+                              : "none"
+                          }
+                          indicator
+                        />
+                      </div>
+                      <h3
+                        className="mt-2 text-[1.25rem] font-semibold leading-tight text-[var(--app-text)] sm:text-[1.4rem]"
+                        style={DYNAMIC_TEXT_STYLE}
+                        dir={getDynamicTextDirection(protectionSummaryTitle)}
+                      >
+                        {protectionSummaryTitle}
                       </h3>
-                      <StatusPill
-                        label={overallCloudSync.label}
-                        tone={overallCloudSync.tone}
-                      />
+                      <p
+                        className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--app-text-muted)]"
+                        style={DYNAMIC_TEXT_STYLE}
+                        dir={getDynamicTextDirection(protectionSummaryDescription)}
+                      >
+                        {protectionSummaryDescription}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]">
-                      {overallCloudSync.description}
-                    </p>
-                  </div>
-                  <ActionButton
-                    label={t("options.cloudSync.actions.refreshStatus")}
-                    icon={<RefreshIcon className="h-4 w-4" />}
-                    onClick={() => {
-                      void refreshCloudSyncState();
-                    }}
-                    disabled={cloudSyncMutationState.status === "loading"}
-                  />
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-                      {t("options.cloudSync.stats.currentDevice")}
-                    </p>
-                    <p
-                      className="mt-2 text-sm font-medium text-[var(--app-text)]"
-                      dir={getDynamicTextDirection(settings.deviceLabel)}
-                    >
-                      {settings.deviceLabel}
-                    </p>
-                    <p
-                      className="mt-1 text-xs text-[var(--app-text-muted)]"
-                      style={DYNAMIC_TEXT_STYLE}
-                      dir={getDynamicTextDirection(settings.deviceId)}
-                    >
-                      {settings.deviceId}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-                      {t("options.cloudSync.stats.connectedProviders")}
-                    </p>
-                    <p className="mt-2 text-sm font-medium text-[var(--app-text)]">
-                      {connectedCloudProviderCount}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--app-text-muted)]">
-                      {connectedCloudProviderCount === 0
-                        ? t("options.cloudSync.stats.connectedProvidersNone")
-                        : connectedCloudProviderCount === 1
-                          ? t("options.cloudSync.stats.connectedProvidersOne")
-                          : t("options.cloudSync.stats.connectedProvidersTwo")}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-                      {t("options.cloudSync.stats.lastSuccessfulSync")}
-                    </p>
-                    <p className="mt-2 text-sm font-medium text-[var(--app-text)]">
-                      {formatTimestampLabel(
-                        latestSuccessfulCloudSyncAt || undefined,
-                        t
-                      )}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--app-text-muted)]">
-                      {t("options.cloudSync.stats.lastSuccessfulSyncHint")}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--app-text-faint)]">
-                      {t("options.cloudSync.stats.queueStatus")}
-                    </p>
-                    <p className="mt-2 text-sm font-medium text-[var(--app-text)]">
-                      {cloudSyncState.queueSize === 0
-                        ? t("options.cloudSync.queue.noQueuedChanges")
-                        : t("options.cloudSync.queue.queuedChanges", {
-                            count: cloudSyncState.queueSize,
-                          })}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--app-text-muted)]">
-                      {cloudSyncState.engine.running
-                        ? t("options.cloudSync.queue.engineProcessing")
-                        : cloudSyncState.dueTaskCount > 0
-                          ? t("options.cloudSync.queue.tasksReady", {
-                              count: cloudSyncState.dueTaskCount,
-                            })
-                          : t("options.cloudSync.queue.engineIdle")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-[var(--app-text)]">
-                      {t("options.cloudSync.syncHealth.title")}
-                    </p>
-                    <StatusPill
-                      label={
-                        cloudSyncMutationState.status === "error"
-                          ? t("options.cloudSync.syncHealth.attention")
-                          : t("options.cloudSync.syncHealth.status")
-                      }
-                      tone={cloudSyncMutationState.status === "error" ? "danger" : "neutral"}
+                    <ActionButton
+                      label={t("options.cloudSync.actions.refreshStatus")}
+                      loadingLabel={t("options.cloudSync.actions.refreshStatus")}
+                      icon={<RefreshIcon className="h-4 w-4" />}
+                      onClick={() => {
+                        void refreshCloudSyncState();
+                      }}
+                      isLoading={isCloudSyncRefreshing}
+                      size="compact"
                     />
                   </div>
-                  <p
-                    className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]"
-                    style={DYNAMIC_TEXT_STYLE}
-                    dir={getDynamicTextDirection(cloudSyncMutationState.message)}
-                  >
-                    {cloudSyncMutationState.message}
-                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {showQueueStatusMetric ? (
+                      <CloudSyncInlineMetric
+                        label={t("options.cloudSync.stats.queueStatus")}
+                        value={queueSummaryLabel}
+                        tone={queueNeedsConnection ? "warning" : "accent"}
+                      />
+                    ) : null}
+                    <CloudSyncInlineMetric
+                      label={t("options.cloudSync.stats.connectedProviders")}
+                      value={
+                        connectedCloudProviderCount === 0
+                          ? t("options.cloudSync.stats.connectedProvidersNone")
+                          : connectedCloudProviderCount === 1
+                            ? t("options.cloudSync.stats.connectedProvidersOne")
+                            : t("options.cloudSync.stats.connectedProvidersTwo")
+                      }
+                      tone={
+                        connectedCloudProviderCount > 0 ? "accent" : "default"
+                      }
+                    />
+                  </div>
+
+                  {cloudSyncActivityStatus ? (
+                    <CloudSyncActivityBanner
+                      status={cloudSyncActivityStatus}
+                      message={cloudSyncMutationState.message}
+                      detail={cloudSyncMutationState.detail}
+                    />
+                  ) : null}
+
+                  {queueNeedsConnection ? (
+                    <div className="rounded-[1.35rem] border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-warning-soft)_76%,var(--app-surface))] px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-warning-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_86%,transparent)] text-[var(--app-warning)]">
+                          <AlertTriangleIcon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[var(--app-text)]">
+                            {t("options.cloudSync.connection.notConnectedTitle")}
+                          </p>
+                          <p className="mt-1 text-sm leading-relaxed text-[var(--app-text-muted)]">
+                            {t("options.runtime.cloudSync.idleAvailable")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </SurfacePanel>
 
@@ -3323,164 +3581,107 @@ export default function App() {
                 </SurfacePanel>
               ) : null}
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                {cloudSyncProviderDetails.map((providerDetail) => {
-                  const checkpoint = getProviderCheckpoint(
-                    cloudSyncState.checkpoints,
-                    providerDetail.id
-                  );
-                  const healthMeta = getCloudSyncHealthMeta(
-                    checkpoint?.healthState,
-                    t
-                  );
-                  const connectionMeta = getCloudSyncConnectionMeta(checkpoint, t);
-                  const syncMeta = getCloudSyncSyncMeta(checkpoint, t);
-                  const statusMessage = getCloudSyncStatusMessage(checkpoint, t);
-                  const isBusy =
-                    cloudSyncMutationState.status === "loading" &&
-                    cloudSyncMutationState.provider === providerDetail.id;
-                  const canRetry = Boolean(
-                    checkpoint?.connected && checkpoint.manualRetryAvailable
-                  );
-                  const providerConfigured =
-                    settings.connectedCloudProviders.includes(providerDetail.id);
-                  const providerSupported = checkpoint?.supported !== false;
-                  const needsReconnect = Boolean(
-                    checkpoint?.connected &&
-                      providerSupported &&
-                      !checkpoint.manualRetryAvailable &&
-                      (checkpoint.healthState === "action-required" ||
-                        checkpoint.healthState === "needs-attention")
-                  );
-                  const canRemoveUnsupportedProvider = Boolean(
-                    !providerSupported && providerConfigured
-                  );
+              <SurfacePanel className="overflow-hidden border-[var(--app-border-strong)] bg-[var(--app-surface-strong)] p-0">
+                <div className="divide-y divide-[color:color-mix(in_srgb,var(--app-border)_88%,transparent)]">
+                  {cloudSyncProviderCards.map((providerCard) => (
+                    <CloudSyncProviderRow
+                      key={providerCard.provider}
+                      providerCard={providerCard}
+                      t={t}
+                      onConnect={(provider) => {
+                        void connectProvider(provider);
+                      }}
+                      onRetry={(provider) => {
+                        void retryProvider(provider);
+                      }}
+                      onReconnect={(provider) => {
+                        void reconnectProvider(provider);
+                      }}
+                      onDisconnect={(provider) => {
+                        void disconnectProvider(provider);
+                      }}
+                    />
+                  ))}
+                </div>
 
-                  return (
-                    <SurfacePanel
-                      key={providerDetail.id}
-                      className="bg-[var(--app-surface-soft)] p-4 sm:p-5"
-                    >
-                      <div className="flex flex-col gap-3.5">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <CloudSyncProviderBadge provider={providerDetail.id} />
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3
-                                  className="text-base font-medium leading-snug text-[var(--app-text)]"
-                                  style={DYNAMIC_TEXT_STYLE}
-                                >
-                                  {providerDetail.title}
-                                </h3>
-                                <StatusPill
-                                  label={healthMeta.label}
-                                  tone={healthMeta.tone}
-                                />
-                              </div>
-                              <p className="mt-1 text-sm text-[var(--app-text-muted)]">
-                                {providerDetail.subtitle}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {!checkpoint?.connected && providerSupported ? (
-                              <ActionButton
-                                label={t("options.cloudSync.actions.connect")}
-                                variant="accent"
-                                onClick={() => {
-                                  void connectProvider(providerDetail.id);
-                                }}
-                                isLoading={isBusy}
-                              />
-                            ) : canRetry ? (
-                              <ActionButton
-                                label={t("options.cloudSync.actions.retryNow")}
-                                icon={<RefreshIcon className="h-4 w-4" />}
-                                variant="accent"
-                                onClick={() => {
-                                  void retryProvider(providerDetail.id);
-                                }}
-                                isLoading={isBusy}
-                              />
-                            ) : needsReconnect ? (
-                              <ActionButton
-                                label={t("options.cloudSync.actions.reconnect")}
-                                icon={<RefreshIcon className="h-4 w-4" />}
-                                variant="accent"
-                                onClick={() => {
-                                  void reconnectProvider(providerDetail.id);
-                                }}
-                                isLoading={isBusy}
-                              />
-                            ) : null}
+                <div className="border-t border-[color:color-mix(in_srgb,var(--app-border)_88%,transparent)] px-4 py-3 sm:px-5">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-sm font-medium text-[var(--app-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:-translate-y-[1px] hover:border-[var(--app-accent-border)] hover:text-[var(--app-text)]"
+                    onClick={() => {
+                      setCloudSyncDetailsExpanded((current) => !current);
+                    }}
+                  >
+                    {cloudSyncDetailsExpanded ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )}
+                    <span>
+                      {cloudSyncDetailsExpanded
+                        ? t("common.actions.collapse")
+                        : t("common.actions.expand")}
+                    </span>
+                  </button>
 
-                            {checkpoint?.connected || canRemoveUnsupportedProvider ? (
-                              <ActionButton
-                                label={t("options.cloudSync.actions.disconnect")}
-                                variant="default"
-                                onClick={() => {
-                                  void disconnectProvider(providerDetail.id);
-                                }}
-                                isLoading={isBusy}
-                              />
-                            ) : null}
-                          </div>
+                  <div
+                    className={[
+                      "grid transition-all duration-200 ease-out",
+                      cloudSyncDetailsExpanded
+                        ? "mt-4 grid-rows-[1fr] opacity-100"
+                        : "mt-0 grid-rows-[0fr] opacity-0",
+                    ].join(" ")}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <CloudSyncSignalTile
+                            label={t("options.cloudSync.stats.currentDevice")}
+                            value={settings.deviceLabel}
+                            description={settings.deviceId}
+                            tone="default"
+                            valueClassName="text-base"
+                            descriptionClassName="font-mono text-[10px] tracking-[0.04em]"
+                          />
+                          <CloudSyncSignalTile
+                            label={t("options.cloudSync.stats.lastSuccessfulSync")}
+                            value={formatCloudSyncTimestampLabel(
+                              latestSuccessfulCloudSyncAt || undefined,
+                              t
+                            )}
+                            description={t(
+                              "options.cloudSync.stats.lastSuccessfulSyncHint"
+                            )}
+                            tone={
+                              latestSuccessfulCloudSyncAt ? "accent" : "default"
+                            }
+                          />
+                          <CloudSyncSignalTile
+                            label={t("options.cloudSync.stats.queueStatus")}
+                            value={queueSummaryLabel}
+                            description={queueDetailLabel}
+                            tone={
+                              cloudSyncState.queueSize > 0 ||
+                              cloudSyncState.dueTaskCount > 0
+                                ? "warning"
+                                : "default"
+                            }
+                          />
                         </div>
 
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <CloudSyncStatCard
-                            label={t("options.cloudSync.providerCard.account")}
-                            value={connectionMeta.title}
-                            description={connectionMeta.description}
+                        <div className="grid gap-4 lg:grid-cols-2">
+                          <CloudSyncScopeList
+                            title={t("options.cloudSync.scope.sharedTitle")}
+                            items={cloudSyncScopeShared}
+                            tone="shared"
                           />
-                          <CloudSyncStatCard
-                            label={t("options.cloudSync.providerCard.lastSuccessfulSync")}
-                            value={syncMeta.title}
-                            description={syncMeta.description}
-                          />
-                          <CloudSyncStatCard
-                            label={t("options.cloudSync.providerCard.providerStatus")}
-                            value={healthMeta.label}
-                            description={statusMessage}
+                          <CloudSyncScopeList
+                            title={t("options.cloudSync.scope.localTitle")}
+                            items={cloudSyncScopeLocal}
+                            tone="local"
                           />
                         </div>
                       </div>
-                    </SurfacePanel>
-                  );
-                })}
-              </div>
-
-              <SurfacePanel className="bg-[var(--app-surface-soft)]">
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--app-text)]">
-                      {t("options.cloudSync.scope.sharedTitle")}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {cloudSyncScopeShared.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full border border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] px-3 py-1 text-xs font-medium text-[var(--app-accent)]"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[var(--app-text)]">
-                      {t("options.cloudSync.scope.localTitle")}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {cloudSyncScopeLocal.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1 text-xs font-medium text-[var(--app-text-muted)]"
-                        >
-                          {item}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 </div>
@@ -3538,7 +3739,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="mt-4">
-                  <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] backdrop-blur-xl sm:p-4">
+                  <div className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-3.5 shadow-[0_14px_30px_var(--app-shadow)] sm:p-4">
                     <label className="mb-2.5 block text-sm font-medium text-[var(--app-text)]">
                       {t("options.dataRecovery.passphrase.label")}
                     </label>
@@ -3639,7 +3840,8 @@ export default function App() {
 
         </div>
 
-        <LegalFooter className="mt-8" version={chrome.runtime.getManifest().version} />
+          <LegalFooter className="mt-8" version={chrome.runtime.getManifest().version} />
+        </div>
       </div>
       <DiagnosticsConsole />
     </div>

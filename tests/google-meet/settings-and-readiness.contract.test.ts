@@ -49,35 +49,23 @@ beforeEach(() => {
 });
 
 describe("Settings and readiness contract", () => {
-  test("SETRDY-001: settings load merges legacy and split-state payloads before normalization", async () => {
+  test("SETRDY-001: settings load reads the canonical structured state and normalizes it", async () => {
     const base = createDefaultSettings();
-    const legacyCustomProfile = {
+    const customProfile = {
       ...base.meetingProfiles[0]!,
-      id: "legacy-custom",
-      name: "Legacy Custom",
+      id: "custom-profile",
+      name: "Custom Profile",
     };
-    const {
-      meetingProfiles: _meetingProfiles,
-      defaultMeetingProfileId: _defaultMeetingProfileId,
-      meetingOutputLanguage: _meetingOutputLanguage,
-      ...legacyBase
-    } = base;
     const storage = installExtensionStorage({
-      settings: {
-        ...legacyBase,
-        model: "gpt-5.1",
-        targetLanguage: "de",
-        deviceLabel: "legacy-label",
-        summaryLanguage: "ja",
-        summaryProfiles: [base.meetingProfiles[0]!, legacyCustomProfile],
-        defaultSummaryProfileId: legacyCustomProfile.id,
-      },
       settingsState: {
         schemaVersion: 1,
         shared: {
           model: "gpt-4.1",
           targetLanguage: "fa",
+          meetingOutputLanguage: "ja",
           meetingArchiveRetentionDays: 30,
+          meetingProfiles: [base.meetingProfiles[0]!, customProfile],
+          defaultMeetingProfileId: customProfile.id,
           legalRiskAcknowledgements: {
             storeMeetingChat: 55,
           },
@@ -104,7 +92,7 @@ describe("Settings and readiness contract", () => {
     expect(result.settings.targetLanguage).toBe("fa");
     expect(result.settings.meetingOutputLanguage).toBe("ja");
     expect(result.settings.meetingArchiveRetentionDays).toBe(30);
-    expect(result.settings.defaultMeetingProfileId).toBe(legacyCustomProfile.id);
+    expect(result.settings.defaultMeetingProfileId).toBe(customProfile.id);
     expect(result.settings.openaiApiKey).toBe("key-from-state");
     expect(result.settings.deviceLabel).toBe("state-label");
     expect(result.settings.connectedCloudProviders).toEqual(["google-drive"]);
@@ -118,7 +106,7 @@ describe("Settings and readiness contract", () => {
     expect(storage.local.set).not.toHaveBeenCalled();
   });
 
-  test("SETRDY-002: settings save persists both shapes and notifies cloud-sync", async () => {
+  test("SETRDY-002: settings save persists the canonical structured state and notifies cloud-sync", async () => {
     const base = createDefaultSettings();
     const storage = installExtensionStorage({
       settingsState: {
@@ -160,18 +148,8 @@ describe("Settings and readiness contract", () => {
       acceptedAt: 4567,
     });
     expect(storage.local.set).toHaveBeenCalled();
-    const persistedSettings = storage.storageState.settings as Record<string, unknown>;
     const persistedState = storage.storageState.settingsState as Record<string, unknown>;
-    expect(persistedSettings.model).toBe("gpt-5.2");
-    expect(persistedSettings.translationEnabled).toBe(true);
-    expect(persistedSettings.meetingArchiveRetentionDays).toBe(365);
-    expect(persistedSettings.legalRiskAcknowledgements).toEqual({
-      captureStartupAlways: 101,
-    });
-    expect(persistedSettings.termsAcceptance).toEqual({
-      version: "2026-04-10",
-      acceptedAt: 4567,
-    });
+    expect(storage.storageState.settings).toBeUndefined();
     expect(persistedState).toHaveProperty("shared");
     expect(persistedState).toHaveProperty("secrets");
     expect(persistedState).toHaveProperty("local");
@@ -213,9 +191,8 @@ describe("Settings and readiness contract", () => {
 
     expect(response.success).toBe(true);
     expect(response.settings.meetingArchiveRetentionDays).toBe(0);
-    const persistedSettings = storage.storageState.settings as Record<string, unknown>;
     const persistedState = storage.storageState.settingsState as Record<string, unknown>;
-    expect(persistedSettings.meetingArchiveRetentionDays).toBe(0);
+    expect(storage.storageState.settings).toBeUndefined();
     expect((persistedState.shared as Record<string, unknown>).meetingArchiveRetentionDays).toBe(0);
   });
 
@@ -257,15 +234,29 @@ describe("Settings and readiness contract", () => {
   test("SETRDY-004: verification success/failure clears stale readiness when OpenAI is not configured", async () => {
     const base = createDefaultSettings();
     const storage = installExtensionStorage({
-      settings: {
-        ...base,
-        openaiApiKey: "",
-        model: "",
-        verificationSnapshot: {
-          status: "error",
-          message: "old",
-          signature: "old",
-          verifiedAt: Date.now(),
+      settingsState: {
+        schemaVersion: 1,
+        shared: {
+          ...base,
+          model: "",
+        },
+        secrets: {
+          openaiApiKey: "",
+        },
+        local: {
+          deviceId: base.deviceId,
+          deviceLabel: base.deviceLabel,
+          uiLanguage: base.uiLanguage,
+          connectedCloudProviders: [],
+          overlayPositionsByPlatform: {},
+          verificationSnapshot: {
+            status: "error",
+            message: "old",
+            signature: "old",
+            verifiedAt: Date.now(),
+          },
+          termsAcceptance: null,
+          termsDecline: null,
         },
       },
     });
@@ -278,8 +269,8 @@ describe("Settings and readiness contract", () => {
     await recordOpenAiVerificationSuccess();
     await recordOpenAiVerificationFailure("failed");
 
-    const persisted = storage.storageState.settings as Record<string, unknown>;
-    expect(persisted.verificationSnapshot).toBeNull();
+    const persisted = storage.storageState.settingsState as Record<string, unknown>;
+    expect((persisted.local as Record<string, unknown>).verificationSnapshot).toBeNull();
   });
 
   test("SETRDY-006: invalid local terms acceptance records are discarded during normalization", async () => {
@@ -318,7 +309,21 @@ describe("Settings and readiness contract", () => {
   test("SETRDY-008: current-version terms decisions reconcile to the latest local state and save returns the normalized settings", async () => {
     const base = createDefaultSettings();
     installExtensionStorage({
-      settings: base,
+      settingsState: {
+        schemaVersion: 1,
+        shared: base,
+        secrets: { openaiApiKey: base.openaiApiKey },
+        local: {
+          deviceId: base.deviceId,
+          deviceLabel: base.deviceLabel,
+          uiLanguage: base.uiLanguage,
+          connectedCloudProviders: base.connectedCloudProviders,
+          overlayPositionsByPlatform: base.overlayPositionsByPlatform,
+          verificationSnapshot: base.verificationSnapshot,
+          termsAcceptance: base.termsAcceptance,
+          termsDecline: base.termsDecline,
+        },
+      },
     });
 
     const { saveSettings } = await import("../../entrypoints/background/settings");

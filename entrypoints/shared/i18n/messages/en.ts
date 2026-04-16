@@ -1224,10 +1224,41 @@ Example: \`Prioritize concise talking points and flag hidden risks before drafti
         updated: "Cloud sync status updated.",
         actionFailed: "Cloud sync action failed.",
         connecting: "Connecting cloud provider...",
+        connectingProvider: "Starting {provider} sign-in...",
+        connectHint:
+          "A secure browser window should open. Finish sign-in there, then return here.",
+        connectSuccess: "{provider} connected.",
+        connectSuccessHint:
+          "Background protection can continue from the next sync cycle.",
         disconnecting: "Disconnecting cloud provider...",
+        disconnectingProvider: "Disconnecting {provider}...",
+        disconnectHint:
+          "The local archive stays on this device while cloud access is being removed.",
+        disconnectSuccess: "{provider} disconnected.",
+        disconnectSuccessHint:
+          "Your local archive remains available on this device.",
         retrying: "Retrying cloud sync...",
+        retryingProvider: "Queuing another sync attempt for {provider}...",
+        retryHint:
+          "CaptionArc will ask the provider to resume background sync again.",
+        retrySuccess: "A new sync attempt was queued.",
+        retrySuccessHint:
+          "The provider will be retried in the background on the next run.",
         reconnecting: "Refreshing cloud provider access...",
+        reconnectingProvider: "Refreshing {provider} access...",
+        reconnectSuccess: "{provider} access refreshed.",
         resolvingChoice: "Applying the shared settings choice...",
+        resolveChoiceHint:
+          "The next background cycle will reconcile from the selected starting point.",
+        choiceSuccess: "Shared settings choice applied.",
+        choiceSuccessHint:
+          "Cloud sync will continue from the selected shared-settings baseline.",
+        refreshing: "Checking the latest cloud sync state...",
+        refreshHint:
+          "Reading queue health, provider checkpoints, and recent sync activity.",
+        refreshSuccess: "Cloud sync status refreshed.",
+        refreshSuccessHint:
+          "The latest provider state and queue health are now visible on this page.",
       },
     },
   },
