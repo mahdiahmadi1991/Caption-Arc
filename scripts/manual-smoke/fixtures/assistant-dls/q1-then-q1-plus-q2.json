@@ -1,0 +1,52 @@
+{
+  "id": "q1-then-q1-plus-q2",
+  "description": "A repeated first question plus a new second clause only produces guidance for the unresolved new question on the second pass.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "answer_for_me",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "job-q1",
+      "speaker": "Interviewer",
+      "text": "Why do you want this job?",
+      "settleMs": 3200
+    },
+    {
+      "type": "caption",
+      "stableKey": "job-q1-q2",
+      "speaker": "Interviewer",
+      "text": "Why do you want this job? Why you should be hire you?",
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 2,
+    "overlayCardCount": 2,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "hire",
+    "latestOutputTriggerExcludes": "Why do you want this job",
+    "latestOutputProfileId": "interview",
+    "latestOutputResponseIntent": "answer_for_me",
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 45000
+  }
+}

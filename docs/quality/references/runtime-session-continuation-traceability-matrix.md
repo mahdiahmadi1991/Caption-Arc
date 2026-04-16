@@ -27,4 +27,4 @@ This matrix maps runtime session-continuation behavior-contract rules to reposit
 
 ## Notes
 
-1. Session-continuation coverage assumes continuation eligibility is resolved against the canonical meeting-session model after legacy profile aliases are normalized.
+1. Session-continuation coverage assumes continuation eligibility is resolved against the canonical meeting-session model.

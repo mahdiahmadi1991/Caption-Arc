@@ -4,6 +4,8 @@
 
 This matrix maps assistant-runtime behavior-contract rules to available validation surfaces.
 
+Background assistant generation and persistence coverage is tracked separately in [assistant-generation-traceability-matrix.md](./assistant-generation-traceability-matrix.md).
+
 ## Status Legend
 
 - `planned`: case identified, not yet implemented in repository tests

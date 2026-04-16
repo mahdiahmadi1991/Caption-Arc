@@ -15,7 +15,7 @@ function createProviderStub(
     getSessionMetadata: () => ({
       platform: "google-meet",
       providerLabel: "Google Meet",
-      sourceUrl: "https://meet.google.com/abc-defg-hij",
+      sourceUrl: "https://meet.google.com/xxx-xxxx-xxx",
       identifiers: {},
     }),
     getEmptyState: () => ({
@@ -42,7 +42,7 @@ describe("Provider runtime reset-page guard contract", () => {
 
     const candidate = platformRuntimeInternals.shouldResetRuntimeOnCurrentPage(
       provider,
-      new URL("https://meet.google.com/abc-defg-hij")
+      new URL("https://meet.google.com/xxx-xxxx-xxx")
     );
 
     expect(candidate).toBe(true);
@@ -57,7 +57,7 @@ describe("Provider runtime reset-page guard contract", () => {
 
     const candidate = platformRuntimeInternals.shouldResetRuntimeOnCurrentPage(
       provider,
-      new URL("https://meet.google.com/abc-defg-hij")
+      new URL("https://meet.google.com/xxx-xxxx-xxx")
     );
 
     expect(candidate).toBe(false);

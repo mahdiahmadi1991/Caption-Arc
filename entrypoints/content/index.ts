@@ -1,4 +1,3 @@
-import { initializePlatformRuntime } from "./platform-runtime";
 import {
   createDiagnosticsLogger,
   initializeDiagnosticsClient,
@@ -14,6 +13,13 @@ const contentBootLogger = createDiagnosticsLogger({
   domain: "runtime",
   feature: "content-boot",
 });
+
+let platformRuntimeModulePromise:
+  | Promise<typeof import("./platform-runtime")>
+  | null = null;
+let assistantBridgeModulePromise:
+  | Promise<typeof import("./assistant-dls-capture-bridge")>
+  | null = null;
 
 type ContentScriptContext = {
   signal?: AbortSignal;
@@ -61,6 +67,24 @@ function shouldRetryBootIndefinitely(): boolean {
   }
 }
 
+function loadPlatformRuntimeModule(): Promise<typeof import("./platform-runtime")> {
+  if (!platformRuntimeModulePromise) {
+    platformRuntimeModulePromise = import("./platform-runtime");
+  }
+
+  return platformRuntimeModulePromise;
+}
+
+function loadAssistantBridgeModule(): Promise<
+  typeof import("./assistant-dls-capture-bridge")
+> {
+  if (!assistantBridgeModulePromise) {
+    assistantBridgeModulePromise = import("./assistant-dls-capture-bridge");
+  }
+
+  return assistantBridgeModulePromise;
+}
+
 export default defineContentScript({
   matches: [
     "https://meet.google.com/*",
@@ -106,6 +130,9 @@ export default defineContentScript({
     void contentBootLogger.debug("content_script_marker_injected", {
       runtimeId,
     });
+    void loadAssistantBridgeModule().then((module) =>
+      module.installAssistantDlsCaptureBridge()
+    );
 
     void bootWithRetry(ctx);
 
@@ -144,6 +171,7 @@ async function bootWithRetry(ctx?: ContentScriptContext): Promise<void> {
     });
 
     try {
+      const { initializePlatformRuntime } = await loadPlatformRuntimeModule();
       const initialized = await initializePlatformRuntime();
       if (ctx?.signal?.aborted || !hasActiveExtensionContext()) {
         return;

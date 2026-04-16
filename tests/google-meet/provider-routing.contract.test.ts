@@ -31,7 +31,7 @@ describe("Provider routing contract", () => {
 
   test("PROUTE-002: URL routing resolves provider by host/path and returns null for unsupported pages", () => {
     expect(
-      getProviderForUrl(new URL("https://meet.google.com/abc-defg-hij"))?.platform
+      getProviderForUrl(new URL("https://meet.google.com/xxx-xxxx-xxx"))?.platform
     ).toBe("google-meet");
     expect(
       getProviderForUrl(new URL("https://teams.microsoft.com/l/meetup-join/123"))?.platform

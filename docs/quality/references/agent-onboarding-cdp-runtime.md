@@ -60,7 +60,7 @@ Before smoke runs that validate AI-dependent behavior, ensure local secrets exis
 1. Build extension:
 
 ```bash
-pnpm build:chrome:production
+pnpm build:target:chrome:development
 ```
 
 2. Launch Windows Chrome debug profile from WSL:
@@ -118,7 +118,7 @@ pnpm test:module:run <module-path>
 Smoke wrappers auto-heal and auto-reload extension runtime by default:
 
 1. use current local build output by default (fast path)
-2. sync output to `%LOCALAPPDATA%\CaptionArc\extension\production`
+2. sync output to `%LOCALAPPDATA%\CaptionArc\extension\development`
 3. if debug Chrome is active, execute in-place extension runtime reload
 4. if reload is inconclusive, continue without forced restart by default (`RELOAD_EXTENSION_STRICT=0`)
 5. if strict mode is enabled (`RELOAD_EXTENSION_STRICT=1`), fallback to runtime restart
@@ -126,9 +126,9 @@ Smoke wrappers auto-heal and auto-reload extension runtime by default:
 
 Release output layout:
 
-- `.release/chrome/production` is the default artifact used by debug and smoke scripts
-- `.release/chrome/development` can be built separately for side-by-side Chrome environment testing by overriding `EXTENSION_DIR`
-- Firefox artifacts live under `.release/firefox/<mode>` for packaging and browser-specific verification work
+- `.release/v<version>/development/chrome` is the default artifact used by debug and smoke scripts
+- `.release/v<version>/production/chrome` remains available for packaging-specific validation only
+- Firefox artifacts live under `.release/v<version>/<mode>/firefox` for packaging and browser-specific verification work
 
 Forced rebuild path:
 
@@ -141,7 +141,7 @@ Default smoke UX mode (mandatory unless task needs speed):
 2. step-by-step pacing (`SMOKE_STEP_MODE=1`)
 2.1 fast default pacing is `SMOKE_STEP_PAUSE_MS=700` (can raise for demos)
 3. avoid cross-tab reload noise (`RELOAD_PROVIDER_TABS=0`)
-4. launch/runtime path is single-path (`cft-only + auto`) with no fallback reruns
+4. launch/runtime path is single-path (`system-only + auto`) with no fallback reruns
 5. enforce deterministic runtime path (`DETERMINISTIC_TEST_MODE=1`)
 6. if in-place extension reload is inconclusive, restart in same deterministic path (`RELOAD_EXTENSION_STRICT=1` under deterministic mode)
 7. stream live diagnostics in same smoke terminal (`SMOKE_LIVE_DIAGNOSTICS=1`)
@@ -153,9 +153,9 @@ Default smoke UX mode (mandatory unless task needs speed):
 
 Runtime selection baseline for this environment:
 
-1. use `CHROME_RUNTIME_MODE=cft-only` launcher mode
+1. use `CHROME_RUNTIME_MODE=system-only` launcher mode
 2. keep `DETERMINISTIC_TEST_MODE=1` for acceptance runs
-3. do not use `system-only` or manual extension-load modes in acceptance flow
+3. do not use Chrome-for-Testing fallback or manual extension-load modes in acceptance flow
 
 ## Mode Selection
 
@@ -255,8 +255,6 @@ Primary matrix:
   - landing flow for `lobby`/`continuation` (`meet.google.com/landing` -> `New meeting` -> `Create a meeting for later`)
   - landing flow for `meeting` (`meet.google.com/landing` -> `New meeting` -> `Start an instant meeting`)
   - no synthetic fallback by default; fail fast if real URL cannot be resolved
-- if you need backward-compatible placeholder behavior for debugging only:
-  - `MEET_ALLOW_SYNTHETIC_FALLBACK=1`
 - to force brand-new Meet URL generation instead of reusing existing Meet tabs:
   - `GOOGLE_MEET_REQUIRE_FRESH_URL=1`
  - if landing generation is blocked by UI/runtime constraints, valid Meet URL in system clipboard is used as fallback
@@ -281,10 +279,10 @@ Primary matrix:
 - if prompt is not actionable in current DOM state, runner temporarily sets startup behavior to `always` for this run, then restores snapshot
 
 6. Teams/Zoom prejoin and meeting URLs:
-- fallback URLs exist for baseline smoke, but true prejoin/meeting behavior can require account/session context
-- when provider fallback routes are insufficient, pass explicit provider URL:
-  - `TEAMS_URL=\"https://teams.live.com/meet/9365261740667?p=wW30AeA8vzUtAkZRmM\" pnpm chrome:smoke:live microsoft-teams lobby`
-  - `ZOOM_URL=\"https://us05web.zoom.us/j/...\" pnpm chrome:smoke:live zoom-web lobby`
+- true prejoin/meeting behavior can require account/session context
+- when provider URL discovery cannot infer the right page, pass an explicit provider URL from `.secrets/smoke.env`:
+  - `TEAMS_URL=\"$TEAMS_URL\" pnpm chrome:smoke:live microsoft-teams lobby`
+  - `ZOOM_URL=\"$ZOOM_URL\" pnpm chrome:smoke:live zoom-web lobby`
 - if Teams resolves to launcher-only or `about:blank`, treat it as environment/auth gate and rerun with an authenticated `TEAMS_URL`
 - if Teams resolves to `chrome-error://chromewebdata/`, treat it as network/auth gate and rerun with authenticated `TEAMS_URL`
 - for Zoom meeting creation checks, use provider smoke `zoom-web meeting` which starts from `https://app.zoom.us/wc/home` and triggers `New Meeting`

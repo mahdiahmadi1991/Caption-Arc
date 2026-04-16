@@ -1,0 +1,4 @@
+{
+  "name": "incomplete-stream-no-final-output",
+  "description": "Provider stream emits partial text and ends as incomplete. No assistant output should be persisted as completed."
+}

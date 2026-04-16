@@ -80,7 +80,7 @@ const VALID_PROVIDER_FILTERS: ProviderFilter[] = [
 ];
 const VALID_SORT_ORDERS: SessionSort[] = ["newest", "oldest"];
 const VALID_STAR_FILTERS: StarFilter[] = ["all", "starred"];
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 
 function createMeetingHistoryViewInstanceId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -167,14 +167,6 @@ function getActionErrorMessage(
     fallback: fallbackMessage,
     details: cleanedMessage,
   });
-}
-
-function isOutdatedRuntimeError(value: unknown): boolean {
-  const message = String(value || "");
-  return (
-    message.includes("Unknown action") ||
-    message.includes("The extension runtime is out of date")
-  );
 }
 
 function isTerminalSummaryJobState(
@@ -1050,110 +1042,6 @@ export function useHistory() {
         source,
       });
 
-      if (isOutdatedRuntimeError(response?.error)) {
-        const session =
-          selectedSession?.id === sessionId
-            ? selectedSession
-            : sessions.find((entry) => entry.id === sessionId);
-        if (!session) {
-          throw new Error(t("history.runtime.sessionNotFound"));
-        }
-
-        const items =
-          source === "chat" ? session.chatMessages : session.captions;
-        const itemIndex = items.findIndex(
-          (entry) => entry.timestamp === captionTimestamp
-        );
-        if (itemIndex < 0) {
-          throw new Error(
-            source === "chat"
-              ? t("history.runtime.chatMessageNotFound")
-              : t("history.runtime.captionNotFound")
-          );
-        }
-
-        const item = items[itemIndex];
-        const settings = settingsSnapshot;
-        const legacyResponse = await chrome.runtime.sendMessage({
-          action: "translate",
-          id: `${sessionId}:${source}:${captionTimestamp}`,
-          text: item.text,
-          targetLang: targetLanguage,
-          mode: "semantic",
-          force: true,
-          speaker: item.speaker,
-          context: buildTimelineContext(session, source, captionTimestamp),
-          customPrompt: settings.customPrompt,
-        });
-
-        if (!legacyResponse?.success || !legacyResponse.translation) {
-          throw new Error(
-            legacyResponse?.error || t("history.runtime.translationFailed")
-          );
-        }
-
-        const updatedSession = {
-          ...session,
-          captions:
-            source === "caption"
-              ? session.captions.map((entry, index) =>
-                  index === itemIndex
-                    ? {
-                        ...entry,
-                        translation: legacyResponse.translation as string,
-                        translationLanguage: targetLanguage,
-                      }
-                    : entry
-                )
-              : session.captions,
-          chatMessages:
-            source === "chat"
-              ? session.chatMessages.map((entry, index) =>
-                  index === itemIndex
-                    ? {
-                        ...entry,
-                        translation: legacyResponse.translation as string,
-                        translationLanguage: targetLanguage,
-                      }
-                    : entry
-                )
-              : session.chatMessages,
-        };
-
-        await chrome.runtime.sendMessage({
-          action: "updateMeetingSession",
-          sessionId,
-          updates:
-            source === "chat"
-              ? { chatMessages: updatedSession.chatMessages }
-              : { captions: updatedSession.captions },
-        });
-
-        replaceSession({
-          ...updatedSession,
-          searchableText: buildMeetingSessionSearchableText(updatedSession),
-        });
-        await historyDiagnostics.info("meeting_history_item_translation_completed", {
-          sessionId,
-          source,
-          targetLanguage,
-          legacyFallback: true,
-        }, {
-          sessionId,
-        });
-        toast.success(
-          t(
-            source === "chat"
-              ? "history.runtime.chatTranslated"
-              : "history.runtime.captionTranslated",
-            {
-              language: getLanguageName(targetLanguage),
-            }
-          )
-        );
-        return;
-      }
-
       if (!response?.success || !response.session) {
         throw new Error(response?.error || t("history.runtime.translationFailed"));
       }
@@ -1163,7 +1051,6 @@ export function useHistory() {
         sessionId,
         source,
         targetLanguage,
-        legacyFallback: false,
       }, {
         sessionId,
       });
@@ -1251,108 +1138,6 @@ export function useHistory() {
         profileId,
       });
 
-      if (isOutdatedRuntimeError(response?.error)) {
-        const session =
-          selectedSession?.id === sessionId
-            ? selectedSession
-            : sessions.find((entry) => entry.id === sessionId);
-        if (!session) {
-          throw new Error(t("history.runtime.sessionNotFound"));
-        }
-
-        if (session.captions.length === 0 && session.chatMessages.length === 0) {
-          throw new Error(t("history.runtime.noSummarySource"));
-        }
-
-        const settings = settingsSnapshot;
-        const summaryProfile = resolveMeetingProfile(
-          settings.meetingProfiles.length
-            ? settings.meetingProfiles
-            : meetingProfiles,
-          profileId,
-          settings.defaultMeetingProfileId || defaultMeetingProfileId
-        );
-        const resolvedPrompt = resolveMeetingProfilePrompt(summaryProfile);
-
-        const summaryPrompt = buildMeetingSummaryPrompt(
-          session,
-          targetLanguage,
-          summaryProfile.id,
-          summaryProfile.name,
-          resolvedPrompt
-        );
-
-        const legacyResponse = await chrome.runtime.sendMessage({
-          action: "generateText",
-          prompt: summaryPrompt,
-          maxTokens: 3200,
-        });
-
-        if (!legacyResponse?.success || !legacyResponse.text) {
-          throw new Error(
-            legacyResponse?.error || t("history.runtime.summaryGenerationFailed")
-          );
-        }
-
-        const summary = createMeetingSummaryArtifact(
-          session,
-          summaryProfile.id,
-          summaryProfile.name,
-          targetLanguage,
-          legacyResponse.text as string,
-          "openai",
-          settings.model,
-          resolvedPrompt,
-          {
-            requestSource: "manual",
-            sourceSessionProfileId: session.meetingProfileId,
-          }
-        );
-
-        const updatedSession = {
-          ...session,
-          summaries: {
-            ...(session.summaries || {}),
-            [summary.key]: summary,
-          },
-          artifacts: {
-            ...(session.artifacts || {}),
-            summaries: {
-              ...(session.artifacts?.summaries || session.summaries || {}),
-              [summary.key]: summary,
-            },
-          },
-        };
-
-        await chrome.runtime.sendMessage({
-          action: "updateMeetingSession",
-          sessionId,
-          updates: {
-            summaries: updatedSession.summaries,
-            artifacts: updatedSession.artifacts,
-          },
-        });
-
-        replaceSession({
-          ...updatedSession,
-          searchableText: buildMeetingSessionSearchableText(updatedSession),
-        });
-        await historyDiagnostics.info("meeting_history_summary_completed", {
-          sessionId,
-          targetLanguage,
-          profileId,
-          legacyFallback: true,
-        }, {
-          sessionId,
-        });
-        toast.success(
-          t("history.runtime.summaryGenerated", {
-            language: getLanguageName(targetLanguage),
-          })
-        );
-        return;
-      }
-
       if (!response?.success || !response.session) {
         if (
           typeof response?.error === "string" &&
@@ -1395,7 +1180,6 @@ export function useHistory() {
         sessionId,
         targetLanguage,
         profileId,
-        legacyFallback: false,
       }, {
         sessionId,
       });

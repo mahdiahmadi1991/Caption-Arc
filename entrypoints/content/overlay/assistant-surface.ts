@@ -8,6 +8,7 @@ import { createContentIcon } from "../icons";
 import { createElement } from "../libs";
 import { getOpenAiServiceAvailability } from "../../shared/openai-service";
 import { getUiRuntimeTranslator } from "../../shared/i18n";
+import { getDynamicTextDirection } from "../../shared/text-direction";
 import {
   assistantLiveOutputs,
   assistantLivePendingOutputs,
@@ -555,6 +556,112 @@ function buildSourceLabel(
   return `${source} · ${speaker}${snippet ? ` · ${snippet}` : ""}`;
 }
 
+function renderAssistantMarkdown(content: string): HTMLElement {
+  const direction = getDynamicTextDirection(content) || "ltr";
+  const root = createElement("div", {
+    className: "mc-assistant-card-copy",
+    dir: direction,
+  });
+  const normalized = content.replace(/\r\n/g, "\n").trim();
+
+  if (!normalized) {
+    return root;
+  }
+
+  const lines = normalized.split("\n");
+  let index = 0;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    const headingMatch = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (headingMatch) {
+      const level = Math.min(headingMatch[1].length, 3);
+      root.appendChild(
+        createElement(`h${level}` as "h1" | "h2" | "h3", {
+          textContent: headingMatch[2].trim(),
+        })
+      );
+      index += 1;
+      continue;
+    }
+
+    const unorderedMatch = /^[-*+]\s+(.*)$/.exec(line);
+    if (unorderedMatch) {
+      const list = createElement("ul");
+      while (index < lines.length) {
+        const itemLine = lines[index].trim();
+        const itemMatch = /^[-*+]\s+(.*)$/.exec(itemLine);
+        if (!itemMatch) {
+          break;
+        }
+        list.appendChild(
+          createElement("li", {
+            textContent: itemMatch[1].trim(),
+          })
+        );
+        index += 1;
+      }
+      root.appendChild(list);
+      continue;
+    }
+
+    const orderedMatch = /^(\d+)\.\s+(.*)$/.exec(line);
+    if (orderedMatch) {
+      const list = createElement("ol");
+      while (index < lines.length) {
+        const itemLine = lines[index].trim();
+        const itemMatch = /^(\d+)\.\s+(.*)$/.exec(itemLine);
+        if (!itemMatch) {
+          break;
+        }
+        list.appendChild(
+          createElement("li", {
+            textContent: itemMatch[2].trim(),
+          })
+        );
+        index += 1;
+      }
+      root.appendChild(list);
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+    while (index < lines.length) {
+      const paragraphLine = lines[index].trim();
+      if (
+        !paragraphLine ||
+        /^(#{1,3})\s+/.test(paragraphLine) ||
+        /^[-*+]\s+/.test(paragraphLine) ||
+        /^\d+\.\s+/.test(paragraphLine)
+      ) {
+        break;
+      }
+      paragraphLines.push(paragraphLine);
+      index += 1;
+    }
+
+    if (paragraphLines.length > 0) {
+      root.appendChild(
+        createElement("p", {
+          textContent: paragraphLines.join(" "),
+        })
+      );
+      continue;
+    }
+
+    index += 1;
+  }
+
+  return root;
+}
+
 function isAssistantListNearBottom(): boolean {
   if (!assistantSurfaceList) {
     return true;
@@ -573,6 +680,9 @@ function createPendingCard(
 ): HTMLElement {
   const t = getUiRuntimeTranslator();
   const partialContent = output.partialContent?.trim() || "";
+  const sourceLabel = buildSourceLabel(output);
+  const sourceDirection = getDynamicTextDirection(sourceLabel) || "ltr";
+  const contentDirection = getDynamicTextDirection(partialContent) || "ltr";
   return createElement("article", {
     className: "mc-assistant-card mc-assistant-card-pending",
   }, [
@@ -586,7 +696,8 @@ function createPendingCard(
       }),
       createElement("span", {
         className: "mc-assistant-card-source-text",
-        textContent: buildSourceLabel(output),
+        textContent: sourceLabel,
+        dir: sourceDirection,
       }),
     ]),
     createElement("div", { className: "mc-assistant-card-body" }, [
@@ -599,6 +710,7 @@ function createPendingCard(
         className: "mc-assistant-card-copy",
         textContent:
           partialContent || t("content.assistant.pendingReply"),
+        dir: contentDirection,
       }),
     ]),
   ]);
@@ -608,6 +720,9 @@ function createOutputCard(
   output: (typeof assistantLiveOutputs)[number]
 ): HTMLElement {
   const t = getUiRuntimeTranslator();
+  const copy = renderAssistantMarkdown(output.content);
+  const sourceLabel = buildSourceLabel(output);
+  const sourceDirection = getDynamicTextDirection(sourceLabel) || "ltr";
   return createElement("article", { className: "mc-assistant-card" }, [
     createElement("div", { className: "mc-assistant-card-source" }, [
       createElement("span", {
@@ -619,14 +734,12 @@ function createOutputCard(
       }),
       createElement("span", {
         className: "mc-assistant-card-source-text",
-        textContent: buildSourceLabel(output),
+        textContent: sourceLabel,
+        dir: sourceDirection,
       }),
     ]),
     createElement("div", { className: "mc-assistant-card-body" }, [
-      createElement("div", {
-        className: "mc-assistant-card-copy",
-        textContent: output.content,
-      }),
+      copy,
     ]),
   ]);
 }

@@ -1,0 +1,73 @@
+{
+  "name": "language-switch-en-to-fa-mid-session",
+  "profileId": "interview",
+  "generatedResponses": [
+    "Because the role fits my .NET backend experience.",
+    "چون این نقش با تجربه بک‌اند دات‌نت من هم‌راستا است."
+  ],
+  "settingsSequence": [
+    {
+      "meetingOutputLanguage": "en"
+    },
+    {
+      "meetingOutputLanguage": "fa"
+    }
+  ],
+  "initialSession": {
+    "meetingProfileId": "interview",
+    "events": [
+      {
+        "eventId": "evt-1",
+        "stableEventKey": "stable-evt-1",
+        "source": "caption",
+        "speaker": "Interviewer",
+        "text": "Why do you want this job?",
+        "time": "10:00",
+        "timestamp": 1000,
+        "sessionOffsetMs": 1000,
+        "isFinal": true
+      }
+    ],
+    "artifacts": {
+      "summaries": {},
+      "assistantState": {
+        "enabled": true,
+        "updatedAt": 900
+      }
+    }
+  },
+  "steps": [
+    {
+      "expectedPromptIncludes": [
+        "Output language code: en",
+        "Output language name: English",
+        "Question(s) to answer now:\nWhy do you want this job?"
+      ],
+      "expectedNewOutputKey": "stable-evt-1",
+      "expectedTriggerText": "Why do you want this job?"
+    },
+    {
+      "appendEvents": [
+        {
+          "eventId": "evt-2",
+          "stableEventKey": "stable-evt-2",
+          "source": "caption",
+          "speaker": "Interviewer",
+          "text": "Why should we hire you?",
+          "time": "10:01",
+          "timestamp": 2000,
+          "sessionOffsetMs": 2000,
+          "isFinal": true
+        }
+      ],
+      "expectedPromptIncludes": [
+        "Output language code: fa",
+        "Output language name: Persian",
+        "Write the entire response in Persian.",
+        "Question(s) to answer now:\nWhy should we hire you?"
+      ],
+      "expectedNewOutputKey": "stable-evt-2",
+      "expectedTriggerText": "Why should we hire you?"
+    }
+  ]
+}

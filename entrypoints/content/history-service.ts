@@ -41,6 +41,7 @@ let pendingSessionPreview: Pick<
 > | null = null;
 let pendingSessionProfileId: string | null = null;
 let pendingSessionProfileLocked = false;
+let historyServiceShuttingDown = false;
 
 const allEvents = new Map<string, SavedMeetingEvent>();
 const contentItemEventIds = new Map<number, string>();
@@ -128,7 +129,7 @@ function hydrateOverlayItemsFromCurrentSession(): void {
 }
 
 async function storeCurrentSessionShell(): Promise<void> {
-  if (!currentSession) {
+  if (!currentSession || historyServiceShuttingDown) {
     return;
   }
 
@@ -276,6 +277,10 @@ function applyMaterializedCollectionsToOverlay(
 export async function loadStoredSessionPreview(
   sessionId: string
 ): Promise<boolean> {
+  if (historyServiceShuttingDown) {
+    return false;
+  }
+
   await historyDiagnostics.debug("session_preview_load_started", {
     sessionId,
   }, {
@@ -565,7 +570,7 @@ export async function initMeetingSession(
   >,
   meetingProfileId?: string
 ) {
-  if (currentSession) return;
+  if (currentSession || historyServiceShuttingDown) return;
 
   await historyDiagnostics.info("session_init_started", {
     platform: metadata.platform,
@@ -831,6 +836,10 @@ function materializeCurrentSessionForStorage(): MeetingSession | null {
 }
 
 async function saveToStorage(): Promise<void> {
+  if (historyServiceShuttingDown) {
+    return;
+  }
+
   const session = materializeCurrentSessionForStorage();
   if (!session) return;
 
@@ -868,7 +877,18 @@ async function saveToStorage(): Promise<void> {
 
 export const saveCaptionsDebounced = debounce(saveToStorage, 500);
 
+export function setHistoryServiceShutdownState(shuttingDown: boolean): void {
+  historyServiceShuttingDown = shuttingDown;
+  if (shuttingDown) {
+    saveCaptionsDebounced.cancel();
+  }
+}
+
 export async function updateSessionEndTime(): Promise<void> {
+  if (historyServiceShuttingDown) {
+    return;
+  }
+
   const session = materializeCurrentSessionForStorage();
   if (!session) return;
   session.endTime = Date.now();
@@ -912,6 +932,10 @@ export function getCurrentSessionId(): string | null {
 export async function setCurrentSessionAssistantEnabled(
   enabled: boolean
 ): Promise<boolean> {
+  if (historyServiceShuttingDown) {
+    return false;
+  }
+
   const session = materializeCurrentSessionForStorage();
   if (!session) {
     await historyDiagnostics.warn("assistant_toggle_skipped", {
@@ -920,6 +944,20 @@ export async function setCurrentSessionAssistantEnabled(
     });
     return false;
   }
+
+  const callerStack = new Error("assistant-toggle").stack
+    ?.split("\n")
+    .slice(1, 5)
+    .map((line) => line.trim())
+    .join(" | ");
+
+  await historyDiagnostics.info("assistant_toggle_update_started", {
+    sessionId: session.id,
+    enabled,
+    callerStack: callerStack || null,
+  }, {
+    sessionId: session.id,
+  });
 
   session.artifacts = {
     ...(session.artifacts || {}),
@@ -943,6 +981,7 @@ export async function setCurrentSessionAssistantEnabled(
     await historyDiagnostics.info("assistant_toggle_completed", {
       sessionId: session.id,
       enabled,
+      callerStack: callerStack || null,
     }, {
       sessionId: session.id,
     });
@@ -951,6 +990,73 @@ export async function setCurrentSessionAssistantEnabled(
     await historyDiagnostics.error("assistant_toggle_failed", {
       sessionId: session.id,
       enabled,
+      callerStack: callerStack || null,
+    }, {
+      sessionId: session.id,
+    });
+    return false;
+  }
+}
+
+export async function setCurrentSessionMeetingProfile(
+  meetingProfileId: string
+): Promise<boolean> {
+  if (historyServiceShuttingDown) {
+    return false;
+  }
+
+  const normalizedMeetingProfileId = meetingProfileId.trim();
+  if (!normalizedMeetingProfileId) {
+    return false;
+  }
+
+  const session = materializeCurrentSessionForStorage();
+  if (!session || !currentSession) {
+    await historyDiagnostics.warn("session_profile_switch_skipped", {
+      meetingProfileId: normalizedMeetingProfileId,
+      reason: "missing-session",
+    });
+    return false;
+  }
+
+  const previousMeetingProfileId = currentSession.meetingProfileId || null;
+  currentSession.meetingProfileId = normalizedMeetingProfileId;
+  setPendingSessionProfileSelection(normalizedMeetingProfileId, { locked: false });
+
+  await historyDiagnostics.info("session_profile_switch_started", {
+    sessionId: session.id,
+    previousMeetingProfileId,
+    nextMeetingProfileId: normalizedMeetingProfileId,
+  }, {
+    sessionId: session.id,
+  });
+
+  try {
+    await chrome.runtime.sendMessage({
+      action: "updateMeetingSession",
+      sessionId: session.id,
+      updates: {
+        meetingProfileId: normalizedMeetingProfileId,
+      },
+    });
+    await historyDiagnostics.info("session_profile_switch_completed", {
+      sessionId: session.id,
+      previousMeetingProfileId,
+      nextMeetingProfileId: normalizedMeetingProfileId,
+    }, {
+      sessionId: session.id,
+    });
+    return true;
+  } catch (error) {
+    currentSession.meetingProfileId = previousMeetingProfileId || undefined;
+    setPendingSessionProfileSelection(previousMeetingProfileId || undefined, {
+      locked: false,
+    });
+    await historyDiagnostics.error("session_profile_switch_failed", {
+      sessionId: session.id,
+      previousMeetingProfileId,
+      nextMeetingProfileId: normalizedMeetingProfileId,
+      error,
     }, {
       sessionId: session.id,
     });
@@ -1063,6 +1169,7 @@ function hydratePendingSessionPreview(session: MeetingSession): void {
 export function resetMeetingSession(options?: {
   preservePendingPreview?: boolean;
 }): void {
+  saveCaptionsDebounced.cancel();
   const pendingPreviewSession =
     options?.preservePendingPreview ? materializeCurrentSessionForStorage() : null;
 
@@ -1076,6 +1183,7 @@ export function resetMeetingSession(options?: {
   });
 
   currentSession = null;
+  historyServiceShuttingDown = false;
   pendingSessionMetadata = null;
   getLatestMetadata = null;
   autoSummaryRequestedSessionId = null;

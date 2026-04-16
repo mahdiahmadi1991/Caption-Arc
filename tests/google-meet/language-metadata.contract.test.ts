@@ -6,6 +6,8 @@ import {
   getLanguageByCode,
   getLanguageDirection,
   getLanguageName,
+  getLanguageNativeName,
+  getLanguagePickerDescription,
   normalizeLanguageCode,
 } from "../../entrypoints/shared/language-metadata";
 
@@ -46,6 +48,7 @@ describe("Live translation language metadata contracts", () => {
     expect(getLanguageByCode("bn")).toEqual({
       code: "bn",
       name: "Bengali",
+      nativeName: "বাংলা",
       direction: "ltr",
     });
     expect(getLanguageName("ur")).toBe("Urdu");
@@ -55,6 +58,9 @@ describe("Live translation language metadata contracts", () => {
     expect(getLanguageName("ms")).toBe("Malay");
     expect(getLanguageName("sw")).toBe("Swahili");
     expect(getLanguageName("te")).toBe("Telugu");
+    expect(getLanguageNativeName("fa")).toBe("فارسی");
+    expect(getLanguagePickerDescription("fa")).toBe("Persian");
+    expect(getLanguagePickerDescription("en")).toBeUndefined();
     expect(getLanguageDirection("ur")).toBe("rtl");
     expect(getLanguageDirection("bn")).toBe("ltr");
   });

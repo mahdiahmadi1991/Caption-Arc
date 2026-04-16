@@ -82,7 +82,7 @@ describe("Manual smoke launch configuration", () => {
     expect(result.stdout.trim()).toBe("keep-existing-key");
   });
 
-  test("SMK-LAUNCH-003: start-windows-chrome-debug enforces deterministic runtime even when non-deterministic mode is requested", () => {
+  test("SMK-LAUNCH-003: start-windows-chrome-debug keeps the deterministic system runtime even when non-deterministic mode is requested", () => {
     const tempDir = createTempDir("captionarc-launch-");
     tempDirs.push(tempDir);
     const mockBinDir = join(tempDir, "bin");
@@ -123,14 +123,14 @@ describe("Manual smoke launch configuration", () => {
 
     expect(result.status).toBe(0);
     expect(args).toContain("-ChromeRuntimeMode");
-    expect(args).toContain("cft-only");
+    expect(args).toContain("system-only");
     expect(args).toContain("-ExtensionLoadMode");
     expect(args).toContain("auto");
     expect(executableFlagIndex).toBeGreaterThanOrEqual(0);
     expect(args[executableFlagIndex + 1]).toBe("");
   });
 
-  test("SMK-LAUNCH-004: start-windows-chrome-debug ignores local runtime overrides in deterministic mode", () => {
+  test("SMK-LAUNCH-004: start-windows-chrome-debug ignores local runtime overrides and keeps the deterministic system runtime", () => {
     const tempDir = createTempDir("captionarc-launch-");
     tempDirs.push(tempDir);
     const mockBinDir = join(tempDir, "bin");
@@ -171,7 +171,7 @@ describe("Manual smoke launch configuration", () => {
 
     expect(result.status).toBe(0);
     expect(args).toContain("-ChromeRuntimeMode");
-    expect(args).toContain("cft-only");
+    expect(args).toContain("system-only");
     expect(args).toContain("-ExtensionLoadMode");
     expect(args).toContain("auto");
     expect(executableFlagIndex).toBeGreaterThanOrEqual(0);

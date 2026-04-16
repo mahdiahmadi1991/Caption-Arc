@@ -17,6 +17,7 @@ import {
   setPendingSessionMetadata,
   loadStoredSessionPreview,
   resetMeetingSession,
+  setHistoryServiceShutdownState,
   updateSessionEndTime,
 } from "./history-service";
 import {
@@ -108,7 +109,7 @@ let suppressEndedOverlayAutoShow = false;
 let resetPageObservedAt: number | null = null;
 let preparedMeetingFingerprint: string | null = null;
 
-const SETTINGS_STORAGE_KEYS = new Set(["settings", "settingsState"]);
+const SETTINGS_STORAGE_KEYS = new Set(["settingsState"]);
 const LIFECYCLE_MONITOR_INTERVAL_MS = 1500;
 const PRESENCE_MONITOR_INTERVAL_MS = 1000;
 const PRESENCE_CONFIRMATION_TICKS = 2;
@@ -1498,6 +1499,7 @@ function stopPresenceMonitor(): void {
 }
 
 function handleBeforeUnload(): void {
+  setHistoryServiceShutdownState(true);
   if (hasActiveMeetingSession) {
     void updateSessionEndTime();
   }
@@ -1656,6 +1658,7 @@ async function teardownPlatformRuntime(): Promise<void> {
     return;
   }
 
+  setHistoryServiceShutdownState(true);
   stopPresenceMonitor();
   stopAssistantSync();
   stopSettingsSync?.();

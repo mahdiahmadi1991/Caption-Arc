@@ -1,0 +1,54 @@
+{
+  "id": "improve-my-answer-script",
+  "description": "Improve-my-answer mode can react to self-authored speech and produce a script-oriented response with a careful delivery bias.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "prompt": "Act as a live interview rehearsal assistant. Improve the user's answer as a short script. Begin the response with 'You:' and keep it directly speakable.",
+          "responseIntent": "improve_my_answer",
+          "responseFormat": "script",
+          "responseDepth": "standard",
+          "responseTone": "supportive",
+          "deliveryBias": "careful",
+          "triggerPolicy": "proactive",
+          "participantScope": "all_participants"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "improve-self-1",
+      "speaker": "You",
+      "text": "I worked on microservices, but my explanation feels messy and I am not presenting the migration impact clearly enough.",
+      "own": true,
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "migration impact",
+    "latestOutputProfileId": "interview",
+    "latestOutputResponseIntent": "improve_my_answer",
+    "latestOutputResponseFormat": "script",
+    "latestOutputResponseDepth": "standard",
+    "latestOutputResponseTone": "supportive",
+    "latestOutputDeliveryBias": "careful",
+    "latestOutputContentIncludes": "You:",
+    "latestOverlayMinParagraphCount": 1,
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

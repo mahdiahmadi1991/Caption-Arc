@@ -1,0 +1,53 @@
+{
+  "id": "daily-sync-bullets-fastest",
+  "description": "Daily-sync style settings use bullets, ultra-brief depth, direct tone, fastest bias, and all-participant salience triggering.",
+  "initialDefaultProfileId": "daily_sync",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "daily_sync",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "suggest_next_point",
+          "responseFormat": "bullets",
+          "responseDepth": "ultra_brief",
+          "responseTone": "direct",
+          "deliveryBias": "fastest",
+          "triggerPolicy": "salience_first",
+          "participantScope": "all_participants"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "daily-self-1",
+      "speaker": "You",
+      "text": "Yesterday I finished the outbox migration, today I am validating retries, and the blocker is one flaky dependency in staging.",
+      "own": true,
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "blocker",
+    "latestOutputProfileId": "daily_sync",
+    "latestOutputResponseIntent": "suggest_next_point",
+    "latestOutputResponseFormat": "bullets",
+    "latestOutputResponseDepth": "ultra_brief",
+    "latestOutputResponseTone": "direct",
+    "latestOutputDeliveryBias": "fastest",
+    "latestOverlayMinListItemCount": 2,
+    "latestOutputLanguage": "en",
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

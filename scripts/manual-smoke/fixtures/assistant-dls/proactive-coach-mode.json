@@ -1,0 +1,47 @@
+{
+  "id": "proactive-coach-mode",
+  "description": "Proactive coach mode can react to a longer self-authored statement when participant scope allows all participants.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "coach_me",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "responseTone": "supportive",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "proactive",
+          "participantScope": "all_participants"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "coach-self-1",
+      "speaker": "You",
+      "text": "I am not sure how to answer the dependency question because the rollout plan is still vague and I may over-explain it.",
+      "own": true,
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "dependency question",
+    "latestOutputProfileId": "interview",
+    "latestOutputResponseIntent": "coach_me",
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

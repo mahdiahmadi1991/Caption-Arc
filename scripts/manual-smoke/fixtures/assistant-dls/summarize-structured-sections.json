@@ -1,0 +1,54 @@
+{
+  "id": "summarize-structured-sections",
+  "description": "Structured-sections summary mode renders heading-based guidance for a long participant update.",
+  "initialDefaultProfileId": "client_call",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "client_call",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "prompt": "Act as a live client-call assistant. Summarize the last statement using markdown headings 'Summary' and 'Next steps', and include at least one bullet under each heading. Return only the answer content for the rail.",
+          "responseIntent": "summarize_what_was_just_said",
+          "responseFormat": "structured_sections",
+          "responseDepth": "expanded",
+          "responseTone": "analytical",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "salience_first",
+          "participantScope": "all_participants"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "summary-client-1",
+      "speaker": "Client",
+      "text": "The migration work is mostly on track, but procurement still has not approved the data vendor and the release window is tightening because two dependencies are still pending sign-off.",
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 1,
+    "overlayCardCount": 1,
+    "liveState": "done",
+    "latestOutputTriggerIncludes": "release window",
+    "latestOutputProfileId": "client_call",
+    "latestOutputResponseIntent": "summarize_what_was_just_said",
+    "latestOutputResponseFormat": "structured_sections",
+    "latestOutputResponseDepth": "expanded",
+    "latestOutputResponseTone": "analytical",
+    "latestOutputDeliveryBias": "balanced",
+    "latestOutputContentIncludes": "Summary",
+    "latestOverlayMinListItemCount": 2,
+    "latestOverlayMinHeadingCount": 2,
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 45000
+  }
+}

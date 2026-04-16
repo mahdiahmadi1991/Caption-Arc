@@ -140,7 +140,7 @@ beforeEach(() => {
   openCaptureGuideMock.mockClear();
   renderCaptionsMock.mockClear();
   googleMeetProviderInternals.resetGoogleMeetProviderStateForTests();
-  window.history.replaceState({}, "", "/abc-defg-hij");
+  window.history.replaceState({}, "", "/xxx-xxxx-xxx");
 });
 
 afterEach(() => {

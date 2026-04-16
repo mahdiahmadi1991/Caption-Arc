@@ -1,0 +1,94 @@
+{
+  "id": "baseline-answer-for-me",
+  "description": "Answer-for-me stays active across a short three-question mock interview with visible pauses and self-authored replies.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "answer_for_me",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "responseTone": "confident",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "resume-q1",
+      "speaker": "Interviewer",
+      "text": "Walk me through your resume, please.",
+      "settleMs": 3600
+    },
+    {
+      "type": "caption",
+      "stableKey": "resume-a1",
+      "speaker": "You",
+      "text": "I have eight years of .NET and C# backend experience across fintech and crypto, with a strong focus on reliability, performance, and delivery ownership.",
+      "own": true,
+      "settleMs": 1800
+    },
+    {
+      "type": "pause",
+      "ms": 1400
+    },
+    {
+      "type": "caption",
+      "stableKey": "job-q2",
+      "speaker": "Interviewer",
+      "text": "Why do you want this job?",
+      "settleMs": 3600
+    },
+    {
+      "type": "caption",
+      "stableKey": "job-a2",
+      "speaker": "You",
+      "text": "This role matches the kind of backend ownership I enjoy most, especially improving legacy systems, reliability, and engineering velocity.",
+      "own": true,
+      "settleMs": 1800
+    },
+    {
+      "type": "pause",
+      "ms": 1400
+    },
+    {
+      "type": "caption",
+      "stableKey": "weakness-q3",
+      "speaker": "Interviewer",
+      "text": "What is your biggest weakness?",
+      "settleMs": 3600
+    },
+    {
+      "type": "caption",
+      "stableKey": "weakness-a3",
+      "speaker": "You",
+      "text": "I sometimes go too deep on technical details too early, so I now start with the business goal first and adjust depth based on the audience.",
+      "own": true,
+      "settleMs": 1800
+    }
+  ],
+  "expectations": {
+    "outputCount": 3,
+    "overlayCardCount": 3,
+    "liveState": "done",
+    "latestOutputTriggerText": "What is your biggest weakness?",
+    "latestOutputProfileId": "interview",
+    "latestOutputResponseIntent": "answer_for_me",
+    "latestOutputLanguage": "en",
+    "diagnosticsMessages": [
+      "assistant_pass_started",
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 40000
+  }
+}

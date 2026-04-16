@@ -6,6 +6,8 @@ This document captures how the content assistant surface resolves session state,
 
 It is a characterization artifact derived from implementation code, not a requirement specification.
 
+Background assistant generation behavior is documented separately in [assistant-generation-behavior-contract.md](./assistant-generation-behavior-contract.md).
+
 ## Source Files
 
 - [../../entrypoints/content/assistant-service.ts](../../entrypoints/content/assistant-service.ts)

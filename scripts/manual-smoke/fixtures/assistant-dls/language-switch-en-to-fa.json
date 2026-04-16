@@ -1,0 +1,60 @@
+{
+  "id": "language-switch-en-to-fa",
+  "description": "Changing the default assistant output language mid-session affects the next assistant output without restarting the session.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "answer_for_me",
+          "responseFormat": "talking_points",
+          "responseDepth": "brief",
+          "responseTone": "confident",
+          "deliveryBias": "balanced",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "lang-q1",
+      "speaker": "Interviewer",
+      "text": "Tell me about your recent backend projects.",
+      "settleMs": 3200
+    },
+    {
+      "type": "settingsPatch",
+      "patch": {
+        "meetingOutputLanguage": "fa"
+      },
+      "propagationWaitMs": 2200
+    },
+    {
+      "type": "caption",
+      "stableKey": "lang-q2",
+      "speaker": "Interviewer",
+      "text": "Why are you leaving your current job?",
+      "settleMs": 3200
+    }
+  ],
+  "expectations": {
+    "outputCount": 2,
+    "overlayCardCount": 2,
+    "liveState": "done",
+    "latestOutputTriggerText": "Why are you leaving your current job?",
+    "latestOutputProfileId": "interview",
+    "latestOutputLanguage": "fa",
+    "diagnosticsMessages": [
+      "assistant_pass_completed"
+    ],
+    "settleTimeoutMs": 50000
+  }
+}
