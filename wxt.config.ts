@@ -226,7 +226,7 @@ export default defineConfig({
     },
   }),
   manifest: {
-    name: "CaptionArc",
+    name: "Caption Arc",
     description: "Capture and translate browser meeting captions in real-time",
     version: packageVersion,
     ...(browserTarget === "chrome" && chromeExtensionManifestKey
@@ -270,7 +270,7 @@ export default defineConfig({
       128: "icon-128.png",
     },
     action: {
-      default_title: "CaptionArc",
+      default_title: "Caption Arc",
       default_icon: {
         16: "icon-16.png",
         32: "icon-32.png",
