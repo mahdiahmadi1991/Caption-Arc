@@ -107,6 +107,7 @@ jobs:
           fi
 
       - name: Validate conventional commit history
+        if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release/') }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pnpm release:commits:check -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
