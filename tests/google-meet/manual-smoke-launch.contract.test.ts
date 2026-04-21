@@ -21,6 +21,20 @@ function runBash(command: string, env: NodeJS.ProcessEnv = {}) {
   });
 }
 
+function installMockWindowsLaunchTools(mockBinDir: string, argsFile: string) {
+  writeFileSync(
+    join(mockBinDir, "powershell.exe"),
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$@" > "${argsFile}"\n`
+  );
+  writeFileSync(
+    join(mockBinDir, "wslpath"),
+    '#!/usr/bin/env bash\nif [[ "$1" == "-w" ]]; then\n  printf "C:\\\\mock\\\\%s\\n" "$(basename "$2")"\n  exit 0\nfi\nprintf "%s\\n" "${@: -1}"\n'
+  );
+  runBash(
+    `chmod +x "${join(mockBinDir, "powershell.exe")}" "${join(mockBinDir, "wslpath")}"`
+  );
+}
+
 describe("Manual smoke launch configuration", () => {
   const tempDirs: string[] = [];
 
@@ -100,11 +114,7 @@ describe("Manual smoke launch configuration", () => {
         "AUTO_PROVISION_CFT=0",
       ].join("\n")
     );
-    writeFileSync(
-      join(mockBinDir, "powershell.exe"),
-      `#!/usr/bin/env bash\nprintf '%s\\n' "$@" > "${argsFile}"\n`
-    );
-    runBash(`chmod +x "${join(mockBinDir, "powershell.exe")}"`);
+    installMockWindowsLaunchTools(mockBinDir, argsFile);
 
     const result = spawnSync("bash", ["scripts/start-windows-chrome-debug.sh"], {
       cwd: REPO_ROOT,
@@ -148,11 +158,7 @@ describe("Manual smoke launch configuration", () => {
         "AUTO_PROVISION_CFT=0",
       ].join("\n")
     );
-    writeFileSync(
-      join(mockBinDir, "powershell.exe"),
-      `#!/usr/bin/env bash\nprintf '%s\\n' "$@" > "${argsFile}"\n`
-    );
-    runBash(`chmod +x "${join(mockBinDir, "powershell.exe")}"`);
+    installMockWindowsLaunchTools(mockBinDir, argsFile);
 
     const result = spawnSync("bash", ["scripts/start-windows-chrome-debug.sh"], {
       cwd: REPO_ROOT,

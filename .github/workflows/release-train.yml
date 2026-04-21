@@ -92,10 +92,10 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ env.RELEASE_AUTOMATION_TOKEN }}
-          commit-message: chore(release): prepare v${{ steps.stable.outputs.version }}
+          commit-message: "chore(release): prepare v${{ steps.stable.outputs.version }}"
           branch: release/main/current
           base: main
-          title: release: v${{ steps.stable.outputs.version }}
+          title: "release: v${{ steps.stable.outputs.version }}"
           body: |
             ## Summary
 
