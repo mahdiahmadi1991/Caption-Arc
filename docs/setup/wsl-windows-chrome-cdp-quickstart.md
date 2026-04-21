@@ -17,7 +17,7 @@ Owner approval gate:
 ## Preconditions
 
 1. Project dependencies installed.
-2. Chromium extension build exists. For Codex-led debugging, prefer `.release/v<version>/development/chrome` by default.
+2. Chromium extension build exists. For Codex-led debugging, prefer `.release/development/chrome` by default.
 3. You are running commands from WSL.
 4. Optional but recommended: create `.secrets/smoke.env` from `.secrets/.env.example`.
 
@@ -125,7 +125,7 @@ Default behavior:
 
 - remote debugging port: `9222`
 - preferred profile: `%USERPROFILE%\.google\ChromeDebugProfile` when present, else `%LOCALAPPDATA%\CaptionArc\chrome-cdp-profile`
-- extension source path: `.release/v<version>/development/chrome`
+- extension source path: `.release/development/chrome`
 - extension staged path (Windows local): `%LOCALAPPDATA%\CaptionArc\extension\development`
 - extension load mode: `auto` (command-line load)
 - chrome runtime mode: `system-only` (use Windows Google Chrome directly)

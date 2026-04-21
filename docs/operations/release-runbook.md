@@ -50,8 +50,8 @@ pnpm release:prepare
 
 Expected packaged stable release artifacts:
 
-- `.release/v<version>/production/chrome/*.zip`
-- `.release/v<version>/production/firefox/*.zip`
+- `.release/production/<version>/chrome/*.zip`
+- `.release/production/<version>/firefox/*.zip`
 
 ## GitHub Release Flow
 

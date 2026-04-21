@@ -19,11 +19,11 @@ Packaging-only changes may stop after the build and load validation steps if no 
 pnpm build:target:firefox:production
 ```
 
-Use `.release/v<version>/production/firefox` unless the thread explicitly needs the development artifact.
+Use `.release/production/<version>/firefox` unless the thread explicitly needs the development artifact.
 
 ## Minimum Checklist
 
-1. Load `.release/v<version>/production/firefox` from `about:debugging#/runtime/this-firefox`.
+1. Load `.release/production/<version>/firefox` from `about:debugging#/runtime/this-firefox`.
 2. Confirm the extension loads without manifest or permission errors.
 3. Open Options and verify settings render, save, and survive a page refresh.
 4. Open Popup and verify the page renders without runtime errors.

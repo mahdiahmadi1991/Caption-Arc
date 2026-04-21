@@ -36,24 +36,24 @@ pnpm build:target:firefox:development
 pnpm build:target:firefox:production
 ```
 
-Build outputs now live under a versioned `.release/` parent directory:
+Build outputs now live under an environment-aware `.release/` parent directory:
 
-- `.release/v<version>/development/chrome`
-- `.release/v<version>/production/chrome`
-- `.release/v<version>/development/firefox`
-- `.release/v<version>/production/firefox`
+- `.release/development/chrome`
+- `.release/development/firefox`
+- `.release/production/<version>/chrome`
+- `.release/production/<version>/firefox`
 
 ## Load Unpacked Extension
 
 1. Open `chrome://extensions`.
 2. Enable Developer Mode.
-3. Load `.release/v<version>/production/chrome` for the Chrome production artifact, or `.release/v<version>/development/chrome` for the Chrome development artifact.
+3. Load `.release/production/<version>/chrome` for the Chrome production artifact, or `.release/development/chrome` for the Chrome development artifact.
 4. The Chrome artifact is suitable for Chrome and compatible browsers such as Edge or Brave when their unpacked-extension policies allow it.
-5. For Firefox, open `about:debugging#/runtime/this-firefox` and load `.release/v<version>/production/firefox` or `.release/v<version>/development/firefox`.
+5. For Firefox, open `about:debugging#/runtime/this-firefox` and load `.release/production/<version>/firefox` or `.release/development/firefox`.
 
 For the Windows Chrome debug flow used by smoke tooling, the unpacked bootstrap target is the development artifact:
 
-- `<repo-root>\\.release\\v<version>\\development\\chrome`
+- `<repo-root>\\.release\\development\\chrome`
 
 Chromium-family unpacked development builds keep a stable development ID when `WXT_CHROME_EXTENSION_KEY_DEVELOPMENT` is configured, preferably through `.secrets/.env.development.local`.
 

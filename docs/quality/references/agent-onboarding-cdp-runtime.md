@@ -140,9 +140,9 @@ Smoke wrappers auto-heal and auto-reload extension runtime by default:
 
 Release output layout:
 
-- `.release/v<version>/development/chrome` is the default artifact used by debug and smoke scripts
-- `.release/v<version>/production/chrome` remains available for packaging-specific validation only
-- Firefox artifacts live under `.release/v<version>/<mode>/firefox` for packaging and browser-specific verification work
+- `.release/development/chrome` is the default artifact used by debug and smoke scripts
+- `.release/production/<version>/chrome` remains available for packaging-specific validation only
+- Firefox artifacts live under `.release/development/firefox` and `.release/production/<version>/firefox` for browser-specific verification work
 
 Forced rebuild path:
 

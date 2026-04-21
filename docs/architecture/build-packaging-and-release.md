@@ -37,13 +37,13 @@ From [`.github/workflows/release.yml`](../../.github/workflows/release.yml):
 - validate the stable release tag/version relationship
 - run distribution-target production packaging for Chromium-family and Firefox
 - create the stable annotated tag if it does not exist yet
-- publish `.release/v<version>/production/chrome/*.zip` and `.release/v<version>/production/firefox/*.zip` to the GitHub release
+- publish `.release/production/<version>/chrome/*.zip` and `.release/production/<version>/firefox/*.zip` to the GitHub release
 - the packaging step remains the source of truth for release artifacts because WXT packaging already emits the unpacked production build before zipping
 
 ## Artifact Expectations
 
-- unpacked extension build artifacts are produced under `.release/v<version>/<mode>/chrome` and `.release/v<version>/<mode>/firefox`
-- packaged release zip files are expected under `.release/v<version>/production/chrome/*.zip` and `.release/v<version>/production/firefox/*.zip`
+- unpacked development build artifacts are produced under `.release/development/chrome` and `.release/development/firefox`
+- unpacked production build artifacts and packaged release zip files are expected under `.release/production/<version>/chrome` and `.release/production/<version>/firefox`
 
 ## Release Governance
 

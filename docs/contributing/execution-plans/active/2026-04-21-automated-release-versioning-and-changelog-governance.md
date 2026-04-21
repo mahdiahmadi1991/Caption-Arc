@@ -35,6 +35,7 @@ This creates several gaps:
 - release notes are split between GitHub-generated notes and repo-local markdown
 - `develop` and `main` do not have a coherent shared versioning policy
 - browser-extension manifest rules prevent using plain semver prerelease strings directly as the manifest version on `develop`
+- the current `.release/` layout still version-prefixes development artifacts, which makes runtime tooling and documentation less stable than the desired environment-first contract
 
 ## Scope
 
@@ -48,6 +49,9 @@ This creates several gaps:
 - automate stable release PR generation from `develop` to `main`
 - automate stable tag creation, GitHub release publication, release-note body generation, and packaged asset upload after release merges to `main`
 - make `CHANGELOG.md` the canonical in-repo changelog
+- normalize canonical artifact paths so:
+  - development builds emit to `.release/development/<browser>`
+  - production builds and packaged assets emit to `.release/production/<version>/<browser>`
 - reduce or retire duplicate repo-local per-release note files where appropriate
 - document the new workflow and commit conventions
 
@@ -67,6 +71,8 @@ This creates several gaps:
 - `.github/workflows/release.yml`
 - `scripts/release/validate-release-config.mjs`
 - `scripts/release/package-target.mjs`
+- `scripts/start-windows-chrome-debug.sh`
+- `scripts/manual-smoke/ensure-cdp-ready.sh`
 - `docs/contributing/repository-governance.md`
 - `docs/contributing/development-workflow.md`
 - `docs/architecture/build-packaging-and-release.md`
@@ -212,6 +218,8 @@ Verification:
   Evidence: `git branch -vv`, `git log --graph --decorate --simplify-by-decoration --all`
 - Observation: unreleased history after `v1.3.0` already contains a few legacy non-conventional commit subjects.
   Evidence: `pnpm release:commits:check -- --base v1.3.0 --head HEAD`
+- Observation: development runtime tooling only needs a stable browser-specific path, while production packaging still benefits from a versioned artifact directory.
+  Evidence: `scripts/start-windows-chrome-debug.sh`, `scripts/manual-smoke/ensure-cdp-ready.sh`, `docs/setup/local-development.md`
 
 ## Decision Log
 
@@ -224,6 +232,9 @@ Verification:
 - Decision: Treat legacy non-conventional commits in unreleased history as minimum patch input instead of dropping them from the first automated release train.
   Rationale: the repository has pre-automation commits after `v1.3.0`, and ignoring them would make the first generated release/changelog incomplete.
   Date/Author: 2026-04-21 / Codex
+- Decision: Use an environment-first `.release/` topology where development artifacts are unversioned and production artifacts remain versioned beneath `.release/production/<version>/<browser>`.
+  Rationale: debug/runtime tooling wants a stable development path, while release packaging and published assets still need version-isolated production outputs.
+  Date/Author: 2026-04-21 / Codex
 
 ## Outcomes and Retrospective
 
@@ -231,17 +242,22 @@ Implemented:
 
 - shared release/versioning utilities under `scripts/release/`
 - manifest-safe version mapping in `wxt.config.ts`
+- canonical artifact topology:
+  - development -> `.release/development/<browser>`
+  - production -> `.release/production/<version>/<browser>`
 - unified `CI` workflow with `docs-check` and `quality-checks` jobs
 - commit-governance validation in `quality-gates.yml`
 - `release-train.yml` for develop preview bumps, preview tags/prereleases, and stable release PR creation
 - revised `release.yml` for stable release publication from `main`
-- updated governance, runbook, release-versioning docs, and release-note directory guidance
+- updated runtime tooling, packaging helpers, governance, runbook, and setup docs to the environment-first release layout
 
 Validation completed:
 
 - `pnpm docs:check`
+- `pnpm docs:check:behavior`
 - `pnpm test:targeted:plan`
 - `pnpm exec vitest run tests/google-meet/release-versioning.contract.test.ts`
+- `pnpm vitest run tests/google-meet/manual-smoke-launch.contract.test.ts`
 - `pnpm release:commits:check -- --base 65294eb --head HEAD`
 - `pnpm test:google`
 - `pnpm test:google:coverage`
@@ -249,3 +265,9 @@ Validation completed:
 - `pnpm build:target:firefox:development`
 - `pnpm build:target:chrome:production`
 - `pnpm build:target:firefox:production`
+- `pnpm package:target:chrome`
+- `pnpm package:target:firefox`
+
+Additional runtime note:
+
+- `pnpm chrome:smoke:live google-meet meeting` confirmed the new development artifact path resolves during CDP bootstrap, but the run remained blocked by the active profile-managed debug browser because no CaptionArc service worker was active (`chrome.runtime.sendMessage unavailable`).

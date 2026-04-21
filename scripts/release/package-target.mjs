@@ -2,14 +2,15 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
   readdirSync,
-  renameSync,
   rmSync,
 } from "node:fs";
 import path from "node:path";
+import { deriveReleaseArtifactBaseDir, deriveReleaseArtifactDir } from "./versioning.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const packageJson = JSON.parse(
@@ -26,8 +27,21 @@ if (requestedTarget !== "chrome" && requestedTarget !== "firefox") {
 
 const browserTarget = requestedTarget;
 const version = String(packageJson.version || "0.0.0").trim() || "0.0.0";
-const releaseRoot = path.join(repoRoot, ".release", `v${version}`);
-const packagedTargetDir = path.join(releaseRoot, "production", requestedTarget);
+const releaseRoot = path.join(
+  repoRoot,
+  deriveReleaseArtifactBaseDir({
+    buildMode: "production",
+    packageVersion: version,
+  })
+);
+const packagedTargetDir = path.join(
+  repoRoot,
+  deriveReleaseArtifactDir({
+    buildMode: "production",
+    packageVersion: version,
+    browserTarget: requestedTarget,
+  })
+);
 
 mkdirSync(packagedTargetDir, { recursive: true });
 
@@ -51,7 +65,7 @@ if (!existsSync(releaseRoot)) {
   process.exit(1);
 }
 
-const packageArtifacts = readdirSync(releaseRoot)
+const packageArtifactsAtRoot = readdirSync(releaseRoot)
   .filter((entry) => entry.endsWith(".zip"))
   .filter(
     (entry) =>
@@ -59,19 +73,39 @@ const packageArtifacts = readdirSync(releaseRoot)
       entry.endsWith(`-${requestedTarget}-sources.zip`)
   );
 
-if (packageArtifacts.length === 0) {
+const packageArtifactsInTargetDir = existsSync(packagedTargetDir)
+  ? readdirSync(packagedTargetDir)
+      .filter((entry) => entry.endsWith(".zip"))
+      .filter(
+        (entry) =>
+          entry.endsWith(`-${requestedTarget}.zip`) ||
+          entry.endsWith(`-${requestedTarget}-sources.zip`)
+      )
+  : [];
+
+if (packageArtifactsAtRoot.length === 0 && packageArtifactsInTargetDir.length === 0) {
   console.error(
     `No packaged zip artifacts found for target "${requestedTarget}" under ${releaseRoot}`
   );
   process.exit(1);
 }
 
-for (const artifact of packageArtifacts) {
+for (const artifact of packageArtifactsAtRoot) {
   const sourcePath = path.join(releaseRoot, artifact);
   const destinationPath = path.join(packagedTargetDir, artifact);
   rmSync(destinationPath, { force: true });
-  renameSync(sourcePath, destinationPath);
+  copyFileSync(sourcePath, destinationPath);
+  rmSync(sourcePath, { force: true });
   console.log(
     `Moved ${path.relative(repoRoot, sourcePath)} -> ${path.relative(repoRoot, destinationPath)}`
+  );
+}
+
+for (const artifact of packageArtifactsInTargetDir) {
+  console.log(
+    `Packaged artifact already available at ${path.relative(
+      repoRoot,
+      path.join(packagedTargetDir, artifact)
+    )}`
   );
 }

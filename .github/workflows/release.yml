@@ -120,13 +120,13 @@ jobs:
           gh release create "${{ steps.release-state.outputs.tag_name }}" \
             --title "CaptionArc v${{ steps.release-state.outputs.version }}" \
             --notes-file "${{ steps.notes.outputs.path }}" \
-            .release/v${{ steps.release-state.outputs.version }}/production/chrome/*.zip \
-            .release/v${{ steps.release-state.outputs.version }}/production/firefox/*.zip
+            .release/production/${{ steps.release-state.outputs.version }}/chrome/*.zip \
+            .release/production/${{ steps.release-state.outputs.version }}/firefox/*.zip
 
       - name: Upload release assets to existing GitHub release
         if: ${{ steps.release-state.outputs.publish == 'true' && steps.release-state.outputs.release_exists == 'true' }}
         run: |
           gh release upload "${{ steps.release-state.outputs.tag_name }}" \
-            .release/v${{ steps.release-state.outputs.version }}/production/chrome/*.zip \
-            .release/v${{ steps.release-state.outputs.version }}/production/firefox/*.zip \
+            .release/production/${{ steps.release-state.outputs.version }}/chrome/*.zip \
+            .release/production/${{ steps.release-state.outputs.version }}/firefox/*.zip \
             --clobber

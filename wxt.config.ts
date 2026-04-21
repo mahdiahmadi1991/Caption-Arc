@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   deriveManifestVersion,
   deriveManifestVersionName,
+  deriveReleaseArtifactBaseDir,
 } from "./scripts/release/versioning.mjs";
 
 const packageJson = JSON.parse(
@@ -108,6 +109,10 @@ const resolveBrowserTarget = (): "chrome" | "firefox" => {
   return "chrome";
 };
 const browserTarget = resolveBrowserTarget();
+const releaseArtifactBaseDir = deriveReleaseArtifactBaseDir({
+  buildMode,
+  packageVersion,
+});
 const defaultFirefoxExtensionId =
   buildMode === "development"
     ? "development@captionarc.invalid"
@@ -216,8 +221,8 @@ const meetingWebAccessibleMatches = [
 ] as const;
 
 export default defineConfig({
-  outDir: `.release/v${packageVersion}`,
-  outDirTemplate: `${buildMode}/${browserTarget}`,
+  outDir: releaseArtifactBaseDir,
+  outDirTemplate: browserTarget,
   zip: {
     artifactTemplate: `{{name}}-{{version}}-${browserTarget}.zip`,
     sourcesTemplate: `{{name}}-{{version}}-${browserTarget}-sources.zip`,

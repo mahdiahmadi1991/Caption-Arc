@@ -13,8 +13,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXTENSION_BUILD_MODE="${EXTENSION_BUILD_MODE:-development}"
 EXTENSION_VERSION="${EXTENSION_VERSION:-$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).version)" "$REPO_ROOT/package.json")}"
-EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/v$EXTENSION_VERSION/$EXTENSION_BUILD_MODE/chrome}"
 PS_SCRIPT="$SCRIPT_DIR/windows/start-chrome-remote-debug.ps1"
+
+resolve_extension_dir() {
+  if [[ "$EXTENSION_BUILD_MODE" == "development" ]]; then
+    printf "%s/.release/development/chrome" "$REPO_ROOT"
+    return
+  fi
+
+  printf "%s/.release/production/%s/chrome" "$REPO_ROOT" "$EXTENSION_VERSION"
+}
+
+EXTENSION_DIR="${EXTENSION_DIR:-$(resolve_extension_dir)}"
 
 if [[ -f "$REPO_ROOT/scripts/manual-smoke/load-secrets-env.sh" ]]; then
   # Reuse the local-only smoke env loader so smoke credentials and runtime
