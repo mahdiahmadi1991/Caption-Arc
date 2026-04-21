@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="320" viewBox="0 0 1180 320" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="590" y1="0" x2="590" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#171B18"/>
+      <stop offset="1" stop-color="#0F1210"/>
+    </linearGradient>
+  </defs>
+  <rect width="1180" height="320" rx="42" fill="url(#bg)"/>
+  <rect width="1180" height="320" rx="42" fill="#10A37F" fill-opacity="0.08"/>
+  <image href="logo-mark.svg" x="68" y="70" width="180" height="180"/>
+  <text x="290" y="156" fill="#F7F7F2" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="74" font-weight="700">CaptionArc</text>
+  <text x="294" y="212" fill="#C5CDC7" font-family="DejaVu Sans, Segoe UI, sans-serif" font-size="28">Browser meeting captions, translation, and AI follow-up</text>
+</svg>

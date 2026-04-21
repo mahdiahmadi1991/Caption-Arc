@@ -1,0 +1,4 @@
+{
+  "name": "participant-scope-others-only-self-speech",
+  "description": "Self-authored speech should not trigger assistant generation when participantScope is others_only."
+}

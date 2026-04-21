@@ -1,0 +1,41 @@
+{
+  "id": "others-only-self-speech",
+  "description": "When participant scope is others-only, the assistant stays quiet for self-authored speech.",
+  "initialDefaultProfileId": "interview",
+  "initialSettingsPatch": {
+    "meetingOutputLanguage": "en"
+  },
+  "initialProfilePatches": [
+    {
+      "profileId": "interview",
+      "patch": {
+        "assistant": {
+          "enabledByDefault": true,
+          "responseIntent": "answer_for_me",
+          "triggerPolicy": "questions_requests_only",
+          "participantScope": "others_only"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "type": "caption",
+      "stableKey": "self-q1",
+      "speaker": "You",
+      "text": "Could you tell me a bit about the team structure?",
+      "own": true,
+      "settleMs": 2600
+    }
+  ],
+  "expectations": {
+    "outputCount": 0,
+    "overlayCardCount": 0,
+    "liveState": "watching",
+    "requireNoOutputs": true,
+    "diagnosticsMessages": [
+      "assistant_candidates_selected"
+    ],
+    "settleTimeoutMs": 12000
+  }
+}

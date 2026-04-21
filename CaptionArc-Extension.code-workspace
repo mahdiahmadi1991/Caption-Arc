@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "name": "Caption-Arc-Extension",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/.vsc_launcher": true,
+      "vsc_launcher.*": true,
+      "**/.vscode": true,
+      "**/node_modules": true,
+      "**/.wxt": true
+    },
+    "chatgpt.runCodexInWindowsSubsystemForLinux": true,
+    "chatgpt.openOnStartup": true
+  }
+}
