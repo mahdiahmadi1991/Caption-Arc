@@ -81,6 +81,7 @@ vi.mock("../../entrypoints/background/quick-access-runtime", () => ({
   clearQuickAccessRuntimeStatus: vi.fn(),
   getQuickAccessRuntimeStatus: vi.fn(),
   initializeQuickAccessRuntimeRegistry: vi.fn(),
+  requestQuickAccessSoftRefresh: vi.fn(),
   updateQuickAccessRuntimeStatus: vi.fn(),
 }));
 

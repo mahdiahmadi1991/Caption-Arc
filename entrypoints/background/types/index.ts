@@ -261,6 +261,11 @@ export type GenerateMeetingSummaryResponse = {
   error?: string;
 };
 
+export type RequestQuickAccessSoftRefreshResponse = {
+  success: boolean;
+  error?: string;
+};
+
 export type FinalizeMeetingSessionEndResponse = {
   success: boolean;
   autoSummaryQueued?: boolean;
