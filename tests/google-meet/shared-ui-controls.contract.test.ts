@@ -208,6 +208,9 @@ describe("Shared UI controls", () => {
     expect(lockedScrollKey.defaultPrevented).toBe(true);
     expect(document.body.style.overflow).toBe("");
     expect(document.documentElement.style.overflow).toBe("");
+    const dialog = document.body.querySelector('[role="dialog"][aria-label="Legal warning"]');
+    expect(dialog).toBeTruthy();
+    expect(harness.container.contains(dialog)).toBe(false);
 
     await harness.cleanup();
 
@@ -221,6 +224,46 @@ describe("Shared UI controls", () => {
     expect(unlockedScrollKey.defaultPrevented).toBe(false);
     expect(document.body.style.overflow).toBe("");
     expect(document.documentElement.style.overflow).toBe("");
+  });
+
+  test("UI-CTRL-005B: confirm dialogs escape local transformed shells by rendering in a body portal", async () => {
+    const harness = await mount(
+      React.createElement(
+        "div",
+        {
+          className: "mc-options-page-shell",
+          style: {
+            transform: "scale(0.996)",
+            overflow: "hidden",
+          },
+        },
+        React.createElement(
+          I18nProvider,
+          { locale: "en" },
+          React.createElement(ConfirmDialog, {
+            open: true,
+            title: "Capture startup warning",
+            description: "Approve this acknowledgement before continuing.",
+            confirmLabel: "Enable",
+            onConfirm: vi.fn(),
+            onCancel: vi.fn(),
+          })
+        )
+      )
+    );
+
+    const dialog = document.body.querySelector(
+      '[role="dialog"][aria-label="Capture startup warning"]'
+    );
+    expect(dialog).toBeTruthy();
+    expect(harness.container.contains(dialog)).toBe(false);
+
+    const overlay = dialog?.parentElement as HTMLDivElement | null;
+    expect(overlay).toBeTruthy();
+    expect(overlay?.className).toContain("fixed");
+    expect(overlay?.style.transform).toBe("");
+
+    await harness.cleanup();
   });
 
   test("UI-CTRL-006: help popovers render localized markdown in a portal and respond to escape dismissal", async () => {
