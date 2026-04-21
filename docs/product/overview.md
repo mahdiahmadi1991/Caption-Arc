@@ -20,3 +20,4 @@ Desktop-native meeting apps are out of scope.
 ## Current Product Notes
 
 - 2026-04-10: Behavior-contract test coverage expanded for runtime/provider surfaces with no intended change to user-facing product scope or capability set.
+- 2026-04-21: repository delivery moved to an automated preview/stable release train so `develop` can carry preview builds while `main` remains the stable release line for published extension artifacts.
