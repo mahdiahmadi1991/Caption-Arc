@@ -1,4 +1,4 @@
-name: Quality Gates
+name: CI
 
 on:
   pull_request:
@@ -21,6 +21,9 @@ on:
       - "AGENTS.md"
       - "README.md"
   push:
+    branches:
+      - develop
+      - main
     tags-ignore:
       - "v*"
     paths:
@@ -33,16 +36,43 @@ on:
       - "scripts/start-windows-chrome-debug.sh"
       - "vitest.config.ts"
       - "wxt.config.ts"
-      - "package.json"
       - "pnpm-lock.yaml"
-      - ".github/workflows/quality-gates.yml"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/release-train.yml"
+      - ".github/workflows/**"
       - "docs/**"
       - "AGENTS.md"
       - "README.md"
 
 jobs:
+  docs-check:
+    if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release): update develop preview to ') }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate documentation contract
+        run: node ./scripts/docs/validate-docs.mjs
+
+      - name: Validate business documentation sync
+        env:
+          BUSINESS_DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BUSINESS_DOCS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node ./scripts/docs/validate-business-docs-sync.mjs
+
+      - name: Validate behavior-contract sync
+        env:
+          BEHAVIOR_CONTRACT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BEHAVIOR_CONTRACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node ./scripts/docs/validate-behavior-contract-sync.mjs
+
   quality-checks:
     if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release): update develop preview to ') }}"
     runs-on: ubuntu-latest

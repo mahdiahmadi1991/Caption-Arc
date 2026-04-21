@@ -102,7 +102,7 @@ Behavior-contract sync is enforced by:
 
 - `scripts/docs/validate-behavior-contract-sync.mjs`
 - `pnpm docs:check:behavior`
-- `Docs Guardrails` CI workflow
+- unified `CI` workflow `docs-check` job
 
 ## Deferral Rule
 

@@ -30,7 +30,7 @@ For code changes, this includes both:
 Repository enforcement:
 
 - local: run required commands before completion
-- CI: `Quality Gates` workflow re-runs test and coverage checks on push/PR
+- CI: unified `CI` workflow re-runs `docs-check` and `quality-checks` on push/PR
 
 ## Required Commands By Change Type
 

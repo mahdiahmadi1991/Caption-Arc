@@ -409,6 +409,12 @@ Recommended automation responsibilities:
 - create the GitHub Release automatically
 - upload Chrome/Firefox release artifacts automatically
 
+Current workflow split:
+
+- `CI` workflow: repository guardrails and quality jobs (`docs-check`, `quality-checks`)
+- `Release Train` workflow: preview-version bumps, preview tags/prereleases, and stable release PR maintenance
+- `Publish Release` workflow: stable tag creation, GitHub release publication, and asset upload
+
 ---
 
 ## 13. AI-agent governance rules

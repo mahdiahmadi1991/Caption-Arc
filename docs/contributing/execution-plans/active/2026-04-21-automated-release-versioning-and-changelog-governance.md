@@ -231,6 +231,7 @@ Implemented:
 
 - shared release/versioning utilities under `scripts/release/`
 - manifest-safe version mapping in `wxt.config.ts`
+- unified `CI` workflow with `docs-check` and `quality-checks` jobs
 - commit-governance validation in `quality-gates.yml`
 - `release-train.yml` for develop preview bumps, preview tags/prereleases, and stable release PR creation
 - revised `release.yml` for stable release publication from `main`
