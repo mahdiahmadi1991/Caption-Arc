@@ -18,4 +18,5 @@ Current plans:
 - [2026-04-14-monetization-readiness-foundation.md](./2026-04-14-monetization-readiness-foundation.md)
 - [2026-04-16-cloud-sync-redesign-and-hardening.md](./2026-04-16-cloud-sync-redesign-and-hardening.md)
 - [2026-04-15-meta-workspace-separate-repos-migration.md](./2026-04-15-meta-workspace-separate-repos-migration.md)
+- [2026-04-21-assistant-coverage-60-and-settings-matrix.md](./2026-04-21-assistant-coverage-60-and-settings-matrix.md)
 - [2026-04-21-automated-release-versioning-and-changelog-governance.md](./2026-04-21-automated-release-versioning-and-changelog-governance.md)

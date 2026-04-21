@@ -181,6 +181,97 @@ function classifyAndRecommend(files, { moduleScope }) {
       );
     }
 
+    if (
+      /^entrypoints\/background\/assistant\.ts$/.test(file) ||
+      /^entrypoints\/background\/providers\/openai\.ts$/.test(file)
+    ) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-trigger.contract.test.ts tests/google-meet/assistant-dedupe.contract.test.ts tests/google-meet/assistant-prompt.contract.test.ts tests/google-meet/assistant-language.contract.test.ts tests/google-meet/assistant-pass.contract.test.ts tests/google-meet/assistant-replay.contract.test.ts tests/google-meet/assistant-output-language-transition.contract.test.ts tests/google-meet/assistant-openai-stream.contract.test.ts tests/google-meet/assistant-incomplete-response.contract.test.ts tests/google-meet/assistant-cancellation.contract.test.ts",
+        `${file}: assistant generation and provider orchestration changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after orchestration changes`
+      );
+    }
+
+    if (/^entrypoints\/shared\/meeting-profiles\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-profile-config.contract.test.ts",
+        `${file}: assistant profile defaults and normalization changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after profile-matrix changes`
+      );
+    }
+
+    if (/^entrypoints\/shared\/meeting-session\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-meeting-session-serialization.contract.test.ts tests/google-meet/assistant-history-render.contract.test.tsx",
+        `${file}: assistant session normalization or searchable serialization changed`
+      );
+      add(
+        "pnpm test:assistant",
+        `${file}: verify assistant-owned suites after meeting-session assistant changes`
+      );
+    }
+
+    if (/^entrypoints\/background\/settings\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-settings-save.contract.test.ts tests/google-meet/settings-and-readiness.contract.test.ts",
+        `${file}: assistant settings persistence and normalization changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after settings changes`
+      );
+    }
+
+    if (/^entrypoints\/background\/cloud-sync\/serialization\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-cloud-sync-serialization.contract.test.ts tests/google-meet/cloud-sync-serialization.contract.test.ts",
+        `${file}: assistant artifact serialization or cloud-sync sanitization changed`
+      );
+      add(
+        "pnpm test:assistant",
+        `${file}: verify assistant-owned suites after assistant serialization changes`
+      );
+    }
+
+    if (/^entrypoints\/content\/assistant-service\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-runtime.contract.test.ts tests/google-meet/assistant-surface.contract.test.ts",
+        `${file}: assistant content sync and visible state changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after assistant-service changes`
+      );
+    }
+
+    if (/^entrypoints\/content\/assistant-dls-capture-bridge\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-dls-capture-bridge.contract.test.ts tests/google-meet/assistant-dls-observer.contract.test.ts tests/google-meet/manual-smoke-launch.contract.test.ts",
+        `${file}: assistant DLS capture support code changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after DLS bridge changes`
+      );
+    }
+
+    if (/^entrypoints\/content\/overlay\/assistant-surface\.ts$/.test(file)) {
+      add(
+        "pnpm vitest run tests/google-meet/assistant-surface.contract.test.ts tests/google-meet/assistant-history-render.contract.test.tsx",
+        `${file}: assistant surface rendering or appearance changed`
+      );
+      add(
+        "pnpm test:assistant:coverage",
+        `${file}: verify assistant-owned coverage scope after surface changes`
+      );
+    }
+
     if (/^scripts\/manual-smoke\//.test(file)) {
       add(
         "pnpm vitest run tests/google-meet/manual-smoke-launch.contract.test.ts",
