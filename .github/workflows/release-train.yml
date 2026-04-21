@@ -89,31 +89,57 @@ jobs:
         id: stable
         run: node ./scripts/release/prepare-main-release.mjs
 
+      - name: Push stable release branch
+        if: ${{ steps.stable.outputs.changed == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          RELEASE_BRANCH="release/main/current"
+
+          git checkout -B "$RELEASE_BRANCH"
+          git add package.json CHANGELOG.md
+
+          if git diff --cached --quiet; then
+            echo "No stable release PR changes to commit."
+          else
+            git commit -m "chore(release): prepare v${{ steps.stable.outputs.version }}"
+          fi
+
+          git push --force-with-lease origin "HEAD:${RELEASE_BRANCH}"
+
       - name: Create or update stable release PR
         if: ${{ steps.stable.outputs.changed == 'true' }}
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ env.RELEASE_AUTOMATION_TOKEN }}
-          commit-message: "chore(release): prepare v${{ steps.stable.outputs.version }}"
-          branch: release/main/current
-          base: main
-          title: "release: v${{ steps.stable.outputs.version }}"
-          body: |
-            ## Summary
+        run: |
+          BODY_FILE="$(mktemp)"
+          cat > "$BODY_FILE" <<'EOF'
+          ## Summary
 
-            This automated release PR promotes the current `develop` state to `main` and finalizes the stable release metadata for `v${{ steps.stable.outputs.version }}`.
+          This automated release PR promotes the current `develop` state to `main` and finalizes the stable release metadata for `v${{ steps.stable.outputs.version }}`.
 
-            ## Included Automation
+          ## Included Automation
 
-            - stable package version finalization
-            - canonical `CHANGELOG.md` update
-            - automatic stable tag and GitHub release publication after merge to `main`
-            - automatic Chrome and Firefox release asset packaging after merge to `main`
+          - stable package version finalization
+          - canonical `CHANGELOG.md` update
+          - automatic stable tag and GitHub release publication after merge to `main`
+          - automatic Chrome and Firefox release asset packaging after merge to `main`
 
-            ## Review Notes
+          ## Review Notes
 
-            - if this PR was created with the default `GITHUB_TOKEN`, GitHub may not trigger normal PR workflows automatically
-            - configure `RELEASE_AUTOMATION_TOKEN` to allow release PRs to participate in the standard PR checks
-          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          delete-branch: false
+          - if this PR was created with the default `GITHUB_TOKEN`, GitHub may not trigger normal PR workflows automatically
+          - configure `RELEASE_AUTOMATION_TOKEN` to allow release PRs to participate in the standard PR checks
+          EOF
+
+          EXISTING_PR="$(gh pr list --base main --head release/main/current --json number --jq '.[0].number')"
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            gh pr edit "$EXISTING_PR" \
+              --title "release: v${{ steps.stable.outputs.version }}" \
+              --body-file "$BODY_FILE"
+          else
+            gh pr create \
+              --base main \
+              --head release/main/current \
+              --title "release: v${{ steps.stable.outputs.version }}" \
+              --body-file "$BODY_FILE"
+          fi
