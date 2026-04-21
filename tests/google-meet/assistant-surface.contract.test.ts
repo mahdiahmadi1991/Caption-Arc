@@ -170,4 +170,52 @@ describe("Assistant surface contract", () => {
     expect(toggleButton).toBeInstanceOf(HTMLButtonElement);
     expect(toggleButton?.classList.contains("mc-active")).toBe(false);
   });
+
+  test("OVLAY-014: completed assistant outputs render markdown structure for format-sensitive responses", () => {
+    setAssistantLiveState("done");
+    setAssistantLiveOutputs([
+      {
+        id: "assistant-1",
+        triggerEventId: "evt-1",
+        triggerStableEventKey: "stable-1",
+        source: "caption",
+        speaker: "Interviewer",
+        triggerText: "Could you summarize the delivery risks?",
+        triggerTimestamp: Date.now(),
+        profileId: "client_call",
+        content:
+          "## Direct answer\n\n- Confirm the deployment blocker.\n- State the next safe milestone.",
+        createdAt: Date.now(),
+        provider: "openai",
+        model: "gpt-5-mini",
+        responseFormat: "structured_sections",
+      },
+    ]);
+
+    createAssistantSurface();
+    syncAssistantSurface();
+
+    const card = document.querySelector(".mc-assistant-card:not(.mc-assistant-card-pending)");
+    expect(card).toBeInstanceOf(HTMLElement);
+    expect(card?.textContent).toContain("Direct answer");
+    expect(card?.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  test("OVLAY-015: OpenAI unavailability shows the issue affordance and disables the live toggle", () => {
+    updateSettings({
+      verificationSnapshot: null,
+    });
+    setAssistantSessionEnabled(true);
+    setAssistantLiveState("error");
+
+    createAssistantSurface();
+    syncAssistantSurface();
+
+    const issue = document.querySelector(".mc-assistant-top-dock-issue");
+    const toggleButton = document.querySelector(".mc-assistant-toggle");
+    expect(issue).toBeInstanceOf(HTMLElement);
+    expect((issue as HTMLElement).hidden).toBe(false);
+    expect(toggleButton).toBeInstanceOf(HTMLButtonElement);
+    expect((toggleButton as HTMLButtonElement).disabled).toBe(true);
+  });
 });

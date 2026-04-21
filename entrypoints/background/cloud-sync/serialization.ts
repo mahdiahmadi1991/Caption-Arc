@@ -138,24 +138,41 @@ function buildSessionArtifactsSyncContentHash(
 ): string {
   return createTextFingerprint(
     JSON.stringify({
-      summaries: Object.values(session.summaries || {}).map((summary) => ({
-        key: summary.key,
-        language: summary.language,
-        generatedAt: summary.generatedAt,
-        content: summary.content,
-      })),
-      assistantOutputs: Object.values(session.artifacts?.assistantOutputs || {}).map(
-        (output) => ({
+      summaries: Object.entries(session.summaries || {})
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+        .map(([key, summary]) => ({
+          key: summary.key || key,
+          language: summary.language,
+          generatedAt: summary.generatedAt,
+          content: summary.content,
+        })),
+      assistantOutputs: Object.entries(session.artifacts?.assistantOutputs || {})
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+        .map(([key, output]) => ({
+          key,
           id: output.id,
           triggerEventId: output.triggerEventId,
+          triggerStableEventKey: output.triggerStableEventKey,
+          source: output.source,
+          speaker: output.speaker,
+          triggerText: output.triggerText,
+          triggerTimestamp: output.triggerTimestamp,
+          profileId: output.profileId,
           content: output.content,
           createdAt: output.createdAt,
-        })
-      ),
+          provider: output.provider,
+          model: output.model,
+          responseIntent: output.responseIntent,
+          responseFormat: output.responseFormat,
+          responseDepth: output.responseDepth,
+          responseTone: output.responseTone,
+          deliveryBias: output.deliveryBias,
+        })),
       assistantMemory: session.artifacts?.assistantMemory
         ? {
             updatedAt: session.artifacts.assistantMemory.updatedAt,
             content: session.artifacts.assistantMemory.content,
+            sourceEventCount: session.artifacts.assistantMemory.sourceEventCount,
           }
         : undefined,
       assistantState: session.artifacts?.assistantState

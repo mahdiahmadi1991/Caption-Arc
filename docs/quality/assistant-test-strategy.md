@@ -74,11 +74,14 @@ Do not assert:
 | Surface | Current Source Of Truth | Current Validation | Main Gap |
 | --- | --- | --- | --- |
 | content assistant session resolution | [../api/assistant-runtime-behavior-contract.md](../api/assistant-runtime-behavior-contract.md) | [../../tests/google-meet/assistant-runtime.contract.test.ts](../../tests/google-meet/assistant-runtime.contract.test.ts) | background orchestration not covered here |
-| overlay assistant rendering | [../api/overlay-behavior-contract.md](../api/overlay-behavior-contract.md) | [../../tests/google-meet/assistant-surface.contract.test.ts](../../tests/google-meet/assistant-surface.contract.test.ts) | meeting-history rendering coverage is thin |
-| background trigger and pass orchestration | code only in [../../entrypoints/background/assistant.ts](../../entrypoints/background/assistant.ts) | no dedicated contract suite yet | highest regression risk |
-| assistant persistence merge and session save interactions | code only in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts) | no assistant-specific persistence suite yet | stale artifact overwrite risk |
-| OpenAI streaming and incomplete-response handling | code only in [../../entrypoints/background/providers/openai.ts](../../entrypoints/background/providers/openai.ts) | no assistant-specific provider suite yet | truncation and stream-state regressions |
-| settings transitions and profile changes mid-session | product strategy plus code in `assistant.ts`, `App.tsx`, and `assistant-service.ts` | no assistant-specific transition suite yet | language and profile drift bugs |
+| overlay assistant rendering | [../api/overlay-behavior-contract.md](../api/overlay-behavior-contract.md) | [../../tests/google-meet/assistant-surface.contract.test.ts](../../tests/google-meet/assistant-surface.contract.test.ts), [../../tests/google-meet/assistant-history-render.contract.test.tsx](../../tests/google-meet/assistant-history-render.contract.test.tsx) | more render-shape coverage is still useful for additional appearance permutations |
+| background trigger and pass orchestration | code plus assistant generation traceability | [../../tests/google-meet/assistant-trigger.contract.test.ts](../../tests/google-meet/assistant-trigger.contract.test.ts), [../../tests/google-meet/assistant-dedupe.contract.test.ts](../../tests/google-meet/assistant-dedupe.contract.test.ts), [../../tests/google-meet/assistant-prompt.contract.test.ts](../../tests/google-meet/assistant-prompt.contract.test.ts), [../../tests/google-meet/assistant-language.contract.test.ts](../../tests/google-meet/assistant-language.contract.test.ts), [../../tests/google-meet/assistant-pass.contract.test.ts](../../tests/google-meet/assistant-pass.contract.test.ts), [../../tests/google-meet/assistant-replay.contract.test.ts](../../tests/google-meet/assistant-replay.contract.test.ts) | queue saturation and mixed persistence boundaries still deserve follow-up |
+| assistant persistence merge and session save interactions | code only in [../../entrypoints/background/history.ts](../../entrypoints/background/history.ts) | [../../tests/google-meet/assistant-history-persistence.contract.test.ts](../../tests/google-meet/assistant-history-persistence.contract.test.ts), [../../tests/google-meet/assistant-settings-save.contract.test.ts](../../tests/google-meet/assistant-settings-save.contract.test.ts) | mixed-file ownership still keeps this area harder to measure cleanly |
+| OpenAI streaming and incomplete-response handling | code only in [../../entrypoints/background/providers/openai.ts](../../entrypoints/background/providers/openai.ts) | [../../tests/google-meet/assistant-openai-stream.contract.test.ts](../../tests/google-meet/assistant-openai-stream.contract.test.ts), [../../tests/google-meet/assistant-incomplete-response.contract.test.ts](../../tests/google-meet/assistant-incomplete-response.contract.test.ts), [../../tests/google-meet/assistant-cancellation.contract.test.ts](../../tests/google-meet/assistant-cancellation.contract.test.ts) | provider HTTP/rate-limit mapping can still grow |
+| settings transitions and profile changes mid-session | product strategy plus code in `assistant.ts`, `App.tsx`, and `assistant-service.ts` | [../../tests/google-meet/assistant-settings-transition.contract.test.ts](../../tests/google-meet/assistant-settings-transition.contract.test.ts), [../../tests/google-meet/assistant-profile-switch.contract.test.ts](../../tests/google-meet/assistant-profile-switch.contract.test.ts), [../../tests/google-meet/assistant-output-language-transition.contract.test.ts](../../tests/google-meet/assistant-output-language-transition.contract.test.ts), [../../tests/google-meet/assistant-settings-save.contract.test.ts](../../tests/google-meet/assistant-settings-save.contract.test.ts) | options-page editor wiring coverage is still thinner than pure logic coverage |
+| assistant profile defaults and normalization | [../../entrypoints/shared/meeting-profiles.ts](../../entrypoints/shared/meeting-profiles.ts) | [../../tests/google-meet/assistant-profile-config.contract.test.ts](../../tests/google-meet/assistant-profile-config.contract.test.ts) | more options-page UI coverage can still help prove end-user editing paths |
+| assistant session normalization and searchable artifact indexing | [../../entrypoints/shared/meeting-session.ts](../../entrypoints/shared/meeting-session.ts) | [../../tests/google-meet/assistant-meeting-session-serialization.contract.test.ts](../../tests/google-meet/assistant-meeting-session-serialization.contract.test.ts) | mixed shared-session ownership still makes extraction a possible future cleanup |
+| assistant cloud-sync artifact serialization | [../../entrypoints/background/cloud-sync/serialization.ts](../../entrypoints/background/cloud-sync/serialization.ts) | [../../tests/google-meet/assistant-cloud-sync-serialization.contract.test.ts](../../tests/google-meet/assistant-cloud-sync-serialization.contract.test.ts) | broader sync-orchestration behavior still lives in general cloud-sync suites |
 
 ## Layered Test Model
 
@@ -224,6 +227,8 @@ Use browser smoke for:
 Canonical commands:
 
 ```bash
+pnpm test:assistant
+pnpm test:assistant:coverage
 pnpm build:target:chrome:development
 pnpm chrome:debug:reload-extension
 pnpm chrome:debug:ensure
@@ -248,6 +253,10 @@ The following inventory is the recommended baseline for the assistant module.
 | --- | --- | --- |
 | `tests/google-meet/assistant-trigger.contract.test.ts` | question/request/salience detection and trigger policy | highest |
 | `tests/google-meet/assistant-dedupe.contract.test.ts` | clause extraction, unresolved-question selection, caption coalescing | highest |
+| `tests/google-meet/assistant-profile-config.contract.test.ts` | assistant profile defaults, protected-profile injection, and normalization | highest |
+| `tests/google-meet/assistant-settings-save.contract.test.ts` | assistant settings persistence, normalization, and default-profile resolution | highest |
+| `tests/google-meet/assistant-meeting-session-serialization.contract.test.ts` | assistant artifact normalization and searchable session indexing | high |
+| `tests/google-meet/assistant-cloud-sync-serialization.contract.test.ts` | assistant artifact cloud-sync serialization and hash behavior | high |
 | `tests/google-meet/assistant-prompt.contract.test.ts` | prompt assembly from profile, memory, and recent context | highest |
 | `tests/google-meet/assistant-language.contract.test.ts` | output-language enforcement and translation wording rules | highest |
 | `tests/google-meet/assistant-pass.contract.test.ts` | end-to-end pass orchestration with mocked provider output | highest |
@@ -259,6 +268,7 @@ The following inventory is the recommended baseline for the assistant module.
 | `tests/google-meet/assistant-incomplete-response.contract.test.ts` | incomplete-response classification | high |
 | `tests/google-meet/assistant-cancellation.contract.test.ts` | abort and cancellation semantics | medium |
 | `tests/google-meet/assistant-replay.contract.test.ts` | regression fixtures from real sessions | highest |
+| `tests/google-meet/assistant-dls-capture-bridge.contract.test.ts` | assistant DLS support-code correctness and request handling | high |
 
 ## Scenario Axes
 

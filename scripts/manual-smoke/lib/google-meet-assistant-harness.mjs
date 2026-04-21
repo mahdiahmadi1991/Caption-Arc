@@ -198,6 +198,10 @@ function buildMeetJoinProbeExpression() {
         bodyText.includes("ready to join") ||
         bodyText.includes("join now") ||
         bodyText.includes("ask to join"),
+      instantMeetingReady:
+        bodyText.includes("your meeting") &&
+        bodyText.includes("copy link") &&
+        bodyText.includes("waiting to join"),
       signedOutHint:
         bodyText.includes("sign in") &&
         bodyText.includes("google meet"),
@@ -340,6 +344,7 @@ export async function createAndJoinGoogleMeetSession({
   const joinControls = [
     ["allow camera"],
     ["allow microphone", "allow mic"],
+    ["close"],
     ["join now"],
     ["ask to join"],
     ["continue without microphone", "continue without mic"],
@@ -392,6 +397,16 @@ export async function createAndJoinGoogleMeetSession({
         meetingUrl: resolved.url,
         joinProbe: lastProbe,
       };
+    }
+
+    if (lastProbe?.instantMeetingReady) {
+      await clickByText({
+        webSocketDebuggerUrl: target.webSocketDebuggerUrl,
+        texts: ["close"],
+        attempts: 2,
+        delayMs: 200,
+      });
+      await sleep(300);
     }
 
     for (const texts of joinControls) {

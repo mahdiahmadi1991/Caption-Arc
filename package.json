@@ -43,6 +43,8 @@
     "release:prepare": "pnpm i18n:check && pnpm test:google && pnpm docs:check && pnpm docs:check:behavior && pnpm docs:check:business && pnpm release:validate && pnpm package:targets:production",
     "release:publish": "pnpm release:prepare && node ./scripts/release/print-publish-next-steps.mjs",
     "test": "pnpm test:google",
+    "test:assistant": "vitest run tests/google-meet/assistant-*.contract.test.ts tests/google-meet/assistant-*.contract.test.tsx tests/google-meet/manual-smoke-launch.contract.test.ts",
+    "test:assistant:coverage": "vitest run tests/google-meet/assistant-*.contract.test.ts tests/google-meet/assistant-*.contract.test.tsx tests/google-meet/manual-smoke-launch.contract.test.ts --coverage --coverage.include=entrypoints/background/assistant.ts --coverage.include=entrypoints/background/providers/openai.ts --coverage.include=entrypoints/background/settings.ts --coverage.include=entrypoints/content/assistant-service.ts --coverage.include=entrypoints/content/overlay/assistant-surface.ts --coverage.include=entrypoints/content/assistant-dls-capture-bridge.ts --coverage.include=entrypoints/shared/meeting-profiles.ts",
     "test:google": "vitest run tests/google-meet",
     "test:google:coverage": "vitest run tests/google-meet --coverage",
     "test:coverage": "pnpm test:google:coverage",
