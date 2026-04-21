@@ -24,6 +24,7 @@ A change is done only when all applicable items are satisfied.
 - `pnpm docs:check` passes
 - `pnpm docs:check:business` passes when business-sensitive code surfaces changed
 - `pnpm docs:check:behavior` passes when behavior-sensitive code surfaces changed
+- `pnpm i18n:check` passes when shipped UI locale catalogs change
 
 ## Safety
 

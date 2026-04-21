@@ -51,6 +51,10 @@ Build outputs now live under a versioned `.release/` parent directory:
 4. The Chrome artifact is suitable for Chrome and compatible browsers such as Edge or Brave when their unpacked-extension policies allow it.
 5. For Firefox, open `about:debugging#/runtime/this-firefox` and load `.release/v<version>/production/firefox` or `.release/v<version>/development/firefox`.
 
+For the Windows Chrome debug flow used by smoke tooling, the unpacked bootstrap target is the development artifact:
+
+- `<repo-root>\\.release\\v<version>\\development\\chrome`
+
 Chromium-family unpacked development builds keep a stable development ID when `WXT_CHROME_EXTENSION_KEY_DEVELOPMENT` is configured, preferably through `.secrets/.env.development.local`.
 
 Production builds should use a separate `WXT_CHROME_EXTENSION_KEY_PRODUCTION` value through `.secrets/.env.production.local` so development and production Chrome artifacts do not share the same extension ID.
