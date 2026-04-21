@@ -44,8 +44,10 @@ Rules:
 3. Automatic summary requests are not created when both captions and chat messages are empty.
 4. Automatic summary requests use the session meeting profile or the resolved default meeting profile.
 5. Automatic summary requests are skipped when the resolved profile does not enable `autoSummarizeOnMeetingEnd`.
-6. Automatic summary requests are skipped when an existing summary for the same profile and language is already newer than the latest session boundary.
-7. Automatic reconcile scans only ended sessions from the last `60` minutes and limits the candidate set to `5` sessions.
+6. Automatic summary requests target the current session segment index, where the first segment is `0` and each resumed continuation increments the index by `1`.
+7. Automatic summary requests are skipped when the current segment has no captured caption or chat content.
+8. Automatic summary requests are skipped when an automatic summary already exists for the same profile, language, and current segment index.
+9. Automatic reconcile scans only ended sessions from the last `60` minutes and limits the candidate set to `5` sessions.
 
 ## C-MSUM-003: Summary execution planning selects one of three generation strategies from weighted source size
 

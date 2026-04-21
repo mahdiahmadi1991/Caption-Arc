@@ -14,7 +14,7 @@ This matrix maps meeting-summary-pipeline behavior-contract rules to available v
 | Case ID | Contract ID | Behavior Summary | Validation Surface | Status |
 | --- | --- | --- | --- | --- |
 | MSUM-001 | C-MSUM-001 | persisted summary jobs use per-session queue entries, bounded retries, and earliest-deadline alarms | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
-| MSUM-002 | C-MSUM-002 | automatic summary requests require ended sessions, source content, and auto-summary-enabled profiles | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
+| MSUM-002 | C-MSUM-002 | automatic summary requests require ended sessions, auto-summary-enabled profiles, non-empty current segments, and one automatic summary per segment | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
 | MSUM-003 | C-MSUM-003 | summary planning selects strategy from weighted transcript, chat, and prompt size | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
 | MSUM-004 | C-MSUM-004 | long summaries continue segment-by-segment and optionally reconcile the final draft | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |
 | MSUM-005 | C-MSUM-005 | strategy-specific execution chooses direct prompts or evidence extraction before persistence | `tests/google-meet/meeting-summary-pipeline.contract.test.ts` | implemented |

@@ -245,6 +245,22 @@ export function createTextFingerprint(input: string): string {
   return (hash >>> 0).toString(16);
 }
 
+export function buildMeetingSummarySourceFingerprint(
+  session: Pick<MeetingSession, "captions" | "chatMessages">
+): string {
+  return createTextFingerprint(
+    [
+      ...session.captions.map(
+        (caption) => `${caption.timestamp}|${caption.speaker}|${caption.text}`
+      ),
+      ...session.chatMessages.map(
+        (message) =>
+          `chat:${message.timestamp}|${message.speaker}|${message.text}`
+      ),
+    ].join("\n")
+  );
+}
+
 export function getMeetingSummaryGroupKey(
   profileId: string,
   targetLanguage: string
@@ -274,6 +290,7 @@ export function findLatestMeetingSummary(
     profileId?: string;
     language?: string;
     requestSource?: "automatic" | "manual";
+    sourceSegmentIndex?: number;
   }
 ): MeetingSummary | null {
   return (
@@ -285,6 +302,12 @@ export function findLatestMeetingSummary(
         return false;
       }
       if (options?.requestSource && summary.requestSource !== options.requestSource) {
+        return false;
+      }
+      if (
+        typeof options?.sourceSegmentIndex === "number" &&
+        summary.sourceSegmentIndex !== options.sourceSegmentIndex
+      ) {
         return false;
       }
       return true;
@@ -305,6 +328,7 @@ export function createMeetingSummaryArtifact(
     generationMode?: SummaryGenerationMode;
     requestSource?: "automatic" | "manual";
     sourceSessionProfileId?: string;
+    sourceSegmentIndex?: number;
     executionStrategy?: SummaryExecutionStrategy;
     continuationCount?: number;
     evidenceChunkCount?: number;
@@ -312,17 +336,7 @@ export function createMeetingSummaryArtifact(
   }
 ): MeetingSummary {
   const generatedAt = Date.now();
-  const sourceFingerprint = createTextFingerprint(
-    [
-      ...session.captions.map(
-        (caption) => `${caption.timestamp}|${caption.speaker}|${caption.text}`
-      ),
-      ...session.chatMessages.map(
-        (message) =>
-          `chat:${message.timestamp}|${message.speaker}|${message.text}`
-      ),
-    ].join("\n")
-  );
+  const sourceFingerprint = buildMeetingSummarySourceFingerprint(session);
 
   return {
     key: getMeetingSummaryArtifactKey(profileId, targetLanguage, generatedAt),
@@ -340,6 +354,7 @@ export function createMeetingSummaryArtifact(
     generationMode: metadata?.generationMode,
     requestSource: metadata?.requestSource,
     sourceSessionProfileId: metadata?.sourceSessionProfileId,
+    sourceSegmentIndex: metadata?.sourceSegmentIndex,
     executionStrategy: metadata?.executionStrategy,
     continuationCount: metadata?.continuationCount,
     evidenceChunkCount: metadata?.evidenceChunkCount,

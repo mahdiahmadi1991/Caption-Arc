@@ -242,7 +242,7 @@ describe("Meeting summary pipeline contract", () => {
     expect(when).toBeLessThanOrEqual(Date.now() + 2_500);
   });
 
-  test("MSUM-002: automatic summary gating requires ended sessions, content, and enabled profile", () => {
+  test("MSUM-002: automatic summary gating requires ended sessions, non-empty current segments, enabled profiles, and one automatic summary per segment", () => {
     const defaults = createDefaultSettings();
     const settings = {
       ...defaults,
@@ -262,6 +262,7 @@ describe("Meeting summary pipeline contract", () => {
       sessionId: "session-1",
       targetLanguage: "fa",
       profileId: settings.defaultMeetingProfileId,
+      sourceSegmentIndex: 0,
     });
 
     const liveSession = createSession({ endTime: undefined, lifecycleState: "live" }, 1, 40);
@@ -272,6 +273,99 @@ describe("Meeting summary pipeline contract", () => {
     const emptyContent = createSession({ captions: [], chatMessages: [] }, 0, 0);
     expect(
       historySummaryInternals.getAutomaticSummaryRequest(emptyContent, settings as never)
+    ).toBeNull();
+
+    const segmentAlreadySummarized = {
+      ...endedWithContent,
+      updatedAt: Date.now() + 60_000,
+    };
+    const existingSummary = {
+      key: "default:fa:1",
+      groupKey: "default:fa",
+      profileId: settings.defaultMeetingProfileId!,
+      profileName: "Default",
+      language: "fa",
+      content: "Existing summary",
+      generatedAt: Date.now() - 1_000,
+      provider: "openai",
+      model: "gpt-5-mini",
+      instructionSnapshot: "",
+      sourceFingerprint: "fingerprint-1",
+      captionCount: segmentAlreadySummarized.captions.length,
+      requestSource: "automatic" as const,
+      sourceSegmentIndex: 0,
+    };
+    segmentAlreadySummarized.summaries = {
+      [existingSummary.key]: existingSummary,
+    };
+    segmentAlreadySummarized.artifacts = {
+      ...(segmentAlreadySummarized.artifacts || {}),
+      summaries: segmentAlreadySummarized.summaries,
+    };
+    expect(
+      historySummaryInternals.getAutomaticSummaryRequest(
+        segmentAlreadySummarized,
+        settings as never
+      )
+    ).toBeNull();
+
+    const resumedAt = Date.now() - 5_000;
+    const multiSegmentSession = createSession(
+      {
+        rejoinHistory: [
+          {
+            previousEndTime: resumedAt - 30_000,
+            resumedAt,
+            gapMs: 30_000,
+          },
+        ],
+        captions: [
+          {
+            speaker: "Speaker",
+            text: "Before rejoin",
+            time: "09:00",
+            timestamp: resumedAt - 60_000,
+            sessionOffsetMs: 0,
+            isFinal: true,
+            stableEventKey: "caption-before",
+          },
+          {
+            speaker: "Speaker",
+            text: "After rejoin",
+            time: "09:10",
+            timestamp: resumedAt + 1_000,
+            sessionOffsetMs: 1_000,
+            isFinal: true,
+            stableEventKey: "caption-after",
+          },
+        ],
+      },
+      2,
+      40
+    );
+    expect(
+      historySummaryInternals.getAutomaticSummaryRequest(
+        multiSegmentSession,
+        settings as never
+      )
+    ).toEqual({
+      sessionId: "session-1",
+      targetLanguage: "fa",
+      profileId: settings.defaultMeetingProfileId,
+      sourceSegmentIndex: 1,
+    });
+
+    const emptyCurrentSegmentSession = {
+      ...multiSegmentSession,
+      captions: [multiSegmentSession.captions[0]!],
+      artifacts: { summaries: {} },
+      summaries: {},
+    };
+    expect(
+      historySummaryInternals.getAutomaticSummaryRequest(
+        emptyCurrentSegmentSession,
+        settings as never
+      )
     ).toBeNull();
   });
 

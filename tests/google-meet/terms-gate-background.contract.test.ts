@@ -7,6 +7,7 @@ const backgroundMocks = vi.hoisted(() => ({
   shutdownCloudSyncForTermsRevocation: vi.fn(async () => undefined),
   initializeMeetingSummaryQueue: vi.fn(async () => undefined),
   shutdownMeetingSummaryQueueForTermsRevocation: vi.fn(async () => undefined),
+  debugHandleSummaryReadyNotificationClick: vi.fn(),
   tabsCreate: vi.fn(async () => undefined),
   tabsRemove: vi.fn(async () => undefined),
   listeners: {
@@ -70,6 +71,8 @@ vi.mock("../../entrypoints/background/history", () => ({
   generateMeetingSummary: vi.fn(),
   clearMeetingHistory: vi.fn(),
   getStorageUsage: vi.fn(),
+  debugHandleSummaryReadyNotificationClick:
+    backgroundMocks.debugHandleSummaryReadyNotificationClick,
   shutdownMeetingSummaryQueueForTermsRevocation:
     backgroundMocks.shutdownMeetingSummaryQueueForTermsRevocation,
 }));
@@ -220,6 +223,10 @@ beforeEach(() => {
       termsDecline: null,
     },
   });
+  backgroundMocks.debugHandleSummaryReadyNotificationClick.mockResolvedValue({
+    success: true,
+    notificationId: "summary-ready:session-1|default%3Afa%3A1",
+  });
 });
 
 describe("Terms gate background contract", () => {
@@ -281,5 +288,27 @@ describe("Terms gate background contract", () => {
     expect(backgroundMocks.shutdownCloudSyncForTermsRevocation).toHaveBeenCalledTimes(1);
     expect(backgroundMocks.shutdownMeetingSummaryQueueForTermsRevocation).toHaveBeenCalledTimes(1);
     expect(backgroundMocks.tabsRemove).toHaveBeenCalledWith(42);
+  });
+
+  test("SETRDY-011: development diagnostics can invoke the summary notification click handler through background messaging", async () => {
+    await loadBackgroundModule();
+
+    const response = await dispatchBackgroundMessage({
+      action: "debugHandleSummaryReadyNotificationClick",
+      sessionId: "session-1",
+      summaryKey: "default:fa:1",
+    });
+
+    expect(
+      backgroundMocks.debugHandleSummaryReadyNotificationClick
+    ).toHaveBeenCalledWith({
+      notificationId: null,
+      sessionId: "session-1",
+      summaryKey: "default:fa:1",
+    });
+    expect(response).toEqual({
+      success: true,
+      notificationId: "summary-ready:session-1|default%3Afa%3A1",
+    });
   });
 });
