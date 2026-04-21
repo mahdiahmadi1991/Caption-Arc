@@ -1,6 +1,6 @@
 {
   "name": "caption-arc",
-  "version": "1.4.0-preview.8",
+  "version": "1.4.0",
   "description": "Capture browser meeting captions with floating overlay and real-time translation",
   "type": "module",
   "scripts": {

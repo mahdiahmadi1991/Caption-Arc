@@ -7,11 +7,51 @@ The format follows the repository governance contract:
 - every `main` release step is versioned
 - every `main` release step has a matching annotated Git tag
 - the changelog summarizes what changed without requiring diff inspection
-
 ## Unreleased
 
-- No unreleased changes.
+- No unreleased stable changes.
 
+## 1.4.0 - 2026-04-21
+
+### Added
+
+- assistant: expand coverage and harden DLS
+- release: automate preview and stable release governance
+- quick-access: add soft refresh recovery control
+- assistant: harden runtime, overlay, and DLS coverage
+- cloud-sync: harden browser-aware sync and provider auth
+- settings: roll up meeting profiles, help popovers, and env split
+- runtime: sync meeting assistant lifecycle, providers, docs, and tests
+- add summary completion notifications
+- legal: harden compliance and terms gating
+
+### Fixed
+
+- release: normalize artifact output layout
+- release: use rest api for release pr sync
+- ci: skip commit lint on release pull requests
+- release: push release branch directly from develop
+- ci: ignore preview tag pushes in guardrails
+- ci: stabilize release-train and smoke-launch checks
+- ui: restore legal risk dialog portal behavior
+- summary: dedupe automatic segment summaries
+
+### Changed
+
+- product: record release artifact layout
+- ci: unify docs and quality workflow orchestration
+- manifest: use spaced extension display name
+- runtime: align response typing and terms-gate coverage
+- governance: align branch naming to develop
+- runtime: harden chrome debug and DLS automation
+- i18n: enforce shipped locale catalog sync
+- release: harden build env and repository governance
+- product: refresh monetization readiness foundation
+- product: add monetization readiness foundation
+- rollback temporary Radix PoC and remove dependencies
+- marketing: refresh public positioning and brand assets
+- plans: archive public repository bootstrap plan
+- governance: adopt graph-preserving branch workflow
 ## 1.3.0 - 2026-04-09
 
 ### Added
