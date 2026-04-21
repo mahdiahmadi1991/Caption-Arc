@@ -32,7 +32,7 @@ Do not start build and runtime reload in parallel. A reload against an in-flight
 
 and point any manual debug launch or runtime validation flow at:
 
-- `<repo-root>/.release/v<version>/development/chrome`
+- `<repo-root>/.release/development/chrome`
 
 Only switch to production artifacts when the task explicitly requires production packaging behavior.
 

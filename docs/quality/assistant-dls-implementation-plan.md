@@ -46,7 +46,7 @@ This plan does not cover:
 
 1. DLS proves browser wiring and runtime behavior; deterministic suites still own the bulk matrix.
 2. The canonical runtime is Windows Google Chrome with remote debugging, not Chrome for Testing.
-3. The canonical artifact is `.release/v<version>/development/chrome`.
+3. The canonical artifact is `.release/development/chrome`.
 4. DLS must create and join a real Meet session from landing before any assistant assertions.
 5. Fake transcript data should enter at the extension capture boundary instead of coupling the DLS matrix to Google Meet DOM churn.
 6. A minimal real Meet/provider smoke path should still exist to prove provider wiring has not drifted.

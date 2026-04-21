@@ -4,6 +4,8 @@ import {
   computeNextStableVersion,
   deriveManifestVersion,
   deriveManifestVersionName,
+  deriveReleaseArtifactBaseDir,
+  deriveReleaseArtifactDir,
   extractReleaseNotes,
   parseConventionalCommit,
   updateChangelog,
@@ -14,6 +16,35 @@ describe("release versioning automation", () => {
     expect(deriveManifestVersion("1.4.0")).toBe("1.4.0");
     expect(deriveManifestVersion("1.4.0-preview.7")).toBe("1.4.0.7");
     expect(deriveManifestVersionName("1.4.0-preview.7")).toBe("1.4.0-preview.7");
+  });
+
+  it("derives the canonical release artifact directories for development and production", () => {
+    expect(
+      deriveReleaseArtifactBaseDir({
+        buildMode: "development",
+        packageVersion: "1.4.0-preview.7",
+      })
+    ).toBe(".release/development");
+    expect(
+      deriveReleaseArtifactDir({
+        buildMode: "development",
+        packageVersion: "1.4.0-preview.7",
+        browserTarget: "chrome",
+      })
+    ).toBe(".release/development/chrome");
+    expect(
+      deriveReleaseArtifactBaseDir({
+        buildMode: "production",
+        packageVersion: "1.4.0-preview.7",
+      })
+    ).toBe(".release/production/1.4.0-preview.7");
+    expect(
+      deriveReleaseArtifactDir({
+        buildMode: "production",
+        packageVersion: "1.4.0-preview.7",
+        browserTarget: "firefox",
+      })
+    ).toBe(".release/production/1.4.0-preview.7/firefox");
   });
 
   it("ignores merge commits and parses conventional commits with breaking markers", () => {

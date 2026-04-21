@@ -7,7 +7,7 @@ Use this checklist together with:
 
 ## Pre-Run
 
-- extension built and loaded from `.release/<browser>/<mode>`, matching the browser and environment under test
+- extension built and loaded from `.release/development/<browser>` or `.release/production/<version>/<browser>`, matching the browser and environment under test
 - settings configured with valid AI credentials (if AI paths are under test)
 - clean or known browser profile state
 

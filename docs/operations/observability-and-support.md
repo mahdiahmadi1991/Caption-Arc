@@ -7,7 +7,7 @@
 - direct agent/runtime retrieval through `chrome:debug:diagnostics*` commands during debug sessions
 - environment-aware diagnostics thresholds defined in `entrypoints/shared/environment/development.ts` and `entrypoints/shared/environment/production.ts`
 - options-page diagnostics console gated by `diagnostics.viewerEnabled` in the same environment config files
-- release artifacts isolated under `.release/v<version>/<mode>/chrome` and `.release/v<version>/<mode>/firefox`, with Chrome debug/smoke defaults pointed at the Chrome artifact
+- release artifacts isolated under `.release/development/<browser>` and `.release/production/<version>/<browser>`, with Chrome debug/smoke defaults pointed at `.release/development/chrome`
 - smoke scripts for provider-level regressions
 - UI-level status in popup/options/history surfaces
 

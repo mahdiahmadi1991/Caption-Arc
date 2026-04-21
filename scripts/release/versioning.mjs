@@ -6,6 +6,8 @@ const CONVENTIONAL_COMMIT_PATTERN =
   /^(?<type>[a-z][a-z0-9-]*)(?:\((?<scope>[^)]+)\))?(?<breaking>!)?: (?<description>.+)$/u;
 const BREAKING_CHANGE_PATTERN = /BREAKING[\s-]CHANGE:/iu;
 const STABLE_TAG_PATTERN = /^v(?<version>\d+\.\d+\.\d+)$/u;
+const RELEASE_BUILD_MODE_PATTERN = /^(development|production)$/u;
+const RELEASE_BROWSER_TARGET_PATTERN = /^(chrome|firefox)$/u;
 
 /**
  * @typedef {{
@@ -123,6 +125,37 @@ export function deriveManifestVersion(packageVersion) {
  */
 export function deriveManifestVersionName(packageVersion) {
   return parsePackageVersion(packageVersion).raw;
+}
+
+/**
+ * @param {{ buildMode: string; packageVersion?: string }} options
+ * @returns {string}
+ */
+export function deriveReleaseArtifactBaseDir(options) {
+  const buildMode = String(options?.buildMode || "").trim().toLowerCase();
+  if (!RELEASE_BUILD_MODE_PATTERN.test(buildMode)) {
+    throw new Error(`Unsupported release build mode: ${options?.buildMode}`);
+  }
+
+  if (buildMode === "development") {
+    return ".release/development";
+  }
+
+  const packageVersion = parsePackageVersion(String(options?.packageVersion || "").trim()).raw;
+  return `.release/production/${packageVersion}`;
+}
+
+/**
+ * @param {{ buildMode: string; browserTarget: string; packageVersion?: string }} options
+ * @returns {string}
+ */
+export function deriveReleaseArtifactDir(options) {
+  const browserTarget = String(options?.browserTarget || "").trim().toLowerCase();
+  if (!RELEASE_BROWSER_TARGET_PATTERN.test(browserTarget)) {
+    throw new Error(`Unsupported release browser target: ${options?.browserTarget}`);
+  }
+
+  return `${deriveReleaseArtifactBaseDir(options)}/${browserTarget}`;
 }
 
 /**
