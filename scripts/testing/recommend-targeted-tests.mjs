@@ -142,6 +142,10 @@ function classifyAndRecommend(files, { moduleScope }) {
 
     if (/^entrypoints\/shared\/i18n\/|^entrypoints\/shared\/ui-language/.test(file)) {
       add(
+        "pnpm i18n:check",
+        `${file}: locale catalog sync enforcement applies`
+      );
+      add(
         "pnpm vitest run tests/google-meet/ui-i18n.contract.test.ts",
         `${file}: UI i18n behavior changed`
       );

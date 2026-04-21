@@ -75,6 +75,10 @@ pnpm chrome:smoke:live <provider> <scenario>
 If the change specifically touches shared UI localization runtime behavior:
 
 ```bash
+pnpm i18n:check
+pnpm vitest run tests/google-meet/ui-i18n.contract.test.ts
+pnpm vitest run tests/google-meet/i18n-runtime.contract.test.ts
+pnpm vitest run tests/google-meet/diagnostics-i18n-boundary.contract.test.ts
 pnpm chrome:smoke:live:i18n <provider> <scenario>
 ```
 

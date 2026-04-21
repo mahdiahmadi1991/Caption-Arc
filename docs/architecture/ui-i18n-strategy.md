@@ -168,6 +168,7 @@ Current implementation note:
 - the full 12-locale UI set is shipped through the shared translator
 - English remains the fallback locale for per-key lookup failures
 - any future locale must land as a reviewed catalog and pass the UI i18n contract tests before it is added to `SupportedUiLocale`
+- when `entrypoints/shared/i18n/messages/en.ts` changes, every shipped locale catalog must be updated in the same change set and pass the locale sync guard
 
 Recommended locale resolution order:
 

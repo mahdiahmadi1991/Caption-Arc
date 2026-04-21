@@ -8,9 +8,15 @@
 - run `pnpm docs:check` when markdown files are added, moved, or updated
 - run `pnpm docs:check:business` when business-sensitive product behavior changes
 - run `pnpm docs:check:behavior` when behavior-sensitive runtime/contract surfaces change
+- run `pnpm i18n:check` when shipped UI locale catalogs change under `entrypoints/shared/i18n/messages/`
 - keep `docs/api/*-behavior-contract.md` and `docs/quality/references/*traceability-matrix.md` synchronized with behavior changes
 - for code changes, run `pnpm test:google` and `pnpm test:google:coverage`
 - use `pnpm test:targeted:plan` to determine targeted runtime checks
+
+UI locale catalog rule:
+
+- when the canonical English catalog `entrypoints/shared/i18n/messages/en.ts` changes, every shipped locale catalog must be touched in the same change set
+- locale-only fixes are allowed without touching every catalog when `en.ts` is unchanged
 
 ## Planning Expectations
 

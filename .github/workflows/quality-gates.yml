@@ -6,6 +6,7 @@ on:
       - "entrypoints/**"
       - "tests/**"
       - "scripts/testing/**"
+      - "scripts/i18n/**"
       - "scripts/manual-smoke/**"
       - "scripts/start-windows-chrome-debug.sh"
       - "vitest.config.ts"
@@ -22,6 +23,7 @@ on:
       - "entrypoints/**"
       - "tests/**"
       - "scripts/testing/**"
+      - "scripts/i18n/**"
       - "scripts/manual-smoke/**"
       - "scripts/start-windows-chrome-debug.sh"
       - "vitest.config.ts"
@@ -41,6 +43,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -56,6 +60,14 @@ jobs:
 
       - name: Validate documentation contract
         run: pnpm docs:check
+
+      - name: Validate shipped locale catalog sync
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pnpm i18n:check -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
+          else
+            pnpm i18n:check -- --base "${{ github.event.before }}" --head "${{ github.sha }}"
+          fi
 
       - name: Run contract test suite
         run: pnpm test:google
