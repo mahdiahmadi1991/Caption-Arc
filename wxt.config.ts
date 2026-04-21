@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import {
+  deriveManifestVersion,
+  deriveManifestVersionName,
+} from "./scripts/release/versioning.mjs";
 
 const packageJson = JSON.parse(
   readFileSync(path.resolve(process.cwd(), "package.json"), "utf8")
@@ -228,7 +232,8 @@ export default defineConfig({
   manifest: {
     name: "Caption Arc",
     description: "Capture and translate browser meeting captions in real-time",
-    version: packageVersion,
+    version: deriveManifestVersion(packageVersion),
+    version_name: deriveManifestVersionName(packageVersion),
     ...(browserTarget === "chrome" && chromeExtensionManifestKey
       ? {
           key: chromeExtensionManifestKey,

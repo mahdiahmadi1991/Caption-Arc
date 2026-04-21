@@ -15,10 +15,13 @@ console.log("Next steps:");
 console.log(
   `1. Review artifacts under .release/v${version}/production/chrome and .release/v${version}/production/firefox`
 );
-console.log(`2. Push the annotated tag v${version} to trigger the GitHub release workflow`);
+console.log("2. Confirm the stable release PR targeting main is ready to merge.");
 console.log(
-  "3. Publish the Chrome package to Chrome Web Store and any Chromium-compatible stores you support, such as Edge Add-ons"
+  "3. Merge the release PR to main so automation can create the stable tag, GitHub release, and packaged assets."
 );
 console.log(
-  "4. Publish the Firefox package to AMO after Firefox verification evidence is recorded"
+  "4. After the GitHub release is published, publish the Chrome package to Chrome Web Store and any Chromium-compatible stores you support, such as Edge Add-ons."
+);
+console.log(
+  "5. Publish the Firefox package to AMO after Firefox verification evidence is recorded."
 );

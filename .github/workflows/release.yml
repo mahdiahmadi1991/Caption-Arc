@@ -1,18 +1,22 @@
-name: Release
+name: Publish Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: publish-release-main
+  cancel-in-progress: false
+
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.ref_name }}
       WXT_CHROME_EXTENSION_KEY_PRODUCTION: ${{ secrets.WXT_CHROME_EXTENSION_KEY_PRODUCTION }}
       WXT_FIREFOX_EXTENSION_ID_PRODUCTION: ${{ secrets.WXT_FIREFOX_EXTENSION_ID_PRODUCTION }}
       WXT_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_GOOGLE_OAUTH_CLIENT_ID }}
@@ -25,10 +29,13 @@ jobs:
       WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME: ${{ secrets.WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME }}
       WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX: ${{ secrets.WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX }}
       WXT_MICROSOFT_OAUTH_TENANT: ${{ secrets.WXT_MICROSOFT_OAUTH_TENANT }}
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -39,42 +46,87 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
+      - name: Determine release publication state
+        id: release-state
+        run: |
+          VERSION="$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version)")"
+          TAG_NAME="v${VERSION}"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "reason=preview-version" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            TAG_EXISTS=true
+          else
+            TAG_EXISTS=false
+          fi
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            RELEASE_EXISTS=true
+          else
+            RELEASE_EXISTS=false
+          fi
+
+          if [[ "$TAG_EXISTS" == "true" && "$RELEASE_EXISTS" == "true" ]]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "reason=already-published" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=${TAG_EXISTS}" >> "$GITHUB_OUTPUT"
+          echo "release_exists=${RELEASE_EXISTS}" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
+        if: ${{ steps.release-state.outputs.publish == 'true' }}
         run: pnpm install --frozen-lockfile
 
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Validate release configuration
+        if: ${{ steps.release-state.outputs.publish == 'true' }}
+        env:
+          RELEASE_TAG: ${{ steps.release-state.outputs.tag_name }}
         run: pnpm release:validate
 
       - name: Package Chrome production artifact
+        if: ${{ steps.release-state.outputs.publish == 'true' }}
         run: pnpm package:target:chrome
 
       - name: Package Firefox production artifact
+        if: ${{ steps.release-state.outputs.publish == 'true' }}
         run: pnpm package:target:firefox
 
-      - name: List output files
+      - name: Write release notes body
+        if: ${{ steps.release-state.outputs.publish == 'true' }}
+        id: notes
         run: |
-          set -euo pipefail
-          echo "=== .release directory ==="
-          ls -la .release/ || echo "No .release directory"
-          echo "=== Find all zip files ==="
-          find .release -name "*.zip" -type f
-          test -n "$(find ".release/v${{ steps.version.outputs.VERSION }}/production/chrome" -name '*.zip' -type f -print -quit)"
-          test -n "$(find ".release/v${{ steps.version.outputs.VERSION }}/production/firefox" -name '*.zip' -type f -print -quit)"
+          OUTPUT_PATH="$(node ./scripts/release/write-release-notes.mjs "${{ steps.release-state.outputs.version }}")"
+          echo "path=${OUTPUT_PATH}" >> "$GITHUB_OUTPUT"
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: CaptionArc v${{ steps.version.outputs.VERSION }}
-          generate_release_notes: true
-          append_body: false
-          files: |
-            .release/v${{ steps.version.outputs.VERSION }}/production/chrome/*.zip
-            .release/v${{ steps.version.outputs.VERSION }}/production/firefox/*.zip
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create annotated release tag
+        if: ${{ steps.release-state.outputs.publish == 'true' && steps.release-state.outputs.tag_exists == 'false' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.release-state.outputs.tag_name }}" -m "Release ${{ steps.release-state.outputs.tag_name }}"
+          git push origin "${{ steps.release-state.outputs.tag_name }}"
+
+      - name: Create GitHub release
+        if: ${{ steps.release-state.outputs.publish == 'true' && steps.release-state.outputs.release_exists == 'false' }}
+        run: |
+          gh release create "${{ steps.release-state.outputs.tag_name }}" \
+            --title "CaptionArc v${{ steps.release-state.outputs.version }}" \
+            --notes-file "${{ steps.notes.outputs.path }}" \
+            .release/v${{ steps.release-state.outputs.version }}/production/chrome/*.zip \
+            .release/v${{ steps.release-state.outputs.version }}/production/firefox/*.zip
+
+      - name: Upload release assets to existing GitHub release
+        if: ${{ steps.release-state.outputs.publish == 'true' && steps.release-state.outputs.release_exists == 'true' }}
+        run: |
+          gh release upload "${{ steps.release-state.outputs.tag_name }}" \
+            .release/v${{ steps.release-state.outputs.version }}/production/chrome/*.zip \
+            .release/v${{ steps.release-state.outputs.version }}/production/firefox/*.zip \
+            --clobber

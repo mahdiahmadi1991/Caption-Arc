@@ -2,9 +2,8 @@
 
 ## Preconditions
 
-- changes merged to release-ready branch
+- changes merged to `develop`
 - docs updated for behavior/permission/scope changes
-- target version/tag decided
 - production env values available either through CI secrets or local `.secrets/.env.production.local`
 - Chrome-package identity material prepared:
   - `WXT_CHROME_EXTENSION_KEY_PRODUCTION` available to the production build environment
@@ -20,32 +19,48 @@
   - `WXT_MICROSOFT_OAUTH_CLIENT_ID_CHROME` or `WXT_MICROSOFT_OAUTH_CLIENT_ID`
   - `WXT_MICROSOFT_OAUTH_CLIENT_ID_FIREFOX` or `WXT_MICROSOFT_OAUTH_CLIENT_ID`
   - `WXT_MICROSOFT_OAUTH_TENANT` when OneDrive auth is tenant-scoped instead of `common`
-- release tag must match `package.json` version exactly
+- recommended for full PR-check participation:
+  - `RELEASE_AUTOMATION_TOKEN` configured for release-automation pull requests
 
-## Build And Package
+## Release Train Flow
+
+1. Merge reviewed work into `develop`.
+2. `release-train.yml` computes the next preview version, updates `package.json` on `develop`, and creates the preview tag/prerelease.
+3. The same workflow creates or updates the stable release PR targeting `main`.
+4. Review the release PR.
+5. Merge the release PR into `main`.
+6. `release.yml` validates the stable version, creates the annotated stable tag, creates the GitHub release, and uploads the packaged Chrome/Firefox artifacts.
+
+## Local Verification Before Merging The Release PR
 
 ```bash
 pnpm install
-pnpm release:validate
+pnpm docs:check
+pnpm test:google
+pnpm test:google:coverage
+pnpm build:target:chrome:development
+pnpm build:target:firefox:development
+```
+
+If you want a full local production packaging rehearsal before merging the release PR:
+
+```bash
 pnpm release:prepare
 ```
 
-Notes:
-
-- `pnpm package:target:chrome` and `pnpm package:target:firefox` already emit the unpacked production artifact plus the zip asset for that target
-- `pnpm release:prepare` therefore packages directly instead of running a redundant standalone production build first
-
-Expected release artifacts:
+Expected packaged stable release artifacts:
 
 - `.release/v<version>/production/chrome/*.zip`
 - `.release/v<version>/production/firefox/*.zip`
 
 ## GitHub Release Flow
 
-- push tag in form `v<version>`
-- release workflow installs with `--frozen-lockfile`, validates release config, refuses tag/package version drift, and packages targets directly without a duplicate pre-build step
-- release workflow builds and uploads distribution-target zip assets from `.release/v<version>/production/chrome/` and `.release/v<version>/production/firefox/`
-- verify release assets and generated notes
+- do not push stable tags manually
+- allow the automated release PR merge into `main` to trigger stable publication
+- `release.yml` creates the stable annotated tag in the form `v<version>`
+- `release.yml` creates the GitHub release body from the canonical `CHANGELOG.md` section
+- `release.yml` packages and uploads Chromium-family and Firefox assets
+- preview tags and preview GitHub releases are created automatically from `develop`
 
 ## Post-Release Validation
 

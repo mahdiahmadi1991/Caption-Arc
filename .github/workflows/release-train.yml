@@ -1,0 +1,117 @@
+name: Release Train
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-train-develop
+  cancel-in-progress: true
+
+jobs:
+  release-train:
+    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_AUTOMATION_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN || github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.RELEASE_AUTOMATION_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prepare develop preview version
+        id: preview
+        run: node ./scripts/release/prepare-develop-preview.mjs
+
+      - name: Commit and push develop preview version
+        if: ${{ steps.preview.outputs.changed == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): update develop preview to ${{ steps.preview.outputs.version }}"
+          git push origin HEAD:develop
+
+      - name: Check for existing preview tag
+        id: preview-tag
+        if: ${{ steps.preview.outputs.version != '' }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.preview.outputs.tag_name }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create preview tag
+        if: ${{ steps.preview.outputs.version != '' && steps.preview-tag.outputs.exists == 'false' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.preview.outputs.tag_name }}" -m "Preview ${{ steps.preview.outputs.tag_name }}"
+          git push origin "${{ steps.preview.outputs.tag_name }}"
+
+      - name: Check for existing preview release
+        id: preview-release
+        if: ${{ steps.preview.outputs.version != '' }}
+        run: |
+          if gh release view "${{ steps.preview.outputs.tag_name }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create preview GitHub release
+        if: ${{ steps.preview.outputs.version != '' && steps.preview-release.outputs.exists == 'false' }}
+        run: |
+          gh release create "${{ steps.preview.outputs.tag_name }}" \
+            --prerelease \
+            --title "CaptionArc ${{ steps.preview.outputs.tag_name }}" \
+            --generate-notes
+
+      - name: Prepare stable release branch content
+        id: stable
+        run: node ./scripts/release/prepare-main-release.mjs
+
+      - name: Create or update stable release PR
+        if: ${{ steps.stable.outputs.changed == 'true' }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ env.RELEASE_AUTOMATION_TOKEN }}
+          commit-message: chore(release): prepare v${{ steps.stable.outputs.version }}
+          branch: release/main/current
+          base: main
+          title: release: v${{ steps.stable.outputs.version }}
+          body: |
+            ## Summary
+
+            This automated release PR promotes the current `develop` state to `main` and finalizes the stable release metadata for `v${{ steps.stable.outputs.version }}`.
+
+            ## Included Automation
+
+            - stable package version finalization
+            - canonical `CHANGELOG.md` update
+            - automatic stable tag and GitHub release publication after merge to `main`
+            - automatic Chrome and Firefox release asset packaging after merge to `main`
+
+            ## Review Notes
+
+            - if this PR was created with the default `GITHUB_TOKEN`, GitHub may not trigger normal PR workflows automatically
+            - configure `RELEASE_AUTOMATION_TOKEN` to allow release PRs to participate in the standard PR checks
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          delete-branch: false
