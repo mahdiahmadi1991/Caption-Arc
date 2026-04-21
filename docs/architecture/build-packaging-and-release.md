@@ -11,15 +11,34 @@ From [`package.json`](../../package.json):
 - `pnpm package`: all-target production packaging alias
 - `pnpm package:target:chrome` / `pnpm package:target:firefox`: canonical distribution-target package commands
 
+## Canonical Version Wiring
+
+- `package.json` is the canonical version source
+- [`wxt.config.ts`](../../wxt.config.ts) maps that package version into:
+  - manifest `version`
+  - manifest `version_name`
+- preview package versions on `develop` are converted to numeric manifest versions so extension packaging remains valid across Chromium-family browsers and Firefox
+
+See [../operations/release-versioning.md](../operations/release-versioning.md) for the full versioning model.
+
 ## CI Release Flow
+
+From [`.github/workflows/release-train.yml`](../../.github/workflows/release-train.yml):
+
+- triggered on pushes to `develop`
+- computes the next preview version for the integration branch
+- creates preview tags and GitHub prereleases
+- creates or updates the stable release PR targeting `main`
 
 From [`.github/workflows/release.yml`](../../.github/workflows/release.yml):
 
-- triggered on tags matching `v*`
+- triggered on pushes to `main`
 - install dependencies via pnpm
+- validate the stable release tag/version relationship
 - run distribution-target production packaging for Chromium-family and Firefox
-- publish `.release/v<version>/production/chrome/*.zip` and `.release/v<version>/production/firefox/*.zip` as GitHub release assets
-- the packaging step is the source of truth for release artifacts because WXT packaging already emits the unpacked production build before zipping
+- create the stable annotated tag if it does not exist yet
+- publish `.release/v<version>/production/chrome/*.zip` and `.release/v<version>/production/firefox/*.zip` to the GitHub release
+- the packaging step remains the source of truth for release artifacts because WXT packaging already emits the unpacked production build before zipping
 
 ## Artifact Expectations
 

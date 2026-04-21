@@ -131,23 +131,23 @@ Normal path:
 1. create topic branch from `develop`
 2. implement and validate work
 3. merge topic branch into `develop` with a merge commit
-4. repeat for additional topics
-5. when ready to release, merge `develop` into `main` with a merge commit
-6. create release tag on the resulting `main` merge commit
-7. realign `develop` to the released state
+4. release automation updates `develop` to the next preview version and maintains the stable release PR targeting `main`
+5. when ready to release, merge the stable release PR into `main` with a merge commit
+6. publish the stable tag and GitHub release from the resulting `main` state
 
-### 4.4 Develop branch realignment after release
+### 4.4 Develop branch behavior after release
 
-After merging `develop` into `main` for a release, `develop` should not drift from the released state unnecessarily.
+Normal releases do not require merging `main` back into `develop`.
 
-Preferred post-release behavior:
-- fast-forward `develop` to the release merge commit if possible, or
-- merge `main` back into `develop` if needed
+Reason:
 
-Goal:
-- both long-lived branches should share the released commit as the new baseline before subsequent feature work diverges again
+- `develop` intentionally carries preview-version metadata
+- `main` intentionally carries stable release metadata
+- merging `main` back after every normal release would pollute the preview train with stable-only version finalization commits
 
-This is important if you want the graph to resemble the example style where `main` and `develop` often meet again at release points.
+Exception:
+
+- hotfixes cut from `main` must still be merged back into `develop` after release so the production fix is not lost
 
 ---
 
@@ -215,34 +215,47 @@ Do not rewrite merge commit messages into vague summaries when the merge event i
 
 ### 8.1 Versioning model
 
-Use Semantic Versioning.
+Use a two-lane Semantic Versioning model.
 
 Format:
-- `MAJOR.MINOR.PATCH`
-- Git tag format: `vMAJOR.MINOR.PATCH`
+- stable `main` version: `MAJOR.MINOR.PATCH`
+- preview `develop` version: `MAJOR.MINOR.PATCH-preview.N`
+- stable Git tag format: `vMAJOR.MINOR.PATCH`
+- preview Git tag format: `vMAJOR.MINOR.PATCH-preview.N`
 
 Interpretation:
 - increment **MAJOR** for incompatible public changes
 - increment **MINOR** for backward-compatible features
 - increment **PATCH** for backward-compatible fixes
+- under the current repository release policy, non-empty governed integration/release events still advance the train with a minimum patch bump
 
 ### 8.2 Canonical version source
 
 This repository must have one canonical version source.
 
-For a browser-extension repository, the preferred canonical source is the shipped artifact version definition, such as the extension manifest version used in packaging.
+Canonical source:
 
-Any secondary version locations must remain synchronized.
+- `package.json`
+
+Derived sources that must remain synchronized:
+
+- extension manifest `version`
+- extension manifest `version_name`
+- Git tags
+- `CHANGELOG.md`
+- GitHub Releases
 
 ### 8.3 Release version timing
 
-This repository keeps the earlier rule:
-- every merge from `develop` into `main` is a release event
-- every merge into `main` must correspond to one version and one matching tag
+This repository uses automated preview and stable release steps:
+
+- pushes to `develop` advance the preview train
+- stable publication happens only from the automated release PR targeting `main`
+- every merge of the stable release PR into `main` must correspond to one stable version and one matching stable tag
 
 That means:
-- no unversioned merge to `main`
-- no untagged merge to `main`
+- no unversioned stable release merge to `main`
+- no untagged stable release merge to `main`
 - no version drift between tag, release, and canonical version source
 
 ---
@@ -251,7 +264,7 @@ That means:
 
 ### 9.1 Tag creation rule
 
-Every merge into `main` must result in exactly one release tag on the resulting `main` merge commit.
+Every stable release merge into `main` must result in exactly one stable release tag on the resulting `main` state.
 
 Required format:
 - `vX.Y.Z`
@@ -260,9 +273,13 @@ Examples:
 - `v0.9.0`
 - `v1.2.4`
 
+Preview tags on `develop` follow:
+
+- `vX.Y.Z-preview.N`
+
 ### 9.2 Tag type
 
-Use annotated tags for official releases.
+Use annotated tags for official stable releases and preview tags.
 
 Preferred if operationally available:
 - signed annotated tags
@@ -291,12 +308,10 @@ Rules:
 The normal release path is:
 1. integrate work into `develop`
 2. validate `develop`
-3. bump the release version appropriately
-4. merge `develop` into `main` with a merge commit
-5. create annotated tag `vX.Y.Z` on that merge commit
-6. create a GitHub Release from the tag
-7. if applicable, publish the browser extension package that matches that version
-8. realign `develop` to the released baseline
+3. allow release automation to bump the preview version on `develop`
+4. allow release automation to create or update the stable release PR targeting `main`
+5. review and merge the stable release PR into `main` with a merge commit
+6. let release automation create annotated tag `vX.Y.Z`, the GitHub Release, and packaged browser-extension assets from `main`
 
 ### 10.2 Release readiness criteria
 
@@ -324,7 +339,7 @@ Every release should describe:
 Recommended:
 - create one GitHub Release per `vX.Y.Z` tag
 - keep the GitHub Release version identical to the Git tag
-- use generated release notes only after review/editing if necessary
+- derive the GitHub Release body from the canonical `CHANGELOG.md` entry for that version
 
 ---
 
@@ -387,10 +402,12 @@ Create a tag ruleset targeting `v*` with, at minimum:
 
 Recommended automation responsibilities:
 - validate canonical version consistency
-- validate that release merges into `main` have the correct version bump
-- validate required docs/release notes presence where applicable
-- create the annotated release tag on the resulting `main` merge commit, or fail if policy is violated
-- optionally create the GitHub Release automatically
+- validate conventional-commit inputs used for release automation
+- compute and commit preview version bumps on `develop`
+- create or update the stable release PR targeting `main`
+- create the annotated stable release tag from `main`
+- create the GitHub Release automatically
+- upload Chrome/Firefox release artifacts automatically
 
 ---
 
@@ -403,7 +420,7 @@ Any AI agent operating in this repository must follow these rules:
 3. Do not squash-merge normal work when the graph-preserving workflow is required.
 4. Use explicit merge-commit-oriented integration behavior.
 5. Do not merge to `main` unless the change is release-ready.
-6. Do not tag arbitrary commits; release tags belong on the release merge commit on `main`.
+6. Do not tag arbitrary commits; stable release tags belong to the approved release automation on `main`, and preview tags belong to the approved preview automation on `develop`.
 7. For non-trivial code/behavior work, follow `docs/contributing/execution-plans.md`.
 8. For documentation changes, follow `docs/contributing/documentation-standards.md`.
 9. For repository operations, follow this governance document.

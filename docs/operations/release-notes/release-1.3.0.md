@@ -1,5 +1,10 @@
 # Release 1.3.0
 
+Historical note:
+
+- this file documents the bootstrap release that predated the repository's automated release-note flow
+- ongoing release notes now publish through GitHub Releases, with `CHANGELOG.md` as the canonical in-repo changelog
+
 ## Summary
 
 This release finalizes the governed local bootstrap history for CaptionArc at version `1.3.0`.
