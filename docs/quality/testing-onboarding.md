@@ -114,7 +114,7 @@ Required summary content:
 
 ## CI Enforcement
 
-`Quality Gates` and `Docs Guardrails` workflows re-run:
+Unified `CI` workflow jobs re-run:
 
 - `pnpm docs:check`
 - `pnpm docs:check:behavior`

@@ -56,8 +56,8 @@ When adding or changing dependencies, check `package.json` first and prefer exis
 - Run `pnpm docs:check` after documentation changes. Treat a failing docs check as a blocking issue.
 - Run `pnpm docs:check:business` when business-sensitive code surfaces change.
 - Run `pnpm docs:check:behavior` when behavior-sensitive code surfaces change.
-- The `Docs Guardrails` GitHub Actions workflow is required for markdown-governance enforcement on push/PR.
-- The `Quality Gates` GitHub Actions workflow is required for test and coverage enforcement on push/PR.
+- The unified `CI` GitHub Actions workflow is required on push/PR.
+- The required CI jobs are `docs-check` for markdown/business/behavior governance and `quality-checks` for test, coverage, and build enforcement.
 - Treat `docs/archive/` as historical context. Do not load archived files unless the task explicitly requires decision history.
 
 ## Execution Plans
