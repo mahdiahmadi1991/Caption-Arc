@@ -75,6 +75,11 @@ Response shape:
 - `clearQuickAccessRuntimeStatus`
 - `getQuickAccessRuntimeStatus`
 
+### Development Diagnostics
+
+- `debugHandleSummaryReadyNotificationClick`
+  Development-only diagnostics hook that invokes the summary-ready notification click handler with either a full `notificationId` or a `sessionId` + `summaryKey` pair.
+
 ## Source Types
 
 Detailed request/response types live in [`entrypoints/background/types/index.ts`](../../entrypoints/background/types/index.ts).

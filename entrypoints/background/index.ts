@@ -34,6 +34,7 @@ import {
   getStorageUsage,
   handleMeetingHistoryTabRemoved,
   handleSummaryReadyNotificationClick,
+  debugHandleSummaryReadyNotificationClick,
   shutdownMeetingSummaryQueueForTermsRevocation,
 } from "./history";
 import {
@@ -63,6 +64,7 @@ import {
   getTermsOfServicePageUrl,
   hasAcceptedCurrentTerms,
 } from "../shared/legal";
+import { detectAppEnvironment } from "../shared/runtime-environment";
 
 const backgroundLogger = createBackgroundDiagnosticsLogger({
   domain: "runtime",
@@ -87,6 +89,7 @@ const TERMS_GATE_ALLOWED_ACTIONS = new Set([
   "getDiagnosticsConfig",
   "setDiagnosticsConfig",
   "getDiagnosticsPayload",
+  "debugHandleSummaryReadyNotificationClick",
 ]);
 
 const TERMS_GATE_ALLOWED_SETTINGS_KEYS = new Set([
@@ -244,6 +247,12 @@ async function reconcileProtectedBackgroundServicesForTermsTransition(
 
 export default defineBackground(() => {
   void backgroundLogger.info("background_runtime_started");
+  void backgroundLogger.debug("background_runtime_capabilities", {
+    hasNotificationsOnClickedListener:
+      typeof chrome.notifications?.onClicked?.addListener === "function",
+    hasTabsOnRemovedListener:
+      typeof chrome.tabs?.onRemoved?.addListener === "function",
+  });
   void initializeDiagnosticsCollector()
     .then(() => syncDiagnosticsEnvironmentConfig())
     .catch((error) => {
@@ -309,8 +318,17 @@ export default defineBackground(() => {
   }
 
   if (chrome.notifications?.onClicked?.addListener) {
+    void backgroundLogger.info("summary_ready_notification_click_listener_registered");
     chrome.notifications.onClicked.addListener((notificationId) => {
+      void backgroundLogger.info("summary_ready_notification_click_listener_invoked", {
+        notificationId,
+      });
       void handleSummaryReadyNotificationClick(notificationId);
+    });
+  } else {
+    void backgroundLogger.warn("summary_ready_notification_click_listener_unavailable", {
+      hasNotificationsObject: Boolean(chrome.notifications),
+      hasOnClickedObject: Boolean(chrome.notifications?.onClicked),
     });
   }
 
@@ -631,6 +649,25 @@ async function handleMessage(
       return getDiagnosticsPayload(
         (message.query as Parameters<typeof getDiagnosticsPayload>[0]) || {}
       );
+
+    case "debugHandleSummaryReadyNotificationClick":
+      if (detectAppEnvironment() !== "development") {
+        return {
+          success: false,
+          error: "This diagnostics action is only available in development.",
+        };
+      }
+
+      return debugHandleSummaryReadyNotificationClick({
+        notificationId:
+          typeof message.notificationId === "string"
+            ? message.notificationId
+            : null,
+        sessionId:
+          typeof message.sessionId === "string" ? message.sessionId : null,
+        summaryKey:
+          typeof message.summaryKey === "string" ? message.summaryKey : null,
+      });
 
     default:
       await backgroundLogger.warn("message_unknown_action", {

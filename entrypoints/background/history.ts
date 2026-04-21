@@ -103,6 +103,7 @@ const summaryDiagnosticsLogger = createBackgroundDiagnosticsLogger({
 });
 
 type PersistedMeetingSummaryJob = {
+  jobKey: string;
   request: GenerateMeetingSummaryRequest;
   source: "manual" | "automatic";
   enqueuedAt: number;
@@ -133,6 +134,18 @@ class SummaryJobCancelledError extends Error {
   }
 }
 
+function getMeetingSummaryJobKey(
+  request: GenerateMeetingSummaryRequest,
+  source: "manual" | "automatic"
+): string {
+  const segmentPart =
+    typeof request.sourceSegmentIndex === "number"
+      ? `:segment:${request.sourceSegmentIndex}`
+      : "";
+
+  return `${source}:${request.sessionId}:${request.profileId}:${request.targetLanguage}${segmentPart}`;
+}
+
 function isPersistedMeetingSummaryJob(value: unknown): value is PersistedMeetingSummaryJob {
   if (!value || typeof value !== "object") {
     return false;
@@ -140,6 +153,7 @@ function isPersistedMeetingSummaryJob(value: unknown): value is PersistedMeeting
 
   const candidate = value as PersistedMeetingSummaryJob;
   return (
+    typeof candidate.jobKey === "string" &&
     !!candidate.request &&
     typeof candidate.request.sessionId === "string" &&
     typeof candidate.request.targetLanguage === "string" &&
@@ -168,8 +182,13 @@ async function loadPersistedMeetingSummaryJobs(): Promise<PersistedMeetingSummar
     .map((item) => {
       const candidate = item as Partial<PersistedMeetingSummaryJob>;
       const source = candidate.source === "automatic" ? "automatic" : "manual";
+      const request = candidate.request!;
       return {
-        request: candidate.request!,
+        jobKey:
+          typeof candidate.jobKey === "string" && candidate.jobKey.trim()
+            ? candidate.jobKey
+            : getMeetingSummaryJobKey(request, source),
+        request,
         source,
         enqueuedAt:
           typeof candidate.enqueuedAt === "number" ? candidate.enqueuedAt : Date.now(),
@@ -199,32 +218,37 @@ async function savePersistedMeetingSummaryJobs(
   });
 }
 
-async function getPersistedMeetingSummaryJob(
+async function getPersistedMeetingSummaryJobsForSession(
   sessionId: string
+): Promise<PersistedMeetingSummaryJob[]> {
+  const jobs = await loadPersistedMeetingSummaryJobs();
+  return jobs.filter((job) => job.request.sessionId === sessionId);
+}
+
+async function getPersistedMeetingSummaryJobByKey(
+  jobKey: string
 ): Promise<PersistedMeetingSummaryJob | null> {
   const jobs = await loadPersistedMeetingSummaryJobs();
-  return jobs.find((job) => job.request.sessionId === sessionId) || null;
+  return jobs.find((job) => job.jobKey === jobKey) || null;
 }
 
 async function upsertPersistedMeetingSummaryJob(
   nextJob: PersistedMeetingSummaryJob
 ): Promise<void> {
   const jobs = await loadPersistedMeetingSummaryJobs();
-  const nextJobs = jobs.filter(
-    (job) => job.request.sessionId !== nextJob.request.sessionId
-  );
+  const nextJobs = jobs.filter((job) => job.jobKey !== nextJob.jobKey);
   nextJobs.push(nextJob);
   nextJobs.sort((left, right) => left.enqueuedAt - right.enqueuedAt);
   await savePersistedMeetingSummaryJobs(nextJobs);
 }
 
 async function updatePersistedMeetingSummaryJobStatus(
-  sessionId: string,
+  jobKey: string,
   status: SummaryJobStatus
 ): Promise<void> {
   const jobs = await loadPersistedMeetingSummaryJobs();
   const nextJobs = jobs.map((job) =>
-    job.request.sessionId === sessionId
+    job.jobKey === jobKey
       ? {
           ...job,
           status,
@@ -234,7 +258,15 @@ async function updatePersistedMeetingSummaryJobStatus(
   await savePersistedMeetingSummaryJobs(nextJobs);
 }
 
-async function removePersistedMeetingSummaryJob(sessionId: string): Promise<void> {
+async function removePersistedMeetingSummaryJob(jobKey: string): Promise<void> {
+  const jobs = await loadPersistedMeetingSummaryJobs();
+  const nextJobs = jobs.filter((job) => job.jobKey !== jobKey);
+  await savePersistedMeetingSummaryJobs(nextJobs);
+}
+
+async function removePersistedMeetingSummaryJobsForSession(
+  sessionId: string
+): Promise<void> {
   const jobs = await loadPersistedMeetingSummaryJobs();
   const nextJobs = jobs.filter((job) => job.request.sessionId !== sessionId);
   await savePersistedMeetingSummaryJobs(nextJobs);
@@ -281,6 +313,37 @@ async function scheduleMeetingSummaryRetryAlarm(): Promise<void> {
   });
 }
 
+function getCurrentMeetingSessionSegmentIndex(
+  session: Pick<MeetingSession, "rejoinHistory">
+): number {
+  return Array.isArray(session.rejoinHistory) ? session.rejoinHistory.length : 0;
+}
+
+function getCurrentMeetingSessionSegmentStartTime(
+  session: Pick<MeetingSession, "startTime" | "rejoinHistory">
+): number {
+  const lastRejoin = Array.isArray(session.rejoinHistory)
+    ? session.rejoinHistory[session.rejoinHistory.length - 1]
+    : null;
+
+  return Math.max(
+    session.startTime,
+    typeof lastRejoin?.resumedAt === "number" ? lastRejoin.resumedAt : session.startTime
+  );
+}
+
+function getCurrentMeetingSessionSegmentSourceCount(
+  session: Pick<MeetingSession, "startTime" | "rejoinHistory" | "captions" | "chatMessages">
+): number {
+  const segmentStartTime = getCurrentMeetingSessionSegmentStartTime(session);
+
+  return (
+    session.captions.filter((caption) => caption.timestamp >= segmentStartTime).length +
+    session.chatMessages.filter((message) => message.timestamp >= segmentStartTime)
+      .length
+  );
+}
+
 function getAutomaticSummaryRequest(
   session: MeetingSession,
   settings: Awaited<ReturnType<typeof getSettings>>["settings"]
@@ -307,24 +370,24 @@ function getAutomaticSummaryRequest(
     return null;
   }
 
-  const existingSummary = findLatestMeetingSummary(
+  const currentSegmentIndex = getCurrentMeetingSessionSegmentIndex(session);
+  const currentSegmentSourceCount = getCurrentMeetingSessionSegmentSourceCount(session);
+
+  if (currentSegmentSourceCount === 0) {
+    return null;
+  }
+
+  const existingAutomaticSummaryForSegment = findLatestMeetingSummary(
     session.summaries || session.artifacts?.summaries,
     {
       profileId: summaryProfile.id,
       language: settings.meetingOutputLanguage,
+      requestSource: "automatic",
+      sourceSegmentIndex: currentSegmentIndex,
     }
   );
-  const latestSessionBoundary = Math.max(
-    typeof session.endTime === "number" ? session.endTime : 0,
-    typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0,
-    typeof session.updatedAt === "number" ? session.updatedAt : 0,
-    session.startTime
-  );
 
-  if (
-    existingSummary &&
-    existingSummary.generatedAt >= latestSessionBoundary
-  ) {
+  if (existingAutomaticSummaryForSegment) {
     return null;
   }
 
@@ -332,6 +395,7 @@ function getAutomaticSummaryRequest(
     sessionId: session.id,
     targetLanguage: settings.meetingOutputLanguage,
     profileId: summaryProfile.id,
+    sourceSegmentIndex: currentSegmentIndex,
   };
 }
 
@@ -344,44 +408,14 @@ async function maybeQueueAutomaticSummaryForEndedSession(
     return false;
   }
 
-  if (
-    activeMeetingSummaryJobs.has(request.sessionId) ||
-    (await getPersistedMeetingSummaryJob(request.sessionId))
-  ) {
-    await replaceQueuedMeetingSummaryJob(request.sessionId);
+  const jobKey = getMeetingSummaryJobKey(request, "automatic");
+  if (await getPersistedMeetingSummaryJobByKey(jobKey)) {
+    return false;
   }
 
   await queueMeetingSummaryJob(request, "automatic");
   void processPersistedMeetingSummaryJobs();
   return true;
-}
-
-async function waitForMeetingSummaryJobToStop(
-  sessionId: string,
-  timeoutMs = 10_000
-): Promise<void> {
-  const startedAt = Date.now();
-
-  while (activeMeetingSummaryJobs.has(sessionId)) {
-    if (Date.now() - startedAt >= timeoutMs) {
-      break;
-    }
-
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 100));
-  }
-}
-
-async function replaceQueuedMeetingSummaryJob(sessionId: string): Promise<void> {
-  const activeJob = activeMeetingSummaryJobs.get(sessionId);
-  if (activeJob) {
-    activeJob.controller.abort();
-  }
-
-  await removePersistedMeetingSummaryJob(sessionId);
-
-  if (activeJob) {
-    await waitForMeetingSummaryJobToStop(sessionId);
-  }
 }
 
 async function reconcileAutomaticSummaryQueue(): Promise<void> {
@@ -542,6 +576,22 @@ function resolveSummaryReadyNotificationCopy(session: MeetingSession): {
   };
 }
 
+function describeSummaryReadyNavigationTarget(targetUrl: string): {
+  targetPath: string;
+  targetSessionId: string | null;
+  targetSummaryKey: string | null;
+  targetSummaryExpanded: string | null;
+} {
+  const url = new URL(targetUrl);
+
+  return {
+    targetPath: url.pathname,
+    targetSessionId: url.searchParams.get("session"),
+    targetSummaryKey: url.searchParams.get("summary"),
+    targetSummaryExpanded: url.searchParams.get("summaryExpanded"),
+  };
+}
+
 async function maybeShowSummaryReadyNotification(
   session: MeetingSession,
   summary: NonNullable<GenerateMeetingSummaryResponse["summary"]>
@@ -599,6 +649,19 @@ async function openMeetingHistoryForSummaryTarget(params: {
     getMeetingHistoryPageUrl(),
     params
   );
+  const targetDescriptor = describeSummaryReadyNavigationTarget(targetUrl);
+
+  await summaryDiagnosticsLogger.trace("summary_ready_notification_navigation_started", {
+    sessionId: params.sessionId,
+    summaryKey: params.summaryKey,
+    ...targetDescriptor,
+    hasTabsQuery: typeof chrome.tabs?.query === "function",
+    hasTabsUpdate: typeof chrome.tabs?.update === "function",
+    hasTabsCreate: typeof chrome.tabs?.create === "function",
+    hasWindowsUpdate: typeof chrome.windows?.update === "function",
+  }, {
+    sessionId: params.sessionId,
+  });
 
   try {
     const [tabs, lastFocusedWindowTabs] = await Promise.all([
@@ -607,7 +670,7 @@ async function openMeetingHistoryForSummaryTarget(params: {
     ]);
     const historyBaseUrl = getMeetingHistoryPageUrl();
     const lastFocusedTab = lastFocusedWindowTabs[0];
-    const matchingTab = tabs
+    const matchingCandidates = tabs
       .filter(
         (tab): tab is chrome.tabs.Tab & { id: number; url: string } =>
           typeof tab.id === "number" &&
@@ -647,22 +710,95 @@ async function openMeetingHistoryForSummaryTarget(params: {
 
         return { tab, score };
       })
-      .sort((left, right) => right.score - left.score)[0]?.tab;
+      .sort((left, right) => right.score - left.score);
+    const matchingTab = matchingCandidates[0]?.tab;
+
+    await summaryDiagnosticsLogger.debug("summary_ready_notification_tab_query_completed", {
+      sessionId: params.sessionId,
+      summaryKey: params.summaryKey,
+      totalTabs: tabs.length,
+      tabsWithUrl: tabs.filter((tab) => typeof tab.url === "string").length,
+      tabsWithoutUrl: tabs.filter((tab) => typeof tab.url !== "string").length,
+      lastFocusedTabId: typeof lastFocusedTab?.id === "number" ? lastFocusedTab.id : null,
+      lastFocusedWindowId:
+        typeof lastFocusedTab?.windowId === "number" ? lastFocusedTab.windowId : null,
+      matchingCandidateCount: matchingCandidates.length,
+      matchingCandidates: matchingCandidates.slice(0, 5).map(({ tab, score }) => {
+        const historyUrlState = readMeetingHistoryUrlState(tab.url);
+
+        return {
+          tabId: tab.id,
+          windowId: typeof tab.windowId === "number" ? tab.windowId : null,
+          active: Boolean(tab.active),
+          score,
+          selectedSessionId: historyUrlState.selectedSessionId,
+          targetSummaryKey: historyUrlState.targetSummaryKey,
+          expandSummary: historyUrlState.expandSummary,
+          exactTargetUrl: tab.url === targetUrl,
+        };
+      }),
+    }, {
+      sessionId: params.sessionId,
+    });
 
     if (matchingTab) {
+      await summaryDiagnosticsLogger.debug("summary_ready_notification_matching_tab_selected", {
+        sessionId: params.sessionId,
+        summaryKey: params.summaryKey,
+        tabId: matchingTab.id,
+        windowId:
+          typeof matchingTab.windowId === "number" ? matchingTab.windowId : null,
+        active: Boolean(matchingTab.active),
+      }, {
+        sessionId: params.sessionId,
+      });
+
       await chrome.tabs.update(matchingTab.id, {
         active: true,
         url: targetUrl,
       });
 
+      await summaryDiagnosticsLogger.info("summary_ready_notification_tab_updated", {
+        sessionId: params.sessionId,
+        summaryKey: params.summaryKey,
+        tabId: matchingTab.id,
+        ...targetDescriptor,
+      }, {
+        sessionId: params.sessionId,
+      });
+
       if (typeof matchingTab.windowId === "number" && chrome.windows?.update) {
         await chrome.windows.update(matchingTab.windowId, { focused: true });
+
+        await summaryDiagnosticsLogger.info("summary_ready_notification_window_focused", {
+          sessionId: params.sessionId,
+          summaryKey: params.summaryKey,
+          windowId: matchingTab.windowId,
+        }, {
+          sessionId: params.sessionId,
+        });
       }
 
       return true;
     }
 
+    await summaryDiagnosticsLogger.debug("summary_ready_notification_no_matching_tab_found", {
+      sessionId: params.sessionId,
+      summaryKey: params.summaryKey,
+      ...targetDescriptor,
+    }, {
+      sessionId: params.sessionId,
+    });
+
     await chrome.tabs.create({ url: targetUrl });
+
+    await summaryDiagnosticsLogger.info("summary_ready_notification_tab_created", {
+      sessionId: params.sessionId,
+      summaryKey: params.summaryKey,
+      ...targetDescriptor,
+    }, {
+      sessionId: params.sessionId,
+    });
     return true;
   } catch (error) {
     await summaryDiagnosticsLogger.error("summary_ready_notification_navigation_failed", {
@@ -699,7 +835,7 @@ export async function initializeMeetingSummaryQueue(): Promise<void> {
     meetingSummaryJobStatuses.set(job.request.sessionId, status);
 
     if (status !== job.status) {
-      await updatePersistedMeetingSummaryJobStatus(job.request.sessionId, status);
+      await updatePersistedMeetingSummaryJobStatus(job.jobKey, status);
     }
   }
 
@@ -1681,11 +1817,16 @@ async function queueMeetingSummaryJob(
   request: GenerateMeetingSummaryRequest,
   source: "manual" | "automatic"
 ): Promise<SummaryJobStatus> {
+  const jobKey = getMeetingSummaryJobKey(request, source);
   await summaryDiagnosticsLogger.info("summary_job_queued", {
     sessionId: request.sessionId,
     source,
     profileId: request.profileId,
     targetLanguage: request.targetLanguage,
+    sourceSegmentIndex:
+      typeof request.sourceSegmentIndex === "number"
+        ? request.sourceSegmentIndex
+        : null,
   }, {
     sessionId: request.sessionId,
   });
@@ -1700,6 +1841,7 @@ async function queueMeetingSummaryJob(
   };
 
   await upsertPersistedMeetingSummaryJob({
+    jobKey,
     request,
     source,
     enqueuedAt: Date.now(),
@@ -1762,7 +1904,8 @@ function isSameSummaryRequest(
   return (
     left.sessionId === right.sessionId &&
     left.targetLanguage === right.targetLanguage &&
-    left.profileId === right.profileId
+    left.profileId === right.profileId &&
+    left.sourceSegmentIndex === right.sourceSegmentIndex
   );
 }
 
@@ -1807,7 +1950,7 @@ export async function getMeetingSummaryJobStatus(
     };
   }
 
-  const persistedJob = await getPersistedMeetingSummaryJob(sessionId);
+  const persistedJob = (await getPersistedMeetingSummaryJobsForSession(sessionId))[0] || null;
   return {
     success: true,
     status: persistedJob?.status || null,
@@ -1839,9 +1982,9 @@ export async function cancelMeetingSummaryJob(
     cancelled = true;
   }
 
-  const persistedJob = await getPersistedMeetingSummaryJob(sessionId);
-  if (persistedJob) {
-    await removePersistedMeetingSummaryJob(sessionId);
+  const persistedJobs = await getPersistedMeetingSummaryJobsForSession(sessionId);
+  if (persistedJobs.length > 0) {
+    await removePersistedMeetingSummaryJobsForSession(sessionId);
     cancelled = true;
   }
 
@@ -1870,14 +2013,19 @@ async function runMeetingSummaryJob(
   request: GenerateMeetingSummaryRequest,
   source: "manual" | "automatic"
 ): Promise<GenerateMeetingSummaryResponse> {
+  const jobKey = getMeetingSummaryJobKey(request, source);
   await summaryDiagnosticsLogger.info("summary_job_started", {
     sessionId: request.sessionId,
     source,
     profileId: request.profileId,
+    sourceSegmentIndex:
+      typeof request.sourceSegmentIndex === "number"
+        ? request.sourceSegmentIndex
+        : null,
   }, {
     sessionId: request.sessionId,
   });
-  const persistedJob = await getPersistedMeetingSummaryJob(request.sessionId);
+  const persistedJob = await getPersistedMeetingSummaryJobByKey(jobKey);
   const session = await loadStoredMeetingSession(request.sessionId);
 
   if (!session) {
@@ -1887,7 +2035,7 @@ async function runMeetingSummaryJob(
     }, {
       sessionId: request.sessionId,
     });
-    await removePersistedMeetingSummaryJob(request.sessionId);
+    await removePersistedMeetingSummaryJob(jobKey);
     clearMeetingSummaryJobStatus(request.sessionId);
     return {
       success: false,
@@ -1901,7 +2049,7 @@ async function runMeetingSummaryJob(
     }, {
       sessionId: request.sessionId,
     });
-    await removePersistedMeetingSummaryJob(request.sessionId);
+    await removePersistedMeetingSummaryJob(jobKey);
     clearMeetingSummaryJobStatus(request.sessionId);
     return {
       success: false,
@@ -1942,7 +2090,7 @@ async function runMeetingSummaryJob(
       ...status,
     };
 
-    await updatePersistedMeetingSummaryJobStatus(request.sessionId, nextStatus);
+    await updatePersistedMeetingSummaryJobStatus(jobKey, nextStatus);
     await emitMeetingSummaryJobStatus(nextStatus);
   };
 
@@ -2110,11 +2258,11 @@ async function runMeetingSummaryJob(
           attemptCount,
           retryAfter,
           lastError: errorMessage,
-        });
-        await emitMeetingSummaryJobStatus(retryStatus);
-        await scheduleMeetingSummaryRetryAlarm();
-      } else {
-        await removePersistedMeetingSummaryJob(request.sessionId);
+      });
+      await emitMeetingSummaryJobStatus(retryStatus);
+      await scheduleMeetingSummaryRetryAlarm();
+    } else {
+        await removePersistedMeetingSummaryJob(jobKey);
         await scheduleMeetingSummaryRetryAlarm();
       }
       await summaryDiagnosticsLogger.error("summary_job_failed", {
@@ -2143,6 +2291,7 @@ async function runMeetingSummaryJob(
         generationMode: executionPlan.mode,
         requestSource: source,
         sourceSessionProfileId: session.meetingProfileId,
+        sourceSegmentIndex: request.sourceSegmentIndex,
         executionStrategy: executionPlan.strategy,
         continuationCount: response.continuationCount,
         evidenceChunkCount,
@@ -2171,7 +2320,7 @@ async function runMeetingSummaryJob(
       message: "Summary ready",
     });
     await maybeShowSummaryReadyNotification(updatedSession, summary);
-    await removePersistedMeetingSummaryJob(request.sessionId);
+    await removePersistedMeetingSummaryJob(jobKey);
     await scheduleMeetingSummaryRetryAlarm();
 
     await summaryDiagnosticsLogger.info("summary_job_completed", {
@@ -2203,7 +2352,7 @@ async function runMeetingSummaryJob(
         message: "Summary generation cancelled",
         updatedAt: Date.now(),
       });
-      await removePersistedMeetingSummaryJob(request.sessionId);
+      await removePersistedMeetingSummaryJob(jobKey);
       await scheduleMeetingSummaryRetryAlarm();
       return {
         success: false,
@@ -2250,6 +2399,7 @@ async function runMeetingSummaryJob(
       };
       await upsertPersistedMeetingSummaryJob({
         ...(persistedJob || {
+          jobKey,
           request,
           source,
           enqueuedAt: Date.now(),
@@ -2263,7 +2413,7 @@ async function runMeetingSummaryJob(
       await emitMeetingSummaryJobStatus(retryStatus);
       await scheduleMeetingSummaryRetryAlarm();
     } else {
-      await removePersistedMeetingSummaryJob(request.sessionId);
+      await removePersistedMeetingSummaryJob(jobKey);
       await scheduleMeetingSummaryRetryAlarm();
     }
     return {
@@ -2862,7 +3012,8 @@ export async function generateMeetingSummary(
     };
   }
 
-  const queuedJob = await getPersistedMeetingSummaryJob(request.sessionId);
+  const queuedJob =
+    (await getPersistedMeetingSummaryJobsForSession(request.sessionId))[0] || null;
   if (activeMeetingSummaryJobs.has(request.sessionId) || queuedJob) {
     return {
       success: false,
@@ -2980,20 +3131,104 @@ export async function updateMeetingHistoryViewState(
 export async function handleSummaryReadyNotificationClick(
   notificationId: string
 ): Promise<boolean> {
+  await summaryDiagnosticsLogger.info("summary_ready_notification_click_received", {
+    notificationId,
+    hasNotificationsClear: typeof chrome.notifications?.clear === "function",
+  });
+
   const target = parseSummaryReadyNotificationId(notificationId);
   if (!target) {
+    await summaryDiagnosticsLogger.warn("summary_ready_notification_click_unrecognized", {
+      notificationId,
+    });
     return false;
   }
+
+  await summaryDiagnosticsLogger.debug("summary_ready_notification_click_resolved_target", {
+    notificationId,
+    sessionId: target.sessionId,
+    summaryKey: target.summaryKey,
+  }, {
+    sessionId: target.sessionId,
+  });
 
   if (chrome.notifications?.clear) {
     try {
       await chrome.notifications.clear(notificationId);
+      await summaryDiagnosticsLogger.trace("summary_ready_notification_cleared", {
+        notificationId,
+        sessionId: target.sessionId,
+        summaryKey: target.summaryKey,
+      }, {
+        sessionId: target.sessionId,
+      });
     } catch {
+      await summaryDiagnosticsLogger.warn("summary_ready_notification_clear_failed", {
+        notificationId,
+        sessionId: target.sessionId,
+        summaryKey: target.summaryKey,
+      }, {
+        sessionId: target.sessionId,
+      });
       // Navigation should still continue if clear fails.
     }
   }
 
-  return openMeetingHistoryForSummaryTarget(target);
+  const navigated = await openMeetingHistoryForSummaryTarget(target);
+
+  await summaryDiagnosticsLogger.info("summary_ready_notification_click_completed", {
+    notificationId,
+    sessionId: target.sessionId,
+    summaryKey: target.summaryKey,
+    navigated,
+  }, {
+    sessionId: target.sessionId,
+  });
+
+  return navigated;
+}
+
+export async function debugHandleSummaryReadyNotificationClick(input: {
+  notificationId?: string | null;
+  sessionId?: string | null;
+  summaryKey?: string | null;
+}): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+  const notificationId =
+    typeof input.notificationId === "string" && input.notificationId.trim()
+      ? input.notificationId.trim()
+      : typeof input.sessionId === "string" &&
+          input.sessionId.trim() &&
+          typeof input.summaryKey === "string" &&
+          input.summaryKey.trim()
+        ? buildSummaryReadyNotificationId(
+            input.sessionId.trim(),
+            input.summaryKey.trim()
+          )
+        : null;
+
+  if (!notificationId) {
+    await summaryDiagnosticsLogger.warn("summary_ready_notification_debug_click_invalid_input", {
+      hasNotificationId:
+        typeof input.notificationId === "string" && input.notificationId.trim().length > 0,
+      hasSessionId:
+        typeof input.sessionId === "string" && input.sessionId.trim().length > 0,
+      hasSummaryKey:
+        typeof input.summaryKey === "string" && input.summaryKey.trim().length > 0,
+    });
+
+    return {
+      success: false,
+      error:
+        "A notificationId or both sessionId and summaryKey are required.",
+    };
+  }
+
+  const success = await handleSummaryReadyNotificationClick(notificationId);
+  return {
+    success,
+    notificationId,
+    ...(success ? {} : { error: "Notification click handling did not complete successfully." }),
+  };
 }
 
 export function handleMeetingHistoryTabRemoved(tabId: number): void {

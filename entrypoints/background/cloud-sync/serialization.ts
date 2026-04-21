@@ -317,6 +317,10 @@ function sanitizeMeetingSummaryRecord(
           typeof summaryValue.sourceSessionProfileId === "string"
             ? summaryValue.sourceSessionProfileId
             : undefined,
+        sourceSegmentIndex:
+          typeof summaryValue.sourceSegmentIndex === "number"
+            ? summaryValue.sourceSegmentIndex
+            : undefined,
       };
       return result;
     },

@@ -125,6 +125,7 @@ export type MeetingSummary = {
   generationMode?: SummaryGenerationMode;
   requestSource?: "automatic" | "manual";
   sourceSessionProfileId?: string;
+  sourceSegmentIndex?: number;
   executionStrategy?: SummaryExecutionStrategy;
   continuationCount?: number;
   evidenceChunkCount?: number;
@@ -1145,6 +1146,10 @@ export function normalizeMeetingSession(
             sourceSessionProfileId:
               typeof summary.sourceSessionProfileId === "string"
                 ? summary.sourceSessionProfileId
+                : undefined,
+            sourceSegmentIndex:
+              typeof summary.sourceSegmentIndex === "number"
+                ? summary.sourceSegmentIndex
                 : undefined,
             executionStrategy: summary.executionStrategy,
             continuationCount: summary.continuationCount,

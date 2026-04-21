@@ -238,6 +238,7 @@ export type GenerateMeetingSummaryRequest = {
   sessionId: string;
   targetLanguage: string;
   profileId: string;
+  sourceSegmentIndex?: number;
 };
 
 export type UpdateMeetingHistoryViewStateRequest = {
