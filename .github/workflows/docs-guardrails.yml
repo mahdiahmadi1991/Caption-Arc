@@ -3,9 +3,12 @@ name: Docs Guardrails
 on:
   pull_request:
   push:
+    tags-ignore:
+      - "v*"
 
 jobs:
   docs-check:
+    if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release): update develop preview to ') }}"
     runs-on: ubuntu-latest
 
     steps:

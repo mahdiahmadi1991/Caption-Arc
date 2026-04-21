@@ -21,6 +21,8 @@ on:
       - "AGENTS.md"
       - "README.md"
   push:
+    tags-ignore:
+      - "v*"
     paths:
       - "entrypoints/**"
       - "tests/**"
@@ -42,6 +44,7 @@ on:
 
 jobs:
   quality-checks:
+    if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release): update develop preview to ') }}"
     runs-on: ubuntu-latest
 
     steps:

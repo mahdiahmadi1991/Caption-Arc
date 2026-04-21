@@ -5,6 +5,7 @@ import path from "node:path";
 import { parseConventionalCommit } from "./versioning.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
+const ZERO_SHA = /^0+$/u;
 
 function readArg(name) {
   const index = process.argv.findIndex((entry) => entry === name);
@@ -21,6 +22,11 @@ function git(args) {
 
 const baseSha = readArg("--base");
 const headSha = readArg("--head") || "HEAD";
+if (baseSha && ZERO_SHA.test(baseSha)) {
+  console.log("Skipping conventional commit validation for an all-zero base SHA.");
+  process.exit(0);
+}
+
 const range = baseSha ? `${baseSha}..${headSha}` : headSha;
 const rawLog = git(["log", "--format=%H%x00%s%x00%b%x00", range]);
 
