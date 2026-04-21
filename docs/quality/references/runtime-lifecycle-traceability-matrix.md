@@ -25,6 +25,7 @@ This matrix maps runtime-lifecycle behavior-contract rules to repository validat
 | RLIFE-010 | C-RLIFE-006 | teardown clears quick-access runtime status and resets runtime-local flags | `tests/google-meet/runtime-lifecycle.contract.test.ts` | implemented |
 | RLIFE-011 | C-RLIFE-006 | lifecycle sync force-resolves capture, continuation, and ended prompts during unknown or joined transitions | `tests/google-meet/runtime-lifecycle.contract.test.ts` | implemented |
 | RLIFE-012 | C-RLIFE-006 | confirmed Teams reset pages prefer in-place reset flows over immediate teardown | `tests/google-meet/runtime-lifecycle.contract.test.ts` | implemented |
+| RLIFE-013 | C-RLIFE-007 | quick-access soft refresh rebuilds extension-owned artifacts and keeps the same meeting session active | `tests/google-meet/runtime-lifecycle.contract.test.ts` | implemented |
 
 ## Notes
 

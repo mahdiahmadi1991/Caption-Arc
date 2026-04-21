@@ -74,6 +74,7 @@ Response shape:
 - `updateQuickAccessRuntimeStatus`
 - `clearQuickAccessRuntimeStatus`
 - `getQuickAccessRuntimeStatus`
+- `requestQuickAccessSoftRefresh`
 
 ### Development Diagnostics
 

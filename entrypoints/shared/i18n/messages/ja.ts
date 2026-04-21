@@ -1884,6 +1884,22 @@ export const jaMessages = {
                 instantToggle: "オープンな会議を瞬時に切り替えます。位置、サイズ、コンパクトな状態は会議アプリごとに記憶されます。"
             }
         },
+        refresh: {
+            badge: "復旧",
+            title: "会議アーティファクトを再読み込み",
+            buttonAriaLabel: "アクティブな会議タブの CaptionArc アーティファクトを再読み込み",
+            buttonDisabledTitle: "復旧リフレッシュを使うには、対応済みのアクティブな会議タブを開いてください。",
+            state: {
+                ready: "準備完了",
+                refreshing: "再読み込み中",
+                unavailable: "利用不可"
+            },
+            helper: {
+                ready: "アクティブな {platform} タブ内の CaptionArc アーティファクトを再構築し、同じセッションに再同期します。",
+                refreshing: "CaptionArc は会議アーティファクトを再構築し、現在のセッション状態に合わせ直しています。",
+                unavailable: "復旧リフレッシュを使うには、CaptionArc が有効な対応会議タブを開いてください。"
+            }
+        },
         pulse: {
             title: "ワークスペースパルス"
         },

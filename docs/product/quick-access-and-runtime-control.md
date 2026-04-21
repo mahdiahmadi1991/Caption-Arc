@@ -10,6 +10,7 @@ Primary user outcomes:
 
 - confirm whether meeting runtime is active
 - quickly show or hide live overlay behavior
+- trigger a guarded recovery refresh for extension-owned meeting artifacts
 - understand startup behavior and setup readiness
 - jump to full settings when deeper changes are needed
 
@@ -41,14 +42,23 @@ Quick access currently supports:
 
 - opening full options/settings
 - toggling overlay visibility
+- soft-refreshing extension-owned artifacts in the active meeting tab while preserving same-session continuity rules
 - reading capture startup behavior state (`off`, `ask`, `always`)
 - reading setup readiness and dependency state
+
+The recovery refresh action is intentionally narrower than a browser reload or full runtime teardown:
+
+- it targets CaptionArc-owned injected artifacts only
+- it does not reset provider-owned tab state
+- it rebuilds runtime surfaces and then lets lifecycle synchronization reconcile against the current live meeting/session state
+- it should feel smooth in the popup and in-meeting UI, in the same quality family as the quick-access visibility toggle
 
 ## Business Boundaries
 
 - quick access is a fast operational surface, not a full configuration workspace
 - durable advanced settings remain in options pages
 - quick access relies on current runtime messages and can appear inactive outside supported meeting contexts
+- recovery refresh is a protected operational tool, not a hard reset or provider-page reload
 
 ## Availability
 

@@ -1884,6 +1884,22 @@ Exemplo: \`Priorize talking points curtos e destaque riscos ocultos antes de red
                 instantToggle: "Alternância instantânea para reuniões abertas. A posição, o tamanho e o estado compacto são lembrados por aplicativo de reunião."
             }
         },
+        refresh: {
+            badge: "Recuperação",
+            title: "Atualizar artefatos da reunião",
+            buttonAriaLabel: "Atualizar os artefatos do CaptionArc na aba ativa da reunião",
+            buttonDisabledTitle: "Abra uma aba de reunião compatível e ativa para usar a atualização de recuperação.",
+            state: {
+                ready: "Pronto",
+                refreshing: "Atualizando",
+                unavailable: "Indisponível"
+            },
+            helper: {
+                ready: "Reconstrói os artefatos do CaptionArc na aba ativa do {platform} e os sincroniza novamente com a mesma sessão.",
+                refreshing: "O CaptionArc está reconstruindo os artefatos da reunião e alinhando tudo ao estado atual da sessão.",
+                unavailable: "Abra uma aba de reunião compatível em que o CaptionArc esteja ativo para usar a atualização de recuperação."
+            }
+        },
         pulse: {
             title: "Pulso do espaço de trabalho"
         },

@@ -1884,6 +1884,22 @@ Ejemplo: \`Prioriza puntos breves para hablar y destaca riesgos ocultos antes de
                 instantToggle: "Alternancia instantánea para reuniones abiertas. La posición, el tamaño y el estado compacto se recuerdan por aplicación de reunión."
             }
         },
+        refresh: {
+            badge: "Recuperación",
+            title: "Refrescar artefactos de la reunión",
+            buttonAriaLabel: "Refrescar los artefactos de CaptionArc en la pestaña activa de la reunión",
+            buttonDisabledTitle: "Abre una pestaña de reunión compatible y activa para usar el refresco de recuperación.",
+            state: {
+                ready: "Listo",
+                refreshing: "Refrescando",
+                unavailable: "No disponible"
+            },
+            helper: {
+                ready: "Reconstruye los artefactos de CaptionArc en la pestaña activa de {platform} y vuelve a sincronizarlos con la misma sesión.",
+                refreshing: "CaptionArc está reconstruyendo los artefactos de la reunión y alineándolos con el estado actual de la sesión.",
+                unavailable: "Abre una pestaña de reunión compatible donde CaptionArc esté activo para usar el refresco de recuperación."
+            }
+        },
         pulse: {
             title: "Pulso del espacio de trabajo"
         },
