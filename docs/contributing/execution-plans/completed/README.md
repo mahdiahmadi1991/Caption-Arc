@@ -14,6 +14,7 @@ Default behavior:
 - [2026-04-20-ui-locale-catalog-sync-enforcement.md](./2026-04-20-ui-locale-catalog-sync-enforcement.md)
 - [2026-04-20-cdp-extension-materialization-and-runtime-detection.md](./2026-04-20-cdp-extension-materialization-and-runtime-detection.md)
 - [2026-04-20-assistant-dls-join-automation-hardening.md](./2026-04-20-assistant-dls-join-automation-hardening.md)
+- [2026-04-20-options-legal-risk-dialog-regression.md](./2026-04-20-options-legal-risk-dialog-regression.md)
 - [2026-04-15-compact-overlay-warning-slot-stability.md](./2026-04-15-compact-overlay-warning-slot-stability.md)
 - [2026-04-15-assistant-instructions-limit-expansion.md](./2026-04-15-assistant-instructions-limit-expansion.md)
 - [2026-04-14-environment-specific-chrome-extension-identity.md](./2026-04-14-environment-specific-chrome-extension-identity.md)

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { IconButton } from "../../shared/icon-button";
 import { useT } from "../../shared/i18n";
 import { CloseIcon } from "../../shared/icons";
@@ -141,7 +142,7 @@ export function ConfirmDialog({
         ? "border-[var(--app-warning-border)] bg-[var(--app-warning-soft)] text-[var(--app-warning)] hover:bg-[color:color-mix(in_srgb,var(--app-warning-soft)_72%,var(--app-surface))]"
       : "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)] hover:bg-[var(--app-surface-strong)]";
 
-  return (
+  const dialog = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--app-bg)_68%,transparent)] px-4">
       {dismissible ? (
         <button
@@ -151,7 +152,12 @@ export function ConfirmDialog({
           className="absolute inset-0"
         />
       ) : null}
-      <div className="relative w-full max-w-md rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-6 shadow-[0_24px_60px_var(--app-shadow)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative w-full max-w-md rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-6 shadow-[0_24px_60px_var(--app-shadow)]"
+      >
         {dismissible ? (
           <div className="absolute right-4 top-4">
             <IconButton
@@ -196,4 +202,10 @@ export function ConfirmDialog({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return dialog;
+  }
+
+  return createPortal(dialog, document.body);
 }
