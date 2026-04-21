@@ -130,16 +130,19 @@ jobs:
           - configure `RELEASE_AUTOMATION_TOKEN` to allow release PRs to participate in the standard PR checks
           EOF
 
-          EXISTING_PR="$(gh pr list --base main --head release/main/current --json number --jq '.[0].number')"
+          BODY_CONTENT="$(cat "$BODY_FILE")"
+          EXISTING_PR="$(gh api "repos/${{ github.repository }}/pulls?state=open&base=main&head=${{ github.repository_owner }}:release/main/current" --jq '.[0].number')"
 
           if [[ -n "$EXISTING_PR" ]]; then
-            gh pr edit "$EXISTING_PR" \
-              --title "release: v${{ steps.stable.outputs.version }}" \
-              --body-file "$BODY_FILE"
+            gh api "repos/${{ github.repository }}/pulls/${EXISTING_PR}" \
+              --method PATCH \
+              -f title="release: v${{ steps.stable.outputs.version }}" \
+              -f body="$BODY_CONTENT" >/dev/null
           else
-            gh pr create \
-              --base main \
-              --head release/main/current \
-              --title "release: v${{ steps.stable.outputs.version }}" \
-              --body-file "$BODY_FILE"
+            gh api "repos/${{ github.repository }}/pulls" \
+              --method POST \
+              -f title="release: v${{ steps.stable.outputs.version }}" \
+              -f head="release/main/current" \
+              -f base="main" \
+              -f body="$BODY_CONTENT" >/dev/null
           fi
