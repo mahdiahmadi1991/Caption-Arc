@@ -30,7 +30,7 @@ This policy intentionally favors a **readable branch graph** over a fully linear
 This repository must remain:
 - **releasable from `main`**
 - **easy to inspect visually in the Git graph**
-- **traceable from feature branch -> develope -> main -> tag -> release**
+- **traceable from feature branch -> develop -> main -> tag -> release**
 - **safe for AI-assisted development**
 - **consistent in versioning and release semantics**
 - **free of speculative migration scaffolding unless the owner explicitly requests it**
@@ -45,12 +45,12 @@ The graph should communicate how work flowed, not hide it.
 The desired graph model is the following:
 
 - `main` is the release branch
-- `develope` is the long-lived integration branch
-- feature work is created in short-lived `feature/*` branches from `develope`
-- feature branches are merged into `develope` with explicit merge commits
-- releases happen by merging `develope` into `main` with an explicit merge commit
+- `develop` is the long-lived integration branch
+- feature work is created in short-lived `feature/*` branches from `develop`
+- feature branches are merged into `develop` with explicit merge commits
+- releases happen by merging `develop` into `main` with an explicit merge commit
 - release tags are created on the corresponding merge commit on `main`
-- after release, `develope` should be realigned to the released state before new feature work continues
+- after release, `develop` should be realigned to the released state before new feature work continues
 
 This policy explicitly prefers preserving branch topology.
 
@@ -69,15 +69,15 @@ This policy explicitly prefers preserving branch topology.
 
 Allowed permanent branches:
 - `main`
-- `develope`
+- `develop`
 
 Branch meanings:
 - `main` = stable release line
-- `develope` = integration line for upcoming work
+- `develop` = integration line for upcoming work
 
 Rules:
 - `main` must stay release-ready
-- `develope` may contain the next releasable integration state
+- `develop` may contain the next releasable integration state
 - work should not be developed directly on either branch under normal circumstances
 
 ### 3.3 Short-lived branches
@@ -93,7 +93,7 @@ Recommended naming:
 - `hotfix/<short-slug>` for urgent fixes that must start from `main`
 
 Rules:
-- branch from `develope` for normal work
+- branch from `develop` for normal work
 - branch from `main` only for urgent hotfixes
 - one concern per branch
 - keep branches short-lived
@@ -113,41 +113,41 @@ It optimizes for a graph that visibly shows:
 
 ### 4.2 Merge method
 
-Normal merges into `develope` and `main` must preserve merge commits.
+Normal merges into `develop` and `main` must preserve merge commits.
 
 Preferred approach:
 - merge commits with `--no-ff`
 
 Normal policy:
-- do **not** squash feature branches into `develope`
-- do **not** rebase-merge feature branches into `develope`
-- do **not** require linear history on `develope` or `main`
+- do **not** squash feature branches into `develop`
+- do **not** rebase-merge feature branches into `develop`
+- do **not** require linear history on `develop` or `main`
 
 The merge commit itself is part of the governance model because it records the integration event.
 
 ### 4.3 Integration path
 
 Normal path:
-1. create topic branch from `develope`
+1. create topic branch from `develop`
 2. implement and validate work
-3. merge topic branch into `develope` with a merge commit
+3. merge topic branch into `develop` with a merge commit
 4. repeat for additional topics
-5. when ready to release, merge `develope` into `main` with a merge commit
+5. when ready to release, merge `develop` into `main` with a merge commit
 6. create release tag on the resulting `main` merge commit
-7. realign `develope` to the released state
+7. realign `develop` to the released state
 
-### 4.4 Develope branch realignment after release
+### 4.4 Develop branch realignment after release
 
-After merging `develope` into `main` for a release, `develope` should not drift from the released state unnecessarily.
+After merging `develop` into `main` for a release, `develop` should not drift from the released state unnecessarily.
 
 Preferred post-release behavior:
-- fast-forward `develope` to the release merge commit if possible, or
-- merge `main` back into `develope` if needed
+- fast-forward `develop` to the release merge commit if possible, or
+- merge `main` back into `develop` if needed
 
 Goal:
 - both long-lived branches should share the released commit as the new baseline before subsequent feature work diverges again
 
-This is important if you want the graph to resemble the example style where `main` and `develope` often meet again at release points.
+This is important if you want the graph to resemble the example style where `main` and `develop` often meet again at release points.
 
 ---
 
@@ -156,10 +156,10 @@ This is important if you want the graph to resemble the example style where `mai
 Even in a solo-maintainer repository, pull requests are the standard integration checkpoint.
 
 Recommended PR directions:
-- topic branch -> `develope`
-- `develope` -> `main`
+- topic branch -> `develop`
+- `develop` -> `main`
 - `hotfix/*` -> `main`
-- after hotfix release, merge `main` back into `develope`
+- after hotfix release, merge `main` back into `develop`
 
 Every PR should include:
 - purpose of the change
@@ -193,11 +193,11 @@ Recommended style:
 To preserve a graph similar to the desired example, merge commit messages should remain explicit and predictable.
 
 Recommended patterns:
-- `Merge branch 'feature/<name>' into develope`
-- `Merge branch 'fix/<name>' into develope`
+- `Merge branch 'feature/<name>' into develop`
+- `Merge branch 'fix/<name>' into develop`
 - `Merge branch 'hotfix/<name>' into main`
-- `Merge branch 'develope'`
-- `Merge branch 'main' into develope` when realigning after a hotfix or release
+- `Merge branch 'develop'`
+- `Merge branch 'main' into develop` when realigning after a hotfix or release
 
 Do not rewrite merge commit messages into vague summaries when the merge event itself is part of the repository story.
 
@@ -237,7 +237,7 @@ Any secondary version locations must remain synchronized.
 ### 8.3 Release version timing
 
 This repository keeps the earlier rule:
-- every merge from `develope` into `main` is a release event
+- every merge from `develop` into `main` is a release event
 - every merge into `main` must correspond to one version and one matching tag
 
 That means:
@@ -289,14 +289,14 @@ Rules:
 ### 10.1 Release path
 
 The normal release path is:
-1. integrate work into `develope`
-2. validate `develope`
+1. integrate work into `develop`
+2. validate `develop`
 3. bump the release version appropriately
-4. merge `develope` into `main` with a merge commit
+4. merge `develop` into `main` with a merge commit
 5. create annotated tag `vX.Y.Z` on that merge commit
 6. create a GitHub Release from the tag
 7. if applicable, publish the browser extension package that matches that version
-8. realign `develope` to the released baseline
+8. realign `develop` to the released baseline
 
 ### 10.2 Release readiness criteria
 
@@ -336,9 +336,9 @@ When an urgent production fix is needed:
 3. merge `hotfix/*` into `main` with a merge commit
 4. tag the resulting `main` merge commit with the next release version
 5. create the GitHub Release
-6. merge `main` back into `develope` so the hotfix is not lost
+6. merge `main` back into `develop` so the hotfix is not lost
 
-Do not apply hotfixes only on `main` without propagating them back to `develope`.
+Do not apply hotfixes only on `main` without propagating them back to `develop`.
 
 ---
 
@@ -367,13 +367,13 @@ Create a ruleset targeting `main` with, at minimum:
 - require required status checks once CI exists
 - do **not** require linear history
 
-### 12.3 `develope` branch ruleset
+### 12.3 `develop` branch ruleset
 
-Create a ruleset targeting `develope` with, at minimum:
+Create a ruleset targeting `develop` with, at minimum:
 - require pull request before merging, if you want the same integration ceremony for features
 - block force pushes
 - block deletions
-- require status checks if `develope` serves as the integration gate
+- require status checks if `develop` serves as the integration gate
 - do **not** require linear history
 
 ### 12.4 Tag ruleset
@@ -399,7 +399,7 @@ Recommended automation responsibilities:
 Any AI agent operating in this repository must follow these rules:
 
 1. Do not change the branch model unless explicitly instructed.
-2. Normal work branches from `develope`, not `main`.
+2. Normal work branches from `develop`, not `main`.
 3. Do not squash-merge normal work when the graph-preserving workflow is required.
 4. Use explicit merge-commit-oriented integration behavior.
 5. Do not merge to `main` unless the change is release-ready.
