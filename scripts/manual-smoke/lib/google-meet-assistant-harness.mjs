@@ -1,10 +1,42 @@
 #!/usr/bin/env node
 
-import { createTarget, evaluateInTarget } from "./cdp-runtime.mjs";
-import { resolveGoogleMeetLobbyUrl } from "./meet-url.mjs";
+import {
+  createTarget,
+  dispatchMouseClickInTarget,
+  evaluateInTarget,
+} from "./cdp-runtime.mjs";
+import { resolveGoogleMeetUrl } from "./meet-url.mjs";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}
+
+function canonicalUrl(value) {
+  try {
+    return new URL(String(value)).toString();
+  } catch {
+    return String(value || "");
+  }
+}
+
+async function listTargets(baseUrl) {
+  const response = await fetch(`${baseUrl}/json/list`);
+  if (!response.ok) {
+    throw new Error(`Failed to list CDP targets: HTTP ${response.status}`);
+  }
+  return await response.json();
+}
+
+function findPageTargetByUrl(targets, expectedUrl) {
+  const wanted = canonicalUrl(expectedUrl);
+  return (
+    targets.find(
+      (target) =>
+        target?.type === "page" &&
+        typeof target?.webSocketDebuggerUrl === "string" &&
+        canonicalUrl(target?.url) === wanted
+    ) || null
+  );
 }
 
 function buildTextClickExpression(texts) {
@@ -33,8 +65,31 @@ function buildTextClickExpression(texts) {
       );
     };
 
+    const hasMatchingVisibleDescendant = (node, token) => {
+      const descendants = Array.from(
+        node.querySelectorAll("button, [role='button'], li, [role='menuitem'], a")
+      );
+      return descendants.some((child) => {
+        if (child === node || !isVisible(child)) {
+          return false;
+        }
+        const childText = normalize(
+          (child.textContent || "") +
+            " " +
+            (child.getAttribute?.("aria-label") || "") +
+            " " +
+            (child.getAttribute?.("title") || "") +
+            " " +
+            (child.getAttribute?.("data-tooltip") || "")
+        );
+        return childText.includes(token);
+      });
+    };
+
     const nodes = Array.from(
-      document.querySelectorAll("button, [role='button'], a, [aria-label], [title], [data-tooltip]")
+      document.querySelectorAll(
+        "button, [role='button'], a, [aria-label], [title], [data-tooltip], li, [role='menuitem']"
+      )
     ).filter(isVisible);
 
     for (const node of nodes) {
@@ -56,8 +111,17 @@ function buildTextClickExpression(texts) {
         continue;
       }
 
-      node.click();
-      return { clicked: true, text };
+      if (hasMatchingVisibleDescendant(node, matched)) {
+        continue;
+      }
+
+      const rect = node.getBoundingClientRect();
+      return {
+        clicked: true,
+        text,
+        x: Math.round(rect.left + rect.width / 2),
+        y: Math.round(rect.top + rect.height / 2),
+      };
     }
 
     return { clicked: false };
@@ -69,14 +133,25 @@ async function clickByText({
   texts,
   attempts = 6,
   delayMs = 350,
-} = {}) {
+  } = {}) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await evaluateInTarget({
       webSocketDebuggerUrl,
       delayMs: 120,
       expression: buildTextClickExpression(texts),
     });
-    if (result?.clicked) {
+
+    if (
+      result?.clicked &&
+      Number.isFinite(result?.x) &&
+      Number.isFinite(result?.y)
+    ) {
+      await dispatchMouseClickInTarget({
+        webSocketDebuggerUrl,
+        x: result.x,
+        y: result.y,
+        clickCount: 1,
+      });
       return result;
     }
     await sleep(delayMs);
@@ -182,14 +257,6 @@ export function extractGoogleMeetCodeFromUrl(url) {
   return match?.[1]?.toLowerCase() || null;
 }
 
-async function listTargets(baseUrl) {
-  const response = await fetch(`${baseUrl}/json/list`);
-  if (!response.ok) {
-    throw new Error(`Failed to list CDP targets: HTTP ${response.status}`);
-  }
-  return await response.json();
-}
-
 async function closeTarget(baseUrl, targetId) {
   if (!targetId) {
     return false;
@@ -256,12 +323,14 @@ export async function createAndJoinGoogleMeetSession({
   targets = [],
   joinTimeoutMs = 30000,
 } = {}) {
-  const resolved = await resolveGoogleMeetLobbyUrl({
+  const resolved = await resolveGoogleMeetUrl({
     baseUrl,
     targets,
   });
-
-  const target = await createTarget(baseUrl, resolved.url);
+  const existingTarget =
+    findPageTargetByUrl(targets, resolved.url) ||
+    findPageTargetByUrl(await listTargets(baseUrl), resolved.url);
+  const target = existingTarget || (await createTarget(baseUrl, resolved.url));
   const meetingCode = extractGoogleMeetCodeFromUrl(resolved.url);
 
   if (!meetingCode) {
@@ -269,6 +338,8 @@ export async function createAndJoinGoogleMeetSession({
   }
 
   const joinControls = [
+    ["allow camera"],
+    ["allow microphone", "allow mic"],
     ["join now"],
     ["ask to join"],
     ["continue without microphone", "continue without mic"],
@@ -301,6 +372,7 @@ export async function createAndJoinGoogleMeetSession({
           ? bridgeProbe?.result || null
           : null;
     const bridgeJoined = bridgeSnapshot?.meetingPresenceState === 'joined';
+    const providerJoined = Boolean(lastProbe?.leaveControl);
     lastProbe = {
       ...lastProbe,
       bridgeResponded: Boolean(bridgeProbe?.responded),
@@ -312,8 +384,7 @@ export async function createAndJoinGoogleMeetSession({
       lastProbe?.injected &&
       lastProbe?.overlay &&
       lastProbe?.assistantShell &&
-      lastProbe?.leaveControl &&
-      bridgeJoined
+      (bridgeJoined || providerJoined)
     ) {
       return {
         target,
@@ -331,6 +402,12 @@ export async function createAndJoinGoogleMeetSession({
         delayMs: 120,
       });
     }
+
+    await resolveCaptionArcCapturePrompt({
+      webSocketDebuggerUrl: target.webSocketDebuggerUrl,
+      timeoutMs: 800,
+      action: "approve",
+    }).catch(() => null);
 
     if (lastProbe?.signedOutHint) {
       throw new Error("Google Meet session did not join because the debug profile appears signed out.");

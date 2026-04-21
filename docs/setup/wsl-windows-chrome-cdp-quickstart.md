@@ -97,6 +97,24 @@ If Chrome is not already running in remote-debug mode and you need the equivalen
 
 Keep the `<windows-user>` segment as a placeholder in committed documentation.
 
+## Preferred System-Only Debug Profile
+
+This repository keeps Chrome runtime bootstrap on `system-only`.
+When available, the launcher should prefer a dedicated Windows Chrome debug profile such as:
+
+```text
+C:\Users\<windows-user>\.google\ChromeDebugProfile
+```
+
+Profile resolution order for the launcher:
+
+1. `CHROME_DEBUG_PROFILE_DIR_WIN` from local env
+2. `CAPTIONARC_CHROME_DEBUG_PROFILE_DIR_WIN` from local env
+3. `%USERPROFILE%\.google\ChromeDebugProfile` when it already exists
+4. fallback: `%LOCALAPPDATA%\CaptionArc\chrome-cdp-profile`
+
+When the owner keeps a preferred debug profile, store it in local-only env rather than committed docs.
+
 For explicit `reload` semantics (same behavior, clearer intent):
 
 ```bash
@@ -106,7 +124,7 @@ pnpm chrome:debug:reload
 Default behavior:
 
 - remote debugging port: `9222`
-- isolated profile: `%LOCALAPPDATA%\CaptionArc\chrome-cdp-profile`
+- preferred profile: `%USERPROFILE%\.google\ChromeDebugProfile` when present, else `%LOCALAPPDATA%\CaptionArc\chrome-cdp-profile`
 - extension source path: `.release/v<version>/development/chrome`
 - extension staged path (Windows local): `%LOCALAPPDATA%\CaptionArc\extension\development`
 - extension load mode: `auto` (command-line load)
@@ -161,6 +179,7 @@ Expected output includes:
 - browser/protocol info
 - target counts
 - extension service worker detection
+- unpacked extension bootstrap result when `chrome:debug:ensure` is used
 
 ## Practical Daily Loop
 

@@ -114,6 +114,8 @@ If a change affects both pre-join and in-session behaviors, run both `lobby` and
 - `pnpm chrome:debug`
 - then re-check:
   - `pnpm chrome:debug:doctor`
+- stay on the same `system-only` Chrome path
+- if CaptionArc is missing from `chrome://extensions`, stop and report that prerequisite before continuing with smoke
 
 3. Confirm local secrets are loaded (when needed):
 - `pnpm chrome:secrets:check`

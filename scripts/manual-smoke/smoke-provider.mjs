@@ -533,6 +533,113 @@ async function waitForOverlayPromptsAcrossZoomMeetingTargets(
   };
 }
 
+async function listGoogleMeetingPageTargets(
+  baseUrl,
+  { meetingCode = "" } = {}
+) {
+  const targets = await listTargets(baseUrl);
+  return targets.filter((target) => {
+    if (
+      target?.type !== "page" ||
+      typeof target?.url !== "string" ||
+      typeof target?.webSocketDebuggerUrl !== "string"
+    ) {
+      return false;
+    }
+
+    if (!isExpectedProviderHost("google-meet", target.url)) {
+      return false;
+    }
+
+    if (!meetingCode) {
+      return true;
+    }
+
+    return extractGoogleMeetingCode(target.url) === meetingCode;
+  });
+}
+
+async function waitForOverlayPromptsAcrossGoogleMeetingTargets(
+  baseUrl,
+  {
+    preferredWebSocketDebuggerUrl = "",
+    meetingCode = "",
+    timeoutMs = 30000,
+    pollMs = Math.max(120, promptPollMs),
+    settleQuietMs = 1200,
+  } = {}
+) {
+  const startedAt = Date.now();
+  let seenPrompt = false;
+  let handledPrompt = false;
+  let lastResult = null;
+  let lastPromptResult = null;
+  let lastPromptAt = 0;
+  let lastPromptWs = preferredWebSocketDebuggerUrl || "";
+  const kindsSeen = [];
+
+  while (Date.now() - startedAt <= Math.max(2000, timeoutMs)) {
+    const wsList = [];
+    if (preferredWebSocketDebuggerUrl) {
+      wsList.push(preferredWebSocketDebuggerUrl);
+    }
+
+    try {
+      const meetTargets = await listGoogleMeetingPageTargets(baseUrl, { meetingCode });
+      for (const target of meetTargets) {
+        if (!wsList.includes(target.webSocketDebuggerUrl)) {
+          wsList.push(target.webSocketDebuggerUrl);
+        }
+      }
+    } catch {
+      // Ignore transient list failures and keep using preferred target.
+    }
+
+    let promptSeenInThisPoll = false;
+    for (const ws of wsList) {
+      try {
+        const result = await maybeResolveOverlayPrompt(ws);
+        if (!result?.hasPrompt) {
+          continue;
+        }
+
+        promptSeenInThisPoll = true;
+        seenPrompt = true;
+        lastResult = result;
+        lastPromptResult = result;
+        lastPromptAt = Date.now();
+        lastPromptWs = ws;
+        if (result?.kind) {
+          kindsSeen.push(result.kind);
+        }
+        if (result?.clicked) {
+          handledPrompt = true;
+        }
+      } catch {
+        // Ignore per-target failures.
+      }
+    }
+
+    if (!promptSeenInThisPoll && seenPrompt) {
+      if (Date.now() - lastPromptAt >= Math.max(200, settleQuietMs)) {
+        break;
+      }
+    }
+
+    await sleep(Math.max(80, pollMs));
+  }
+
+  return {
+    ok: true,
+    seenPrompt,
+    handledPrompt,
+    lastResult,
+    lastPromptResult,
+    lastPromptWs,
+    kindsSeen: Array.from(new Set(kindsSeen)),
+  };
+}
+
 function extractGoogleMeetingCode(urlValue) {
   try {
     const parsed = new URL(urlValue);
@@ -1291,6 +1398,14 @@ try {
         target = await createTarget(resolved.baseUrl, targetInput.url);
       }
 
+      let probe = null;
+      let teamsMeta = null;
+      let zoomJourneyMeta = null;
+      let expectedContinuationRuntimeId = null;
+      const googleMeetingCode = expectContinuationPrompt
+        ? extractGoogleMeetingCode(targetInput.url)
+        : null;
+
       if (provider === "google-meet" && forceFreshGoogleMeetUrl) {
         console.log("Google Meet URL mode: force-fresh");
       }
@@ -1302,11 +1417,13 @@ try {
           Math.max(220, evalDelayMs),
           false
         );
-        const expectedRuntimeId = parseRuntimeIdFromMarker(preSeedProbe?.markerContent);
+        expectedContinuationRuntimeId = parseRuntimeIdFromMarker(
+          preSeedProbe?.markerContent
+        );
         const seed = await seedGoogleContinuationCandidate(
           resolved.baseUrl,
           targetInput.url,
-          expectedRuntimeId
+          expectedContinuationRuntimeId
         );
         console.log(
           `Continuation candidate seeded: session=${seed.sessionId || "n/a"} candidate=${seed.candidate?.sessionId || "n/a"}`
@@ -1315,14 +1432,26 @@ try {
         await sleep(Math.max(350, evalDelayMs));
       }
 
-      let probe = null;
-      let teamsMeta = null;
-      let zoomJourneyMeta = null;
-
       await waitStep("Preparing provider page probe");
-      const promptSettleResult = await settleBlockingOverlayPrompts(
-        target.webSocketDebuggerUrl
-      );
+      let promptSettleResult = null;
+
+      if (expectContinuationPrompt) {
+        promptSettleResult = await waitForOverlayPromptsAcrossGoogleMeetingTargets(
+          resolved.baseUrl,
+          {
+            preferredWebSocketDebuggerUrl: target.webSocketDebuggerUrl,
+            meetingCode: googleMeetingCode || "",
+            timeoutMs: Math.max(30000, promptWaitMs * 3),
+            pollMs: Math.max(140, promptPollMs),
+            settleQuietMs: 1200,
+          }
+        );
+      } else {
+        promptSettleResult = await settleBlockingOverlayPrompts(
+          target.webSocketDebuggerUrl
+        );
+      }
+
       if (promptSettleResult.seenPrompt) {
         console.log(
           `Overlay prompt handling: seen=${promptSettleResult.seenPrompt ? "yes" : "no"} handled=${promptSettleResult.handledPrompt ? "yes" : "no"}`
@@ -1343,7 +1472,11 @@ try {
         teamsMeta = await stabilizeTeamsTarget(target.webSocketDebuggerUrl);
         probe = teamsMeta.probe;
       } else {
-        probe = await probeTarget(target.webSocketDebuggerUrl, Math.max(300, evalDelayMs), false);
+        const promptProbeSocket =
+          expectContinuationPrompt && promptSettleResult?.lastPromptWs
+            ? promptSettleResult.lastPromptWs
+            : target.webSocketDebuggerUrl;
+        probe = await probeTarget(promptProbeSocket, Math.max(300, evalDelayMs), false);
       }
 
       if (runZoomJourney) {
@@ -1357,15 +1490,85 @@ try {
       }
 
       if (expectContinuationPrompt) {
-        const promptKind = promptSettleResult?.lastPromptResult?.kind || null;
+        let promptKindsSeen = Array.from(
+          new Set(
+            [
+              ...(Array.isArray(promptSettleResult?.kindsSeen)
+                ? promptSettleResult.kindsSeen
+                : []),
+              promptSettleResult?.lastPromptResult?.kind || null,
+            ].filter(Boolean)
+          )
+        );
+
+        if (!promptKindsSeen.includes("session-continuation")) {
+          console.log("Retrying Google Meet continuation prompt on a fresh target...");
+          const preRetryProbe = await probeTarget(
+            target.webSocketDebuggerUrl,
+            Math.max(220, evalDelayMs),
+            false
+          ).catch(() => null);
+          expectedContinuationRuntimeId =
+            expectedContinuationRuntimeId ||
+            parseRuntimeIdFromMarker(preRetryProbe?.markerContent);
+          const reseed = await seedGoogleContinuationCandidate(
+            resolved.baseUrl,
+            targetInput.url,
+            expectedContinuationRuntimeId
+          );
+          console.log(
+            `Continuation candidate reseeded: session=${reseed.sessionId || "n/a"} candidate=${reseed.candidate?.sessionId || "n/a"}`
+          );
+          target = await createTarget(resolved.baseUrl, targetInput.url);
+          tabStrategy = "created-fresh-continuation-target";
+          promptSettleResult = await waitForOverlayPromptsAcrossGoogleMeetingTargets(
+            resolved.baseUrl,
+            {
+              preferredWebSocketDebuggerUrl: target.webSocketDebuggerUrl,
+              meetingCode: googleMeetingCode || "",
+              timeoutMs: Math.max(45000, promptWaitMs * 4),
+              pollMs: Math.max(140, promptPollMs),
+              settleQuietMs: 1200,
+            }
+          );
+          if (promptSettleResult.seenPrompt) {
+            console.log(
+              `Overlay prompt retry handling: seen=${promptSettleResult.seenPrompt ? "yes" : "no"} handled=${promptSettleResult.handledPrompt ? "yes" : "no"}`
+            );
+            if (promptSettleResult.lastPromptResult?.kind) {
+              console.log(
+                `Overlay prompt retry kind: ${promptSettleResult.lastPromptResult.kind}`
+              );
+            }
+          }
+
+          probe = await probeTarget(
+            promptSettleResult?.lastPromptWs || target.webSocketDebuggerUrl,
+            Math.max(300, evalDelayMs),
+            false
+          );
+        }
+
         if (!promptSettleResult.seenPrompt) {
           throw new Error(
             "Expected session continuation prompt, but no startup prompt was observed."
           );
         }
-        if (promptKind !== "session-continuation") {
+        promptKindsSeen = Array.from(
+          new Set(
+            [
+              ...(Array.isArray(promptSettleResult?.kindsSeen)
+                ? promptSettleResult.kindsSeen
+                : []),
+              promptSettleResult?.lastPromptResult?.kind || null,
+            ].filter(Boolean)
+          )
+        );
+        if (!promptKindsSeen.includes("session-continuation")) {
           throw new Error(
-            `Expected 'session-continuation' prompt, but saw '${promptKind || "unknown"}'.`
+            `Expected 'session-continuation' prompt, but saw '${
+              promptKindsSeen.length > 0 ? promptKindsSeen.join(", ") : "unknown"
+            }'.`
           );
         }
       }

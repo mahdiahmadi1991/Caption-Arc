@@ -74,6 +74,54 @@ export async function openExtensionUiTarget(baseUrl, extensionId) {
   return false;
 }
 
+async function ensureChromeExtensionsTarget(baseUrl) {
+  const targets = await listTargets(baseUrl);
+  const existing = targets.find(
+    (target) =>
+      target?.type === "page" &&
+      typeof target?.url === "string" &&
+      target.url.startsWith("chrome://extensions")
+  );
+  if (existing?.webSocketDebuggerUrl) {
+    return existing;
+  }
+
+  return await createTarget(baseUrl, "chrome://extensions/");
+}
+
+async function queryInstalledExtensionsFromExtensionsPage(baseUrl) {
+  const target = await ensureChromeExtensionsTarget(baseUrl).catch(() => null);
+  if (!target?.webSocketDebuggerUrl) {
+    return [];
+  }
+
+  const result = await evaluateInTarget({
+    webSocketDebuggerUrl: target.webSocketDebuggerUrl,
+    delayMs: 200,
+    awaitPromise: true,
+    expression: `new Promise((resolve) => {
+      const api = chrome?.developerPrivate;
+      if (!api?.getExtensionsInfo) {
+        resolve([]);
+        return;
+      }
+      api.getExtensionsInfo({ includeDisabled: true, includeTerminated: true }, (items) => {
+        resolve(Array.isArray(items)
+          ? items.map((item) => ({
+              id: item.id || null,
+              name: item.name || null,
+              state: item.state || null,
+              location: item.location || null,
+              path: item.path || null,
+            }))
+          : []);
+      });
+    })`,
+  }).catch(() => []);
+
+  return Array.isArray(result) ? result : [];
+}
+
 export function buildExtensionPageUrl(extensionId, pagePath) {
   const normalizedPagePath = String(pagePath || "")
     .replace(/^\/+/, "")
@@ -201,6 +249,43 @@ export async function resolveCaptionArcExtensionTarget({
           runtimeId:
             runtimeId || parseTargetExtensionId(target.url) || expectedId || null,
           manifestName: probe?.name || null,
+        };
+      }
+    }
+  }
+
+  const installedExtensions = await queryInstalledExtensionsFromExtensionsPage(baseUrl);
+  const installedMatch =
+    installedExtensions.find((item) => {
+      const itemId = String(item?.id || "");
+      return expectedId && itemId && itemId.toLowerCase() === expectedId.toLowerCase();
+    }) ||
+    installedExtensions.find((item) => {
+      const manifestName = String(item?.name || "");
+      return allowNameFallback && namePattern.test(manifestName);
+    }) ||
+    null;
+
+  if (installedMatch?.id) {
+    const opened = await openExtensionUiTarget(baseUrl, installedMatch.id);
+    if (opened) {
+      targets = await listTargets(baseUrl);
+      extensionTargets = targets.filter(
+        (target) =>
+          typeof target?.url === "string" &&
+          target.url.startsWith("chrome-extension://") &&
+          typeof target?.webSocketDebuggerUrl === "string"
+      );
+      const byInstalledId = extensionTargets.find((target) => {
+        const targetId = parseTargetExtensionId(target.url);
+        return targetId && targetId.toLowerCase() === installedMatch.id.toLowerCase();
+      });
+      if (byInstalledId) {
+        const probe = await probeManifest(byInstalledId);
+        return {
+          ...byInstalledId,
+          runtimeId: probe?.id || parseTargetExtensionId(byInstalledId.url) || installedMatch.id,
+          manifestName: probe?.name || installedMatch.name || null,
         };
       }
     }
