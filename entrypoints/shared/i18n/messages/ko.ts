@@ -1884,6 +1884,22 @@ export const koMessages = {
                 instantToggle: "공개 회의를 위한 인스턴트 토글. 위치, 크기, 컴팩트 상태는 회의 앱별로 기억됩니다."
             }
         },
+        refresh: {
+            badge: "복구",
+            title: "회의 아티팩트 새로고침",
+            buttonAriaLabel: "활성 회의 탭에서 CaptionArc 아티팩트를 새로고침",
+            buttonDisabledTitle: "복구 새로고침을 사용하려면 지원되는 활성 회의 탭을 여세요.",
+            state: {
+                ready: "준비됨",
+                refreshing: "새로고침 중",
+                unavailable: "사용 불가"
+            },
+            helper: {
+                ready: "활성 {platform} 탭의 CaptionArc 아티팩트를 다시 만들고 같은 세션에 다시 동기화합니다.",
+                refreshing: "CaptionArc가 회의 아티팩트를 다시 만들고 현재 세션 상태에 맞춰 정렬하고 있습니다.",
+                unavailable: "복구 새로고침을 사용하려면 CaptionArc가 활성화된 지원 회의 탭을 여세요."
+            }
+        },
         pulse: {
             title: "작업 공간 펄스"
         },

@@ -1884,6 +1884,22 @@ Exemple : \`Priorise des points de parole concis et remonte les risques cachés 
                 instantToggle: "Basculement instantané pour les réunions ouvertes. La position, la taille et l’état compact sont mémorisés par application de réunion."
             }
         },
+        refresh: {
+            badge: "Récupération",
+            title: "Rafraîchir les artefacts de réunion",
+            buttonAriaLabel: "Rafraîchir les artefacts de CaptionArc dans l’onglet actif de réunion",
+            buttonDisabledTitle: "Ouvrez un onglet de réunion pris en charge et actif pour utiliser le rafraîchissement de récupération.",
+            state: {
+                ready: "Prêt",
+                refreshing: "Rafraîchissement",
+                unavailable: "Indisponible"
+            },
+            helper: {
+                ready: "Reconstruit les artefacts de CaptionArc dans l’onglet {platform} actif et les resynchronise avec la même session.",
+                refreshing: "CaptionArc reconstruit les artefacts de réunion et les réaligne sur l’état actuel de la session.",
+                unavailable: "Ouvrez un onglet de réunion pris en charge où CaptionArc est actif pour utiliser le rafraîchissement de récupération."
+            }
+        },
         pulse: {
             title: "Impulsion de l’espace de travail"
         },

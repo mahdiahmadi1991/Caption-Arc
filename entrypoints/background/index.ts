@@ -41,6 +41,7 @@ import {
   clearQuickAccessRuntimeStatus,
   getQuickAccessRuntimeStatus,
   initializeQuickAccessRuntimeRegistry,
+  requestQuickAccessSoftRefresh,
   updateQuickAccessRuntimeStatus,
 } from "./quick-access-runtime";
 import {
@@ -614,6 +615,9 @@ async function handleMessage(
 
     case "getQuickAccessRuntimeStatus":
       return getQuickAccessRuntimeStatus();
+
+    case "requestQuickAccessSoftRefresh":
+      return requestQuickAccessSoftRefresh();
 
     case "recordDiagnosticsEvent":
       return appendDiagnosticsEvent(

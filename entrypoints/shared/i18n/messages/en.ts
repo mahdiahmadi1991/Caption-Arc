@@ -2144,6 +2144,27 @@ Example: \`Prioritize concise talking points and flag hidden risks before drafti
           "Instant toggle for open meetings. Position, size, and compact state are remembered per meeting app.",
       },
     },
+    refresh: {
+      badge: "Recovery",
+      title: "Refresh meeting artifacts",
+      buttonAriaLabel:
+        "Refresh CaptionArc artifacts in the active meeting tab",
+      buttonDisabledTitle:
+        "Open an active supported meeting tab to use recovery refresh.",
+      state: {
+        ready: "Ready",
+        refreshing: "Refreshing",
+        unavailable: "Unavailable",
+      },
+      helper: {
+        ready:
+          "Rebuild CaptionArc artifacts in the active {platform} tab and resync to the same session.",
+        refreshing:
+          "CaptionArc is rebuilding its meeting artifacts and matching the current session state.",
+        unavailable:
+          "Open a supported meeting tab where CaptionArc is active to use recovery refresh.",
+      },
+    },
     pulse: {
       title: "Workspace Pulse",
     },

@@ -1884,6 +1884,22 @@ export const zhMessages = {
                 instantToggle: "即时切换开放会议。每个会议应用程序都会记住位置、大小和紧凑状态。"
             }
         },
+        refresh: {
+            badge: "恢复",
+            title: "刷新会议工件",
+            buttonAriaLabel: "刷新当前会议标签页中的 CaptionArc 工件",
+            buttonDisabledTitle: "请打开一个受支持且处于活动状态的会议标签页以使用恢复刷新。",
+            state: {
+                ready: "就绪",
+                refreshing: "刷新中",
+                unavailable: "不可用"
+            },
+            helper: {
+                ready: "重新构建当前 {platform} 标签页中的 CaptionArc 工件，并将其重新同步到同一会话。",
+                refreshing: "CaptionArc 正在重建会议工件，并使其与当前会话状态重新对齐。",
+                unavailable: "请打开一个 CaptionArc 已激活的受支持会议标签页以使用恢复刷新。"
+            }
+        },
         pulse: {
             title: "工作空间脉搏"
         },

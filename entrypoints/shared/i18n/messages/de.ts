@@ -1884,6 +1884,22 @@ Beispiel: \`Kurze Talking Points priorisieren und versteckte Risiken vor der Ant
                 instantToggle: "Sofortiges Umschalten für offene Besprechungen. Position, Größe und kompakter Zustand werden pro Meeting-App gespeichert."
             }
         },
+        refresh: {
+            badge: "Wiederherstellung",
+            title: "Meeting-Artefakte neu laden",
+            buttonAriaLabel: "Die CaptionArc-Artefakte im aktiven Meeting-Tab neu laden",
+            buttonDisabledTitle: "Öffne einen unterstützten aktiven Meeting-Tab, um die Wiederherstellungsaktualisierung zu verwenden.",
+            state: {
+                ready: "Bereit",
+                refreshing: "Wird neu geladen",
+                unavailable: "Nicht verfügbar"
+            },
+            helper: {
+                ready: "Erstellt die CaptionArc-Artefakte im aktiven {platform}-Tab neu und synchronisiert sie mit derselben Sitzung.",
+                refreshing: "CaptionArc baut die Meeting-Artefakte neu auf und gleicht sie mit dem aktuellen Sitzungsstatus ab.",
+                unavailable: "Öffne einen unterstützten Meeting-Tab, in dem CaptionArc aktiv ist, um die Wiederherstellungsaktualisierung zu verwenden."
+            }
+        },
         pulse: {
             title: "Arbeitsbereich-Puls"
         },

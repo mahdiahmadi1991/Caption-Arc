@@ -104,6 +104,19 @@ Rules:
 8. When presence returns to `joined` while a session-ended prompt is pending, lifecycle sync force-resolves that prompt to `stay`.
 9. On confirmed Teams reset pages without remaining ended-session state, the runtime resets in place for the next meeting instead of tearing the entire content runtime down.
 
+## C-RLIFE-007: Quick-access soft refresh rebuilds extension-owned artifacts without treating the meeting as a new session
+
+Source: `softRefreshQuickAccessArtifacts`, `requestLifecycleSync` in [../../entrypoints/content/platform-runtime.ts](../../entrypoints/content/platform-runtime.ts)
+
+Rules:
+
+1. Quick-access soft refresh returns a guarded failure when no active initialized runtime or active provider can be resolved.
+2. While soft refresh is running, lifecycle-sync requests are coalesced instead of running concurrently.
+3. Soft refresh tears down and recreates CaptionArc-owned overlay artifacts in place rather than reloading the browser tab or invoking full runtime teardown.
+4. When a meeting session is currently active and the provider still reports `joined`, soft refresh restarts the provider observer instead of dropping current-session continuity.
+5. Soft refresh resets extension-owned provider/runtime-local observer state as needed, but it does not mutate provider-owned meeting tab state.
+6. After rebuilding artifacts, soft refresh republishes quick-access status and re-enters lifecycle synchronization against the current live meeting state.
+
 ## Test Traceability
 
 - [../quality/references/runtime-lifecycle-traceability-matrix.md](../quality/references/runtime-lifecycle-traceability-matrix.md)
@@ -112,4 +125,4 @@ Each rule maps to one or more traceability cases with explicit `implemented` or 
 
 ## Change Control
 
-If content-script boot, lifecycle monitoring, capture startup/stop, reset-page handling, or teardown semantics change in code, update this contract and its traceability matrix in the same change set.
+If content-script boot, lifecycle monitoring, capture startup/stop, soft-refresh recovery, reset-page handling, or teardown semantics change in code, update this contract and its traceability matrix in the same change set.

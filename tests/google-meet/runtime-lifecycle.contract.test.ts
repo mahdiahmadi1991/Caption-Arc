@@ -2,15 +2,35 @@ import { describe, expect, test, vi } from "vitest";
 import type { MeetingProvider } from "../../entrypoints/content/providers/types";
 
 const {
+  closeCaptureGuideMock,
+  createOverlayMock,
+  destroyOverlayMock,
   forceResolveActivePromptMock,
+  hideOverlayMock,
+  openCaptureGuideMock,
+  resetGoogleMeetProviderStateMock,
+  renderCaptionsMock,
   requestCaptureConsentMock,
   requestSessionContinuationDecisionMock,
   requestSessionEndedDecisionMock,
+  showOverlayMock,
+  activeProviderOverride,
 } = vi.hoisted(() => ({
+  closeCaptureGuideMock: vi.fn(),
+  createOverlayMock: vi.fn(),
+  destroyOverlayMock: vi.fn(),
   forceResolveActivePromptMock: vi.fn(),
+  hideOverlayMock: vi.fn(),
+  openCaptureGuideMock: vi.fn(),
+  resetGoogleMeetProviderStateMock: vi.fn(),
+  renderCaptionsMock: vi.fn(),
   requestCaptureConsentMock: vi.fn(),
   requestSessionContinuationDecisionMock: vi.fn(),
   requestSessionEndedDecisionMock: vi.fn(),
+  showOverlayMock: vi.fn(),
+  activeProviderOverride: {
+    current: null as MeetingProvider | null,
+  },
 }));
 
 vi.mock("../../entrypoints/content/overlay/capture-consent", async (importOriginal) => {
@@ -23,6 +43,98 @@ vi.mock("../../entrypoints/content/overlay/capture-consent", async (importOrigin
     requestCaptureConsent: requestCaptureConsentMock,
     requestSessionContinuationDecision: requestSessionContinuationDecisionMock,
     requestSessionEndedDecision: requestSessionEndedDecisionMock,
+  };
+});
+
+vi.mock("../../entrypoints/content/overlay", async () => {
+  const state = await import("../../entrypoints/content/state");
+
+  return {
+    createOverlay: vi.fn(() => {
+      createOverlayMock();
+      if (state.overlay) {
+        return;
+      }
+
+      const overlayEl = document.createElement("div");
+      overlayEl.id = "captionarc-overlay";
+      overlayEl.setAttribute("aria-hidden", "false");
+      document.body.appendChild(overlayEl);
+      state.setOverlay(overlayEl);
+    }),
+    destroyOverlay: vi.fn(() => {
+      destroyOverlayMock();
+      state.overlay?.remove();
+      state.setOverlay(null);
+      state.setCaptionList(null);
+      state.setWaveElement(null);
+      state.setCaptureGuideElement(null);
+    }),
+    hideOverlay: vi.fn(() => {
+      hideOverlayMock();
+      if (!state.overlay) {
+        return;
+      }
+
+      state.overlay.classList.add("mc-hidden");
+      state.overlay.setAttribute("aria-hidden", "true");
+    }),
+    showOverlay: vi.fn(() => {
+      showOverlayMock();
+      if (!state.overlay) {
+        return;
+      }
+
+      state.overlay.classList.remove(
+        "mc-hidden",
+        "mc-overlay-exiting",
+        "mc-capture-consent-dismissed"
+      );
+      state.overlay.setAttribute("aria-hidden", "false");
+    }),
+    updateUIFromSettings: vi.fn(),
+  };
+});
+
+vi.mock("../../entrypoints/content/overlay/capture-guide", () => ({
+  openCaptureGuide: openCaptureGuideMock,
+  closeCaptureGuide: closeCaptureGuideMock,
+}));
+
+vi.mock("../../entrypoints/content/render", () => ({
+  renderCaptions: renderCaptionsMock,
+  scrollOverlayToBottom: vi.fn(),
+  SESSION_ENDED_CLOSE_REQUEST_EVENT: "captionarc:session-ended-close-request",
+}));
+
+vi.mock("../../entrypoints/content/providers/registry", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../../entrypoints/content/providers/registry")
+  >();
+
+  return {
+    ...actual,
+    getProviderByPlatform: vi.fn((platform: MeetingProvider["platform"]) => {
+      if (
+        activeProviderOverride.current &&
+        activeProviderOverride.current.platform === platform
+      ) {
+        return activeProviderOverride.current;
+      }
+
+      return actual.getProviderByPlatform(platform);
+    }),
+  };
+});
+
+vi.mock("../../entrypoints/content/providers/google-meet", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../../entrypoints/content/providers/google-meet")
+  >();
+
+  return {
+    ...actual,
+    resetGoogleMeetProviderState: resetGoogleMeetProviderStateMock,
   };
 });
 
@@ -338,6 +450,69 @@ describe("Runtime lifecycle contract", () => {
       true
     );
     await platformRuntimeInternals.teardownPlatformRuntime();
+    vi.unstubAllGlobals();
+  });
+
+  test("RLIFE-013: quick-access soft refresh rebuilds extension-owned artifacts and keeps the same session active", async () => {
+    vi.useFakeTimers();
+    const sendMessageMock = vi.fn(async () => ({ success: true }));
+    vi.stubGlobal("chrome", {
+      runtime: {
+        sendMessage: sendMessageMock,
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      storage: {
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+    });
+
+    const { platformRuntimeInternals } = await loadPlatformRuntimeModule();
+    const state = await import("../../entrypoints/content/state");
+    const stopObservingCurrentProviderMock = vi.fn();
+    const { provider, setPresence, startObserverMock } = createRuntimeProvider();
+    setPresence("joined");
+    activeProviderOverride.current = provider;
+    state.updateSettings({
+      overlayVisible: true,
+      captureStartupBehavior: "always",
+    });
+
+    const overlayEl = document.createElement("div");
+    overlayEl.id = "captionarc-overlay";
+    overlayEl.setAttribute("aria-hidden", "false");
+    document.body.appendChild(overlayEl);
+    state.setOverlay(overlayEl);
+
+    platformRuntimeInternals.setRuntimeStateForTests({
+      runtimeInitialized: true,
+      activeProviderPlatform: "google-meet",
+      hasActiveMeetingSession: true,
+      captureApprovedForLifecycle: true,
+      captureBlockedForLifecycle: false,
+      meetingPresenceState: "joined",
+      stopObservingCurrentProvider: stopObservingCurrentProviderMock,
+    });
+
+    const refreshPromise = platformRuntimeInternals.softRefreshQuickAccessArtifacts();
+    await vi.advanceTimersByTimeAsync(200);
+    await expect(refreshPromise).resolves.toEqual({ success: true });
+
+    expect(stopObservingCurrentProviderMock).toHaveBeenCalledTimes(1);
+    expect(hideOverlayMock).toHaveBeenCalled();
+    expect(destroyOverlayMock).toHaveBeenCalledTimes(1);
+    expect(createOverlayMock).toHaveBeenCalledTimes(1);
+    expect(resetGoogleMeetProviderStateMock).toHaveBeenCalledTimes(1);
+    expect(startObserverMock).toHaveBeenCalledTimes(1);
+    expect(showOverlayMock).toHaveBeenCalled();
+    expect(renderCaptionsMock).toHaveBeenCalled();
+    expect(platformRuntimeInternals.getRuntimeStateForTests().hasActiveMeetingSession).toBe(
+      true
+    );
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "updateQuickAccessRuntimeStatus" })
+    );
+
+    activeProviderOverride.current = null;
     vi.unstubAllGlobals();
   });
 

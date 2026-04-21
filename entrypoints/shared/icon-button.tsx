@@ -14,6 +14,7 @@ type IconButtonProps = Omit<
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  tooltipDisabled?: boolean;
 };
 
 const VARIANT_CLASSNAMES: Record<Variant, string> = {
@@ -39,12 +40,13 @@ export function IconButton({
   variant = "default",
   size = "md",
   loading = false,
+  tooltipDisabled = false,
   className = "",
   type = "button",
   ...props
 }: IconButtonProps) {
   return (
-    <Tooltip content={label}>
+    <Tooltip content={label} disabled={tooltipDisabled}>
       <button
         type={type}
         aria-label={label}

@@ -25,7 +25,9 @@ import {
   getProviderForPageContext,
   getProviderForUrl,
 } from "./providers/registry";
+import { resetGoogleMeetProviderState } from "./providers/google-meet";
 import { resetMicrosoftTeamsProviderState } from "./providers/microsoft-teams";
+import { resetZoomWebProviderState } from "./providers/zoom-web";
 import {
   isTranslationConfigured,
   resetTranslationState,
@@ -73,7 +75,10 @@ import {
 import { buildMeetingSessionFingerprint } from "../shared/meeting-session";
 import { createDiagnosticsLogger } from "../shared/diagnostics-client";
 import { hasAcceptedCurrentTerms } from "../shared/legal";
-import type { QuickAccessRuntimeStatus } from "../shared/quick-access-status";
+import {
+  QUICK_ACCESS_SOFT_REFRESH_RUNTIME_ACTION,
+  type QuickAccessRuntimeStatus,
+} from "../shared/quick-access-status";
 import type {
   FindMeetingSessionContinuationCandidateResponse,
   ResolveMeetingSessionRequest,
@@ -96,6 +101,7 @@ let lastObservedPresenceCount = 0;
 let sessionEndDecisionPending = false;
 let endedSessionReviewPinned = false;
 let sessionContinuationDecisionPending = false;
+let runtimeSoftRefreshInProgress = false;
 let pendingSessionResolveOptions:
   | Pick<ResolveMeetingSessionRequest, "reusePolicy" | "resumeSessionId">
   | undefined;
@@ -117,6 +123,7 @@ const CONTINUATION_LOOKUP_RETRY_DELAY_MS = 500;
 const CONTINUATION_LOOKUP_MAX_WAIT_MS = 2500;
 const RESET_PAGE_CONFIRMATION_MS = PRESENCE_CONFIRMATION_TICKS * PRESENCE_MONITOR_INTERVAL_MS;
 const AUTO_CAPTION_ENABLE_TIMEOUT_MS = 5000;
+const SOFT_REFRESH_TRANSITION_MS = 140;
 const runtimeDiagnosticsLogger = createDiagnosticsLogger({
   runtime: "content",
   domain: "runtime",
@@ -276,6 +283,7 @@ export const platformRuntimeInternals = {
   handleSessionContinuationDecision,
   prepareMeetingStartupDecision,
   syncMeetingLifecycle,
+  softRefreshQuickAccessArtifacts,
   startLifecycleMonitor,
   teardownPlatformRuntime,
   getRuntimeStateForTests,
@@ -293,6 +301,7 @@ function getRuntimeStateForTests(): {
   lastObservedPresenceCount: number;
   lifecycleSyncInProgress: boolean;
   lifecycleSyncRequested: boolean;
+  runtimeSoftRefreshInProgress: boolean;
   sessionEndDecisionPending: boolean;
   endedSessionReviewPinned: boolean;
   sessionContinuationDecisionPending: boolean;
@@ -320,6 +329,7 @@ function getRuntimeStateForTests(): {
     lastObservedPresenceCount,
     lifecycleSyncInProgress,
     lifecycleSyncRequested,
+    runtimeSoftRefreshInProgress,
     sessionEndDecisionPending,
     endedSessionReviewPinned,
     sessionContinuationDecisionPending,
@@ -366,6 +376,9 @@ function setRuntimeStateForTests(
   }
   if (patch.lifecycleSyncRequested !== undefined) {
     lifecycleSyncRequested = patch.lifecycleSyncRequested;
+  }
+  if (patch.runtimeSoftRefreshInProgress !== undefined) {
+    runtimeSoftRefreshInProgress = patch.runtimeSoftRefreshInProgress;
   }
   if (patch.sessionEndDecisionPending !== undefined) {
     sessionEndDecisionPending = patch.sessionEndDecisionPending;
@@ -417,6 +430,213 @@ function observeResetPageState(
   return now - resetPageObservedAt >= RESET_PAGE_CONFIRMATION_MS
     ? "confirmed"
     : "pending";
+}
+
+function waitForSoftRefreshTransition(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, SOFT_REFRESH_TRANSITION_MS);
+  });
+}
+
+function resetProviderRuntimeArtifactsForSoftRefresh(
+  provider: MeetingProvider
+): void {
+  if (provider.platform === "google-meet") {
+    resetGoogleMeetProviderState();
+    return;
+  }
+
+  if (provider.platform === "microsoft-teams") {
+    resetMicrosoftTeamsProviderState();
+    return;
+  }
+
+  if (provider.platform === "zoom-web") {
+    resetZoomWebProviderState();
+  }
+}
+
+function syncOverlayVisibilityAfterSoftRefresh(): void {
+  if (!settings.overlayVisible || captureBlockedForLifecycle) {
+    hideOverlay();
+    return;
+  }
+
+  if (
+    meetingPresenceState === "unknown" &&
+    !hasActiveMeetingSession &&
+    !recentlyEndedSession
+  ) {
+    hideOverlay();
+    return;
+  }
+
+  if (
+    meetingPresenceState === "ended" &&
+    suppressEndedOverlayAutoShow &&
+    !hasActiveMeetingSession
+  ) {
+    hideOverlay();
+    return;
+  }
+
+  showOverlay();
+}
+
+async function restartProviderObserverAfterSoftRefresh(
+  provider: MeetingProvider
+): Promise<void> {
+  stopObservingCurrentProvider?.();
+  stopObservingCurrentProvider = null;
+  resetProviderRuntimeArtifactsForSoftRefresh(provider);
+
+  if (!hasActiveMeetingSession || provider.getMeetingPresence() !== "joined") {
+    setCCEnabled(provider.isCaptioningCurrentlyAvailable());
+    closeCaptureGuide();
+    return;
+  }
+
+  stopObservingCurrentProvider = provider.startCaptionObserver();
+
+  const captioningAvailable = provider.isCaptioningCurrentlyAvailable();
+  setCCEnabled(captioningAvailable);
+
+  if (captioningAvailable) {
+    closeCaptureGuide();
+    return;
+  }
+
+  const autoEnabled = await attemptAutomaticCaptionActivation(provider);
+  if (
+    !autoEnabled &&
+    provider.getMeetingPresence() === "joined" &&
+    !provider.isCaptioningCurrentlyAvailable()
+  ) {
+    openCaptureGuide();
+    return;
+  }
+
+  closeCaptureGuide();
+}
+
+async function softRefreshQuickAccessArtifacts(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  if (!runtimeInitialized || !activeProviderPlatform) {
+    return {
+      success: false,
+      error: "No active meeting runtime is available to refresh.",
+    };
+  }
+
+  if (runtimeSoftRefreshInProgress) {
+    return {
+      success: false,
+      error: "A quick-access refresh is already running.",
+    };
+  }
+
+  const provider = getActiveProvider();
+  if (!provider) {
+    return {
+      success: false,
+      error: "The active meeting provider could not be resolved.",
+    };
+  }
+
+  runtimeSoftRefreshInProgress = true;
+  const overlayWasVisible =
+    Boolean(overlay) &&
+    overlay?.getAttribute("aria-hidden") === "false" &&
+    !overlay.classList.contains("mc-hidden") &&
+    !overlay.classList.contains("mc-overlay-exiting") &&
+    !overlay.classList.contains("mc-capture-consent-dismissed");
+
+  recordLifecycleDebug("soft-refresh-begin", {
+    providerPlatform: provider.platform,
+    overlayWasVisible,
+    hasOverlay: Boolean(overlay),
+    hasActiveMeetingSession,
+    meetingPresenceState,
+  });
+
+  try {
+    setCaptionActivationState("idle");
+    closeCaptureGuide();
+    resetTranslationState();
+    stopObservingCurrentProvider?.();
+    stopObservingCurrentProvider = null;
+
+    if (overlayWasVisible) {
+      hideOverlay();
+      await waitForSoftRefreshTransition();
+    }
+
+    destroyOverlay();
+    createOverlay();
+    await restartProviderObserverAfterSoftRefresh(provider);
+    setPendingSessionMetadata(
+      hasActiveMeetingSession ? null : provider.getSessionMetadata()
+    );
+    syncOverlayVisibilityAfterSoftRefresh();
+    renderCaptions(true);
+    publishQuickAccessRuntimeStatus();
+    lifecycleSyncRequested = true;
+
+    recordLifecycleDebug("soft-refresh-complete", {
+      providerPlatform: provider.platform,
+      restartedObserver: hasActiveMeetingSession,
+      meetingPresenceState,
+      overlayVisible: overlay?.getAttribute("aria-hidden") === "false",
+    });
+    return { success: true };
+  } catch (error) {
+    void runtimeDiagnosticsLogger.error("quick_access_soft_refresh_failed", {
+      providerPlatform: provider.platform,
+      error,
+    });
+    recordLifecycleDebug("soft-refresh-failed", {
+      providerPlatform: provider.platform,
+      error: String(error),
+    });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    runtimeSoftRefreshInProgress = false;
+    if (lifecycleSyncRequested) {
+      if (captureBlockedForLifecycle) {
+        lifecycleSyncRequested = false;
+      } else {
+        requestLifecycleSync();
+      }
+    }
+  }
+}
+
+const contentRuntimeMessageApi = globalThis.chrome?.runtime;
+
+if (contentRuntimeMessageApi?.onMessage?.addListener) {
+  contentRuntimeMessageApi.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.action !== QUICK_ACCESS_SOFT_REFRESH_RUNTIME_ACTION) {
+      return false;
+    }
+
+    void softRefreshQuickAccessArtifacts()
+      .then((response) => {
+        sendResponse(response);
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+    return true;
+  });
 }
 
 function shouldKeepRuntimeForEndedSessionOnResetPage(): boolean {
@@ -1445,6 +1665,11 @@ async function syncMeetingLifecycle(provider: MeetingProvider): Promise<void> {
 }
 
 function requestLifecycleSync(): void {
+  if (runtimeSoftRefreshInProgress) {
+    lifecycleSyncRequested = true;
+    return;
+  }
+
   const provider = getActiveProvider();
   if (!provider || captureBlockedForLifecycle) {
     return;
@@ -1611,6 +1836,10 @@ function startLifecycleMonitor(): void {
       return;
     }
 
+    if (runtimeSoftRefreshInProgress) {
+      return;
+    }
+
     const provider = getProviderByPlatform(activeProviderPlatform);
     if (!provider) {
       void teardownPlatformRuntime();
@@ -1690,6 +1919,7 @@ async function teardownPlatformRuntime(): Promise<void> {
   captureBlockedForLifecycle = false;
   lifecycleSyncInProgress = false;
   lifecycleSyncRequested = false;
+  runtimeSoftRefreshInProgress = false;
   lastObservedPresenceState = "unknown";
   lastObservedPresenceCount = 0;
   sessionEndDecisionPending = false;

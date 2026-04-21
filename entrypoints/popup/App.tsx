@@ -12,7 +12,10 @@ import {
 } from "../shared/openai-service";
 import { isAutomaticSummaryEnabledForProfile } from "../shared/meeting-profiles";
 import { getLanguageName } from "../shared/language-metadata";
-import type { QuickAccessRuntimeStatus } from "../shared/quick-access-status";
+import {
+  REQUEST_QUICK_ACCESS_SOFT_REFRESH_ACTION,
+  type QuickAccessRuntimeStatus,
+} from "../shared/quick-access-status";
 import { SwitchControl } from "../shared/switch-control";
 import {
   ArchiveIcon,
@@ -20,6 +23,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   GearIcon,
+  RefreshIcon,
   SparklesIcon,
 } from "../shared/icons";
 import { ThemeToggle } from "../shared/theme-toggle";
@@ -60,6 +64,12 @@ type DashboardState = {
   lastSessionAt: number | null;
   bytesUsed: number;
   quota: number;
+};
+
+type QuickAccessSoftRefreshPresentation = {
+  enabled: boolean;
+  stateLabel: string;
+  detail: string;
 };
 
 const DEFAULT_DASHBOARD_STATE: DashboardState = {
@@ -259,6 +269,40 @@ function getCaptureStartupBehaviorLabel(
   }
 
   return t("popup.meta.startupValues.ask");
+}
+
+export function getQuickAccessSoftRefreshPresentation(
+  runtimeStatus: QuickAccessRuntimeStatus | null,
+  loading: boolean,
+  t: UiTranslator
+): QuickAccessSoftRefreshPresentation {
+  if (loading) {
+    return {
+      enabled: false,
+      stateLabel: t("popup.refresh.state.refreshing"),
+      detail: t("popup.refresh.helper.refreshing"),
+    };
+  }
+
+  const hasRefreshableRuntime =
+    Boolean(runtimeStatus?.platform) &&
+    runtimeStatus?.meetingPresence !== "unknown";
+
+  if (!hasRefreshableRuntime) {
+    return {
+      enabled: false,
+      stateLabel: t("popup.refresh.state.unavailable"),
+      detail: t("popup.refresh.helper.unavailable"),
+    };
+  }
+
+  return {
+    enabled: true,
+    stateLabel: t("popup.refresh.state.ready"),
+    detail: t("popup.refresh.helper.ready", {
+      platform: getPlatformLabel(runtimeStatus?.platform || null, t),
+    }),
+  };
 }
 
 function getMostRelevantSummaryStatus(
@@ -512,14 +556,12 @@ function OverlayVisibilityControl({
             <p className="text-[13px] font-semibold leading-none text-[var(--app-text)]">
               {t("popup.overlay.title")}
             </p>
-            <Tooltip content={secondaryText}>
-              <p
-                className="mt-1 truncate text-[11px] leading-none text-[var(--app-text-muted)]"
-                style={DYNAMIC_TEXT_STYLE}
-              >
-                {secondaryText}
-              </p>
-            </Tooltip>
+            <p
+              className="mt-1 text-[11px] leading-snug text-[var(--app-text-muted)]"
+              style={DYNAMIC_TEXT_STYLE}
+            >
+              {secondaryText}
+            </p>
           </div>
         </div>
 
@@ -535,6 +577,73 @@ function OverlayVisibilityControl({
   );
 }
 
+function QuickAccessSoftRefreshControl({
+  runtimeStatus,
+  loading,
+  onRefresh,
+}: {
+  runtimeStatus: QuickAccessRuntimeStatus | null;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const t = useT();
+  const presentation = getQuickAccessSoftRefreshPresentation(
+    runtimeStatus,
+    loading,
+    t
+  );
+
+  return (
+    <section className="rounded-[1.45rem] border border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-strong)_84%,transparent)] px-3 py-2.5 shadow-[0_12px_28px_var(--app-shadow)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-[var(--app-surface-soft)] px-2 py-[5px] text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--app-text-faint)]">
+              <RefreshIcon className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              {t("popup.refresh.badge")}
+            </div>
+            <span
+              className={`inline-flex items-center rounded-full border px-2 py-[5px] text-[9px] font-medium uppercase tracking-[0.14em] ${
+                presentation.enabled
+                  ? "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]"
+                  : loading
+                    ? "border-[var(--app-warning-border)] bg-[var(--app-warning-soft)] text-[var(--app-warning)]"
+                    : "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]"
+              }`}
+            >
+              {presentation.stateLabel}
+            </span>
+          </div>
+
+          <div className="mt-2 min-w-0">
+            <p className="text-[13px] font-semibold leading-none text-[var(--app-text)]">
+              {t("popup.refresh.title")}
+            </p>
+            <p
+              className="mt-1 text-[11px] leading-snug text-[var(--app-text-muted)]"
+              style={DYNAMIC_TEXT_STYLE}
+            >
+              {presentation.detail}
+            </p>
+          </div>
+        </div>
+
+        <IconButton
+          onClick={onRefresh}
+          icon={<RefreshIcon />}
+          label={t("popup.refresh.buttonAriaLabel")}
+          variant="soft"
+          size="sm"
+          loading={loading}
+          tooltipDisabled
+          disabled={!presentation.enabled}
+          className="mt-1 shrink-0"
+        />
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const { locale } = useI18n();
   const t = useT();
@@ -542,6 +651,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [dashboard, setDashboard] = useState<DashboardState>(DEFAULT_DASHBOARD_STATE);
   const [overlayVisibilityLoading, setOverlayVisibilityLoading] = useState(false);
+  const [softRefreshLoading, setSoftRefreshLoading] = useState(false);
   const [appearanceLoading, setAppearanceLoading] = useState(false);
 
   const resolvedTheme = useResolvedTheme(settings.appearance);
@@ -898,6 +1008,33 @@ export default function App() {
     }
   };
 
+  const refreshQuickAccessArtifacts = async () => {
+    if (softRefreshLoading) {
+      return;
+    }
+
+    const presentation = getQuickAccessSoftRefreshPresentation(
+      dashboard.runtimeStatus,
+      false,
+      t
+    );
+    if (!presentation.enabled) {
+      return;
+    }
+
+    setSoftRefreshLoading(true);
+
+    try {
+      await chrome.runtime.sendMessage({
+        action: REQUEST_QUICK_ACCESS_SOFT_REFRESH_ACTION,
+      });
+    } catch {
+      // The dashboard poll will reconcile the latest runtime state.
+    } finally {
+      setSoftRefreshLoading(false);
+    }
+  };
+
   return (
     <div className="mx-2 my-2 overflow-hidden rounded-[1.65rem] border border-[color:color-mix(in_srgb,var(--app-border-strong)_90%,transparent)] bg-[var(--app-bg)] text-[var(--app-text)] shadow-[0_14px_32px_var(--app-shadow)]">
       <div className="bg-[radial-gradient(circle_at_top_left,var(--app-accent-soft),transparent_56%),var(--app-bg)] px-4 pb-4 pt-4">
@@ -976,6 +1113,14 @@ export default function App() {
             modeLabel={overlayModeLabel}
             helperText={overlayHelperText}
             onToggle={toggleOverlayVisibility}
+          />
+        </div>
+
+        <div className="mt-3">
+          <QuickAccessSoftRefreshControl
+            runtimeStatus={dashboard.runtimeStatus}
+            loading={softRefreshLoading}
+            onRefresh={refreshQuickAccessArtifacts}
           />
         </div>
 
