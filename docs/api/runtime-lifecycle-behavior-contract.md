@@ -116,6 +116,7 @@ Rules:
 4. When a meeting session is currently active and the provider still reports `joined`, soft refresh restarts the provider observer instead of dropping current-session continuity.
 5. Soft refresh resets extension-owned provider/runtime-local observer state as needed, but it does not mutate provider-owned meeting tab state.
 6. After rebuilding artifacts, soft refresh republishes quick-access status and re-enters lifecycle synchronization against the current live meeting state.
+7. The background message surface for quick-access soft refresh uses a simple `{ success, error? }` response shape, and background routing tests keep that path available under the terms gate in development/runtime contract coverage.
 
 ## Test Traceability
 
