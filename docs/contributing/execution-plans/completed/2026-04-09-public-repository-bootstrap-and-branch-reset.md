@@ -9,11 +9,11 @@ Planning standard:
 
 ## Purpose / Big Picture
 
-Create the first public GitHub repository for this project, align repository-governance summaries with the new graph-preserving workflow, and publish the requested branch topology where `develope` carries the current integration state and `main` is reset to the repository root commit.
+Create the first public GitHub repository for this project, align repository-governance summaries with the new graph-preserving workflow, and publish the requested branch topology where `develop` carries the current integration state and `main` is reset to the repository root commit.
 
 ## Problem Statement
 
-The local repository has no remote configured yet, Git governance documentation was revised toward a graph-preserving `develope -> main` model, and the owner wants the public repository created and configured in a way that matches the project's current public positioning and Git workflow expectations.
+The local repository has no remote configured yet, Git governance documentation was revised toward a graph-preserving `develop -> main` model, and the owner wants the public repository created and configured in a way that matches the project's current public positioning and Git workflow expectations.
 
 ## Scope
 
@@ -22,7 +22,7 @@ The local repository has no remote configured yet, Git governance documentation 
 - commit the intended repository-governance changes with a reviewable topic-branch commit
 - create a public GitHub repository for the project
 - configure the repository's public metadata and baseline settings
-- create and push `develope` from the current integration state
+- create and push `develop` from the current integration state
 - reset `main` to the initial repository commit and push that state
 
 ## Non-Goals
@@ -53,7 +53,7 @@ The local repository has no remote configured yet, Git governance documentation 
 ## Risks and Unknowns
 
 - the current local history contains a duplicate final bootstrap commit, so branch and tag state must be reviewed carefully before publication
-- resetting `main` to the root commit is intentionally destructive relative to current local branch tips and must only happen after `develope` safely holds the current state
+- resetting `main` to the root commit is intentionally destructive relative to current local branch tips and must only happen after `develop` safely holds the current state
 - GitHub repository settings available through CLI may vary by installed `gh` capabilities and token scopes
 
 ## Documentation Impact
@@ -79,7 +79,7 @@ Create the GitHub repository, set public metadata and baseline repo settings, an
 
 ### Milestone 3 - Publish the requested branch topology
 
-Push the current integration state to `develope`, reset `main` to the root commit, push the reset branch, and confirm the final remote layout.
+Push the current integration state to `develop`, reset `main` to the root commit, push the reset branch, and confirm the final remote layout.
 
 ## Verification
 
@@ -107,7 +107,7 @@ Push the current integration state to `develope`, reset `main` to the root commi
   Evidence: `git log --oneline --decorate --graph --max-count=12 --all`.
 
 - Observation: resetting `main` to the root commit means the public repository cannot rely on `main`-resident workflow files for release PR checks.
-  Evidence: `origin/main` now points to `66aaf75`, while the workflow files live on `origin/develope`.
+  Evidence: `origin/main` now points to `66aaf75`, while the workflow files live on `origin/develop`.
 
 ## Decision Log
 
@@ -115,22 +115,22 @@ Push the current integration state to `develope`, reset `main` to the root commi
   Rationale: repository creation, branch publication, and `main` reset are governance-sensitive operations with irreversible consequences once pushed.
   Date/Author: 2026-04-09 / Codex
 
-- Decision: make `develope` the GitHub default branch before resetting `main`.
+- Decision: make `develop` the GitHub default branch before resetting `main`.
   Rationale: the owner requested `main` be reset to the repository root, but the public repository should still open on the current product state for usability and SEO.
   Date/Author: 2026-04-09 / Codex
 
-- Decision: protect `develope` with required status checks and protect `main` with a lighter no-force-push baseline.
-  Rationale: `develope` is the public default branch and contains the active automation, while `main` was intentionally reset to the root commit and cannot currently host the same required checks.
+- Decision: protect `develop` with required status checks and protect `main` with a lighter no-force-push baseline.
+  Rationale: `develop` is the public default branch and contains the active automation, while `main` was intentionally reset to the root commit and cannot currently host the same required checks.
   Date/Author: 2026-04-09 / Codex
 
 ## Outcomes and Retrospective
 
-The repository governance summary now matches the graph-preserving `develope -> main` workflow, the public GitHub repository exists at `https://github.com/mahdiahmadi1991/caption-arc`, and the requested branch topology is published with `develope` holding the current integration state and `main` reset to the root commit.
+The repository governance summary now matches the graph-preserving `develop -> main` workflow, the public GitHub repository exists at `https://github.com/mahdiahmadi1991/caption-arc`, and the requested branch topology is published with `develop` holding the current integration state and `main` reset to the root commit.
 
 Public repository configuration completed during this task:
 
 - repository visibility set to public
-- default branch set to `develope`
+- default branch set to `develop`
 - description and discovery topics configured from repository scope
 - merge commits enabled
 - squash merge disabled
@@ -140,7 +140,7 @@ Public repository configuration completed during this task:
 - wiki disabled
 - discussions disabled
 - automatic branch deletion on merge enabled
-- branch protection configured on `develope` and `main`
+- branch protection configured on `develop` and `main`
 
 Verification recorded during this task:
 
@@ -148,9 +148,9 @@ Verification recorded during this task:
 - `git status --short --branch` confirmed clean state at each completion checkpoint
 - `git log --oneline --decorate --graph --max-count=12 --all` confirmed the local graph
 - `git remote -v` confirmed `origin`
-- `git ls-remote --heads origin` confirmed `origin/develope` at `4b2bb50` and `origin/main` at `66aaf75`
+- `git ls-remote --heads origin` confirmed `origin/develop` at `4b2bb50` and `origin/main` at `66aaf75`
 - `gh repo view mahdiahmadi1991/caption-arc --json defaultBranchRef,deleteBranchOnMerge,hasIssuesEnabled,hasProjectsEnabled,hasWikiEnabled,hasDiscussionsEnabled,mergeCommitAllowed,rebaseMergeAllowed,squashMergeAllowed,repositoryTopics,url` confirmed the published repository settings
 
 Residual trade-off:
 
-- because `main` was intentionally reset to the root commit by owner request, future release automation and branch protection policy should continue to treat `develope` as the operational default branch until `main` is advanced to a workflow-bearing release baseline again
+- because `main` was intentionally reset to the root commit by owner request, future release automation and branch protection policy should continue to treat `develop` as the operational default branch until `main` is advanced to a workflow-bearing release baseline again
