@@ -69,6 +69,20 @@ pnpm build:target:chrome:development
 pnpm chrome:debug
 ```
 
+If the repository owner has a known-good Windows Chrome debug profile with CaptionArc already installed, agents may launch that profile directly instead of the repository-managed profile. Keep committed docs generic and use this placeholder path:
+
+```text
+C:\Users\<windows-user>\.google\ChromeDebugProfile
+```
+
+Example launch shape:
+
+```powershell
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\Users\<windows-user>\.google\ChromeDebugProfile"
+```
+
+Keep this runtime on `system-only`. Do not switch to a non-system Chrome path when CaptionArc is missing.
+
 Explicit reload command (recommended before each smoke run):
 
 ```bash
@@ -222,9 +236,12 @@ Primary matrix:
 
 1.1 Auto-load blocked by Chrome build:
 - symptom: CDP reachable but CaptionArc extension runtime is not discoverable
-- action: default launcher auto-provisions Chrome for Testing and retries
+- action: stay on the same `system-only` Chrome session
+- run:
+  - `pnpm chrome:debug:check`
+  - `pnpm chrome:debug:doctor`
+- expected outcome: confirm whether the active debug profile already has a usable CaptionArc install
 - rerun:
-  - `pnpm chrome:debug:ensure`
   - smoke command again
 
 2. Extension worker not detected:
@@ -234,10 +251,8 @@ Primary matrix:
 2.1 Extension still not detected after popup/options:
 - open `chrome://extensions` in the debug profile
 - verify CaptionArc is present and enabled
-- if missing, load unpacked extension from:
-  - `%LOCALAPPDATA%\\CaptionArc\\extension\\production`
 - rerun `pnpm chrome:debug:doctor`
-- if extension card is still not shown, stop and fix staging/runtime issue before smoke acceptance
+- if extension card is still not shown, stop and report the missing prerequisite before smoke acceptance
 
 3. WSL direct unavailable but Windows check available:
 - continue using Windows-only mode for runtime validation

@@ -802,7 +802,7 @@ function getGoogleMeetPageKind(
   return null;
 }
 
-function resetGoogleMeetProviderStateForTests(): void {
+export function resetGoogleMeetProviderState(): void {
   currentCaptionRegion = null;
   currentChatRegion = null;
   hasSeenGoogleMeetLeaveCallControl = false;
@@ -812,6 +812,10 @@ function resetGoogleMeetProviderStateForTests(): void {
   capturedChatMessageIds.clear();
   recentChatFingerprints.clear();
   chatMessageCounter = 0;
+}
+
+function resetGoogleMeetProviderStateForTests(): void {
+  resetGoogleMeetProviderState();
 }
 
 export const googleMeetProviderInternals = {

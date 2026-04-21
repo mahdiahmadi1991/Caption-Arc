@@ -177,4 +177,51 @@ describe("Manual smoke launch configuration", () => {
     expect(executableFlagIndex).toBeGreaterThanOrEqual(0);
     expect(args[executableFlagIndex + 1]).toBe("");
   });
+
+  test("SMK-LAUNCH-005: assistant harness uses trusted CDP click flow for join automation instead of synthetic-only DOM clicks", () => {
+    const source = readFileSync(
+      join(
+        REPO_ROOT,
+        "scripts/manual-smoke/lib/google-meet-assistant-harness.mjs"
+      ),
+      "utf8"
+    );
+
+    expect(source).toContain('from "./cdp-runtime.mjs"');
+    expect(source).toContain("dispatchMouseClickInTarget");
+    expect(source).toContain("await dispatchMouseClickInTarget({");
+    expect(source).not.toContain('node.dispatchEvent(new PointerEvent("pointerdown"');
+    expect(source).not.toContain('node.dispatchEvent(new MouseEvent("click"');
+  });
+
+  test("SMK-LAUNCH-006: assistant harness resolves a joinable Google Meet session from the stable meeting flow instead of the lobby-only helper", () => {
+    const source = readFileSync(
+      join(
+        REPO_ROOT,
+        "scripts/manual-smoke/lib/google-meet-assistant-harness.mjs"
+      ),
+      "utf8"
+    );
+
+    expect(source).toContain('import { resolveGoogleMeetUrl } from "./meet-url.mjs"');
+    expect(source).toContain("const resolved = await resolveGoogleMeetUrl({");
+    expect(source).not.toContain("resolveGoogleMeetLobbyUrl");
+  });
+
+  test("SMK-LAUNCH-007: assistant harness reuses the landing-created meeting target before opening a duplicate tab", () => {
+    const source = readFileSync(
+      join(
+        REPO_ROOT,
+        "scripts/manual-smoke/lib/google-meet-assistant-harness.mjs"
+      ),
+      "utf8"
+    );
+
+    expect(source).toContain("function findPageTargetByUrl(");
+    expect(source).toContain("findPageTargetByUrl(targets, resolved.url)");
+    expect(source).toContain("findPageTargetByUrl(await listTargets(baseUrl), resolved.url)");
+    expect(source).toContain(
+      "const target = existingTarget || (await createTarget(baseUrl, resolved.url));"
+    );
+  });
 });

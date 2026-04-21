@@ -22,6 +22,15 @@ EXTENSION_VERSION="${EXTENSION_VERSION:-$(node -e "console.log(JSON.parse(requir
 EXTENSION_DIR="${EXTENSION_DIR:-$REPO_ROOT/.release/v$EXTENSION_VERSION/$EXTENSION_BUILD_MODE/chrome}"
 RELOAD_SCRIPT="$SCRIPT_DIR/reload-extension-runtime.mjs"
 
+active_debug_runtime_uses_command_line_extension_load() {
+  local command_line
+  command_line="$(
+    powershell.exe -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { \$_.Name -eq 'chrome.exe' -and \$_.CommandLine -and \$_.CommandLine -like '*--remote-debugging-port=$PORT*' -and \$_.CommandLine -notlike '*--type=*' } | Select-Object -First 1 -ExpandProperty CommandLine" 2>/dev/null | tr -d '\r'
+  )"
+
+  [[ "$command_line" == *"--load-extension="* ]]
+}
+
 check_cdp() {
   node "$SCRIPT_DIR/check-cdp.mjs" "$PORT"
 }
@@ -144,6 +153,10 @@ ensure_extension_build
 
 if check_cdp; then
   echo "CDP ready."
+  if ! active_debug_runtime_uses_command_line_extension_load; then
+    echo "Skipping staged extension reload: active debug profile uses profile-managed extension lifecycle."
+    exit 0
+  fi
   if try_reload_running_extension; then
     exit 0
   fi
@@ -178,6 +191,9 @@ launch_runtime
 
 if check_cdp; then
   echo "CDP ready after auto-start."
+  if ! active_debug_runtime_uses_command_line_extension_load; then
+    echo "Skipping staged extension reload: active debug profile uses profile-managed extension lifecycle."
+  fi
   exit 0
 fi
 

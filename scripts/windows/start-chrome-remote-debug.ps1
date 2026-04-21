@@ -6,7 +6,7 @@ param(
 
   [string]$RemoteDebuggingAddress = "0.0.0.0",
 
-  [string]$ProfileDir = "$env:LOCALAPPDATA\CaptionArc\chrome-cdp-profile",
+  [string]$ProfileDir = "",
 
   [string]$StagedExtensionDir = "$env:LOCALAPPDATA\CaptionArc\extension\development",
 
@@ -90,6 +90,31 @@ function Ensure-Directory {
   if (-not (Test-Path $PathValue)) {
     New-Item -ItemType Directory -Path $PathValue -Force | Out-Null
   }
+}
+
+function Resolve-ProfileDirectory {
+  if ($ProfileDir) {
+    return $ProfileDir
+  }
+
+  if ($env:CHROME_DEBUG_PROFILE_DIR_WIN) {
+    return $env:CHROME_DEBUG_PROFILE_DIR_WIN
+  }
+
+  if ($env:CAPTIONARC_CHROME_DEBUG_PROFILE_DIR_WIN) {
+    return $env:CAPTIONARC_CHROME_DEBUG_PROFILE_DIR_WIN
+  }
+
+  $preferredProfile = Join-Path $env:USERPROFILE ".google\ChromeDebugProfile"
+  if (Test-Path $preferredProfile) {
+    return $preferredProfile
+  }
+
+  return "$env:LOCALAPPDATA\CaptionArc\chrome-cdp-profile"
+}
+
+function Get-ManagedDebugProfileDirectory {
+  return "$env:LOCALAPPDATA\CaptionArc\chrome-cdp-profile"
 }
 
 function Resolve-ChromePath {
@@ -501,6 +526,9 @@ if (-not (Test-Path $ExtensionPath)) {
   throw "Extension path not found: $ExtensionPath"
 }
 
+$ProfileDir = Resolve-ProfileDirectory
+$managedProfileDir = Get-ManagedDebugProfileDirectory
+$useManagedProfileExtensionLoad = (Normalize-FullPath $ProfileDir) -ieq (Normalize-FullPath $managedProfileDir)
 $staged = Stage-Extension -SourcePath $ExtensionPath -DestinationPath $StagedExtensionDir
 $resolvedExtensionPath = $staged.Source
 $resolvedStagedExtensionDir = $staged.Destination
@@ -511,9 +539,9 @@ $runtimeMode = "system-only"
 if ($ChromeRuntimeMode -ne "system-only") {
   Write-Warning "ChromeRuntimeMode='$ChromeRuntimeMode' is ignored. Forcing single-path mode: system-only."
 }
-if ($ExtensionLoadMode -ne "auto") {
-  Write-Warning "ExtensionLoadMode='$ExtensionLoadMode' is ignored. Forcing single-path mode: auto."
-  $ExtensionLoadMode = "auto"
+$effectiveExtensionLoadMode = $(if ($useManagedProfileExtensionLoad) { "auto" } else { "manual" })
+if ($ExtensionLoadMode -ne $effectiveExtensionLoadMode) {
+  Write-Warning "ExtensionLoadMode='$ExtensionLoadMode' is ignored. Using '$effectiveExtensionLoadMode' for this profile."
 }
 if ($autoProvisionCftEnabled) {
   Write-Warning "AutoProvisionChromeForTesting is ignored. Deterministic runtime now uses Windows Google Chrome directly."
@@ -525,10 +553,10 @@ $chromeArgs = Build-ChromeArguments `
   -Port $RemoteDebuggingPort `
   -Address $RemoteDebuggingAddress `
   -ProfileDirectory $ProfileDir `
-  -LoadMode $ExtensionLoadMode `
+  -LoadMode $effectiveExtensionLoadMode `
   -ExtensionDirectory $resolvedStagedExtensionDir `
   -InitialUrl $StartUrl `
-  -UseDisableExtensionsExcept $true
+  -UseDisableExtensionsExcept $useManagedProfileExtensionLoad
 
 $launchResult = Launch-DebugChrome `
   -ExecutablePath $effectiveChromePath `
@@ -553,9 +581,10 @@ Write-Host "Chrome executable: $effectiveChromePath"
 Write-Host "Chrome flavor: $(if ($usingCft) { 'chrome-for-testing' } else { 'google-chrome' })"
 Write-Host "Extension source: $resolvedExtensionPath"
 Write-Host "Extension staged: $resolvedStagedExtensionDir"
-Write-Host "Extension load mode: $ExtensionLoadMode"
+Write-Host "Extension load mode: $effectiveExtensionLoadMode"
 Write-Host "Chrome runtime mode: $runtimeMode"
 Write-Host "Profile: $ProfileDir"
+Write-Host "Profile extension strategy: $(if ($useManagedProfileExtensionLoad) { 'managed-profile-auto-load' } else { 'profile-managed-install' })"
 Write-Host "Launch mode: $(if ($launchResult.ReusedExisting) { 'reuse-existing' } else { 'fresh-launch' })"
 if ($launchResult.ReusedExisting -and $launchResult.ReuseReason) {
   Write-Host "Reuse reason: $($launchResult.ReuseReason)"
@@ -570,10 +599,11 @@ if ($resolvedExtensionId) {
     Write-Warning "Extension ID resolved ($resolvedExtensionId) but cache write failed: $($_.Exception.Message)"
   }
 } else {
-  if ($ExtensionLoadMode -eq "auto") {
+  if ($effectiveExtensionLoadMode -eq "auto") {
     Write-Warning "Could not resolve loaded extension ID from profile preferences or CDP targets."
     Write-Warning "If this repeats, open extension popup/options once and rerun."
   } else {
-    Write-Warning "Could not resolve loaded extension ID from profile preferences or CDP targets yet."
+    Write-Warning "No installed CaptionArc runtime detected yet for the selected profile."
+    Write-Warning "Use the profile-managed unpacked install bootstrap if CaptionArc is missing from chrome://extensions."
   }
 }
